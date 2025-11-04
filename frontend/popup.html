@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metamorph SEO</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Metamorph SEO</h1>
+        </header>
+        
+        <main>
+            <button id="analyzeBtn" class="btn btn-primary">Analyze This Page</button>
+            
+            <div id="welcome" class="message-card">
+                <p>Click "Analyze" to get AI-powered SEO insights for the current page.</p>
+            </div>
+
+            <div id="loader" class="loader" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing with Gemini...</p>
+            </div>
+            
+            <div id="error" class="error-card" style="display: none;">
+                </div>
+
+            <div id="results" class="results-container" style="display: none;">
+                
+                <div id="scoreCard" class="score-card">
+                    <h2>SEO Score</h2>
+                    <p id="scoreValue">--/100</p>
+                </div>
+
+                <div class="button-row">
+                    <button id="boostBtn" class="btn btn-secondary btn-half">✨ Generate Boost</button>
+                    <button id="dashboardBtn" class="btn btn-secondary btn-half">🚀 Full Dashboard</button>
+                </div>
+
+                <div id="boostResults" class="results-container" style="display: none;">
+                    <div class="results-section">
+                        <h2>SEO Boost Suggestions</h2>
+                        <p class="data-label">Suggested Meta Description</p>
+                        <p id="boostMeta" class="data-value"></p>
+                        <p class="data-label">Suggested Meta Keywords</p>
+                        <ul id="boostTags" class="results-list compact">
+                            </ul>
+                    </div>
+                </div>
+
+                <div class="results-section">
+                    <h2>Page Details</h2>
+                    <p class="data-label">Title</p>
+                    <p id="pageTitleValue" class="data-value">...</p>
+                    
+                    <p class="data-label">Top Keywords (from text)</p>
+                    <ul id="keywordsList" class="results-list compact">
+                        </ul>
+                </div>
+                
+                <div class="results-section">
+                    <h2>💡 AI Suggestions</h2>
+                    <ul id="suggestionsList" class="results-list">
+                        </ul>
+                </div>
+
+                <div class="results-section">
+                    <h2>❌ Critical Issues</h2>
+                    <ul id="issuesList" class="results-list">
+                        </ul>
+                </div>
+
+                <div class="results-section">
+                    <h2>✅ Strengths</h2>
+                    <ul id="strengthsList" class="results-list">
+                        </ul>
+                </div>
+
+                <div class="results-section">
+                    <h2>Content Quality</h2>
+                    <p id="qualityValue" class="data-value"></p>
+                </div>
+                
+                <button id="toggleDetailsBtn" class="btn btn-secondary">Show More Details</button>
+                <div id="extraDetails" class="details-card" style="display: none;">
+                    <h2>Extra Details</h2>
+                    
+                    <p class="data-label">Status Code</p>
+                    <p id="statusCodeValue" class="data-value">...</p>
+                    
+                    <p class="data-label">Meta Description</p>
+                    <p id="metaDescriptionValue" class="data-value">...</p>
+
+                    <p class="data-label">Header Tags (H1, H2, H3)</p>
+                    <div id="headersList" class="data-value headers-list">
+                        </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

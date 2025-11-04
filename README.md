@@ -115,7 +115,6 @@ metamorph-seo-dashboard/
 │   ├── models.py               # Pydantic data models
 │   ├── seo_crawler.py          # Web scraping utilities
 │   ├── dashboard.py            # Streamlit dashboard (updated location)
-│   ├── requirements.txt        # Python dependencies
 │   └── utils/
 │       └── gemini_helper.py    # Gemini AI service
 ├── frontend/
@@ -123,7 +122,9 @@ metamorph-seo-dashboard/
 │   ├── popup.css               # Extension styles
 │   ├── popup.js                # Extension logic
 │   └── manifest.json           # Extension config
-└── README.md
+├── README.md
+├── requirements.txt            # Python dependencies
+└── .gitignore
 ```
 
 ---
@@ -311,9 +312,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support & Contact
 
 For support, questions, or contributions:
-- 📧 Email: bhavanahegde9@gmail.com
-- 🐛 [Issue Tracker](https://github.com/your-username/metamorph-seo-dashboard/issues)
-- 💬 [Discussions](https://github.com/your-username/metamorph-seo-dashboard/discussions)
+- 📧 Email: rakshakmce@gmail.com
 
 ---
 

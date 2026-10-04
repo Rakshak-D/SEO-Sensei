@@ -83,13 +83,18 @@ class GeminiService:
             parsed = await self._generate_json(prompt, SEORecommendationsResponse, request_id=request_id)
             recommendations = parsed.recommendations[: self._settings.max_ai_recommendation_count]
             for item in recommendations:
-                if len(item.explanation) > self._settings.max_ai_recommendation_length or len(item.recommendation) > self._settings.max_ai_recommendation_length:
+                if (
+                    len(item.explanation) > self._settings.max_ai_recommendation_length
+                    or len(item.recommendation) > self._settings.max_ai_recommendation_length
+                ):
                     raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
             return AIRecommendationsResult(state=AIRecommendationState.AVAILABLE, recommendations=recommendations)
         except AIServiceError as exc:
             return AIRecommendationsResult(state=_recommendation_state(exc.code), message=_safe_message(exc.code))
 
-    async def generate_article(self, request: ArticleGenerationRequest, request_id: str | None = None) -> ArticleGenerationResult:
+    async def generate_article(
+        self, request: ArticleGenerationRequest, request_id: str | None = None
+    ) -> ArticleGenerationResult:
         context = {"topic": request.topic, "keywords": list(request.keywords), "tone": request.tone}
         prompt = _prompt(
             "Write a useful original article from the supplied topic and keywords. Content must be plain text, not HTML or Markdown. "
@@ -190,16 +195,33 @@ def _recommendation_context(analysis: SEOAnalysis) -> dict[str, Any]:
             "canonical_relationship": analysis.metadata.canonical_relationship,
             "robots_directives": analysis.metadata.robots_directives[:10],
         },
-        "headings": {"h1_count": len(analysis.headings.h1), "h2_count": len(analysis.headings.h2), "h3_count": len(analysis.headings.h3)},
+        "headings": {
+            "h1_count": len(analysis.headings.h1),
+            "h2_count": len(analysis.headings.h2),
+            "h3_count": len(analysis.headings.h3),
+        },
         "images": analysis.images.model_dump(),
         "links": analysis.links.model_dump(),
-        "structured_data": {"blocks": analysis.structured_data.block_count, "malformed": analysis.structured_data.malformed_blocks, "types": analysis.structured_data.types[:10]},
-        "lexical_signals": {"visible_word_count": analysis.lexical_signals.visible_word_count, "frequent_terms": [term.model_dump() for term in analysis.lexical_signals.frequent_terms[:10]]},
+        "structured_data": {
+            "blocks": analysis.structured_data.block_count,
+            "malformed": analysis.structured_data.malformed_blocks,
+            "types": analysis.structured_data.types[:10],
+        },
+        "lexical_signals": {
+            "visible_word_count": analysis.lexical_signals.visible_word_count,
+            "frequent_terms": [term.model_dump() for term in analysis.lexical_signals.frequent_terms[:10]],
+        },
     }
 
 
 def _check_context(check: SEOCheck) -> dict[str, Any]:
-    return {"id": check.id, "title": check.title, "status": check.status.value, "evidence": check.evidence.observed[:1_000], "recommendation": check.recommendation[:1_000]}
+    return {
+        "id": check.id,
+        "title": check.title,
+        "status": check.status.value,
+        "evidence": check.evidence.observed[:1_000],
+        "recommendation": check.recommendation[:1_000],
+    }
 
 
 def _recommendation_state(code: AIServiceErrorCode) -> AIRecommendationState:

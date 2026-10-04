@@ -102,7 +102,9 @@ def test_recommendations_use_json_mode_and_preserve_score() -> None:
         "not json",
         json.dumps({"recommendations": [{"issue": "missing fields"}]}),
         recommendation_json("urgent"),
-        json.dumps({"recommendations": [{"issue": "x", "explanation": "x" * 2_100, "priority": "high", "recommendation": "x"}]}),
+        json.dumps(
+            {"recommendations": [{"issue": "x", "explanation": "x" * 2_100, "priority": "high", "recommendation": "x"}]}
+        ),
     ],
 )
 def test_malformed_or_invalid_recommendations_degrade_safely(payload: str) -> None:
@@ -159,18 +161,24 @@ def test_permanent_provider_failure_is_not_retried() -> None:
 
 
 def test_article_output_is_validated_and_plain_text_contract() -> None:
-    response = json.dumps({"title": "Test", "content": "A plain text article.", "seo_suggestions": ["Use a descriptive title."]})
-    result = asyncio.run(GeminiService(settings(), model=FakeModel([response])).generate_article(
-        ArticleGenerationRequest(topic="A bounded topic", keywords=["seo"], tone="professional")
-    ))
+    response = json.dumps(
+        {"title": "Test", "content": "A plain text article.", "seo_suggestions": ["Use a descriptive title."]}
+    )
+    result = asyncio.run(
+        GeminiService(settings(), model=FakeModel([response])).generate_article(
+            ArticleGenerationRequest(topic="A bounded topic", keywords=["seo"], tone="professional")
+        )
+    )
     assert result.content == "A plain text article."
 
 
 def test_article_malformed_output_is_controlled() -> None:
     with pytest.raises(AIServiceError) as exc:
-        asyncio.run(GeminiService(settings(), model=FakeModel(["[]"])).generate_article(
-            ArticleGenerationRequest(topic="A bounded topic", keywords=["seo"], tone="professional")
-        ))
+        asyncio.run(
+            GeminiService(settings(), model=FakeModel(["[]"])).generate_article(
+                ArticleGenerationRequest(topic="A bounded topic", keywords=["seo"], tone="professional")
+            )
+        )
     assert exc.value.code == AIServiceErrorCode.INVALID_RESPONSE
 
 
@@ -178,9 +186,11 @@ def test_oversized_prompt_is_rejected_before_provider_call() -> None:
     model = FakeModel([recommendation_json()])
     service = GeminiService(settings(MAX_AI_INPUT_SIZE="1000"), model=model)
     with pytest.raises(AIServiceError) as exc:
-        asyncio.run(service.generate_article(
-            ArticleGenerationRequest(topic="x" * 500, keywords=["y" * 80] * 10, tone="professional")
-        ))
+        asyncio.run(
+            service.generate_article(
+                ArticleGenerationRequest(topic="x" * 500, keywords=["y" * 80] * 10, tone="professional")
+            )
+        )
     assert exc.value.code == AIServiceErrorCode.INPUT_TOO_LARGE
     assert model.calls == []
 

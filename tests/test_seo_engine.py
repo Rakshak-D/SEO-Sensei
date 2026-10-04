@@ -39,7 +39,11 @@ def test_metadata_and_transport_checks_are_deterministic() -> None:
 
 
 def test_missing_short_and_long_metadata_is_reported() -> None:
-    short = analyze_html("<html><head><title>x</title><meta name='description' content='x'></head></html>", "https://example.com", fetch())
+    short = analyze_html(
+        "<html><head><title>x</title><meta name='description' content='x'></head></html>",
+        "https://example.com",
+        fetch(),
+    )
     assert check(short, "title").status == CheckStatus.WARNING
     assert check(short, "meta_description").status == CheckStatus.WARNING
     missing = analyze_html("<html><body></body></html>", "https://example.com", fetch())

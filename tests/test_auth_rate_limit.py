@@ -48,7 +48,9 @@ def _analysis_payload(url: str = "https://example.com/") -> dict:
     return {"status": "success", **analyze_html(body, url, fetch).model_dump(mode="json")}
 
 
-def test_health_is_public_but_analysis_requires_bearer(protected_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_health_is_public_but_analysis_requires_bearer(
+    protected_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     assert protected_client.get("/health").status_code == 200
     called = False
 
@@ -84,7 +86,9 @@ def test_query_string_token_is_not_accepted(protected_client: TestClient) -> Non
     assert response.status_code == 401
 
 
-def test_authentication_failure_does_not_log_token(protected_client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
+def test_authentication_failure_does_not_log_token(
+    protected_client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level("INFO")
     secret = "never-log-this-token"
     response = protected_client.post(

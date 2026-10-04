@@ -159,7 +159,9 @@ def test_unconfigured_ai_returns_safe_public_error(api_client: TestClient) -> No
 def test_analysis_api_returns_deterministic_contract_without_gemini(
     api_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    html = "<html lang='en'><head><title>Stable title for analysis</title></head><body><h1>Stable page</h1></body></html>"
+    html = (
+        "<html lang='en'><head><title>Stable title for analysis</title></head><body><h1>Stable page</h1></body></html>"
+    )
 
     async def fake_analysis(url: str, fetcher=None):
         metadata = FetchMetadata(

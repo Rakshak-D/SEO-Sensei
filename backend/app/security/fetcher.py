@@ -6,7 +6,9 @@ import asyncio
 import logging
 import ssl
 import time
+from collections.abc import AsyncIterable
 from dataclasses import dataclass, field
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import httpcore
@@ -60,13 +62,13 @@ class _PinnedNetworkBackend(httpcore.AsyncNetworkBackend):
     def pin(self, hostname: str, address: str) -> None:
         self._pinned[hostname] = address
 
-    async def connect_tcp(self, host: str, port: int, **kwargs):  # type: ignore[no-untyped-def]
+    async def connect_tcp(self, host: str, port: int, **kwargs: Any) -> Any:  # type: ignore[override]
         address = self._pinned.get(host)
         if address is None:
             raise httpcore.ConnectError("No validated destination is pinned for this host.")
         return await self._backend.connect_tcp(address, port, **kwargs)
 
-    async def connect_unix_socket(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    async def connect_unix_socket(self, *args: Any, **kwargs: Any) -> Any:
         raise httpcore.ConnectError("Unix sockets are not supported by the safe fetcher.")
 
     async def sleep(self, seconds: float) -> None:
@@ -108,7 +110,7 @@ class _PinnedTransport(httpx.AsyncBaseTransport):
         return httpx.Response(
             status_code=response.status,
             headers=response.headers,
-            stream=AsyncResponseStream(response.stream),
+            stream=AsyncResponseStream(cast(AsyncIterable[bytes], response.stream)),
             extensions=response.extensions,
             request=request,
         )
@@ -169,64 +171,166 @@ class SafeFetcher:
                 try:
                     remaining = deadline - time.perf_counter()
                     if remaining <= 0:
-                        return self._failure(requested_url, FetchErrorCode.OVERALL_TIMEOUT, started, current.url, redirect_count, redirects)
-                    addresses = await asyncio.wait_for(
-                        resolve_safe_addresses(current), timeout=remaining
-                    )
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.OVERALL_TIMEOUT,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                        )
+                    addresses = await asyncio.wait_for(resolve_safe_addresses(current), timeout=remaining)
                     self._transport.network.pin(current.hostname, addresses[0])
                     self._client.cookies.clear()
                     remaining = deadline - time.perf_counter()
                     if remaining <= 0:
-                        return self._failure(requested_url, FetchErrorCode.OVERALL_TIMEOUT, started, current.url, redirect_count, redirects)
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.OVERALL_TIMEOUT,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                        )
                     request = self._client.build_request("GET", current.url)
-                    response = await asyncio.wait_for(
-                        self._client.send(request, stream=True), timeout=remaining
-                    )
+                    response = await asyncio.wait_for(self._client.send(request, stream=True), timeout=remaining)
                 except FetchError as exc:
                     return self._failure(requested_url, exc.code, started, current.url, redirect_count, redirects)
                 except asyncio.TimeoutError:
-                    return self._failure(requested_url, FetchErrorCode.OVERALL_TIMEOUT, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url, FetchErrorCode.OVERALL_TIMEOUT, started, current.url, redirect_count, redirects
+                    )
                 except httpx.ConnectTimeout:
-                    return self._failure(requested_url, FetchErrorCode.CONNECTION_TIMEOUT, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url,
+                        FetchErrorCode.CONNECTION_TIMEOUT,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                    )
                 except httpx.ReadTimeout:
-                    return self._failure(requested_url, FetchErrorCode.READ_TIMEOUT, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url, FetchErrorCode.READ_TIMEOUT, started, current.url, redirect_count, redirects
+                    )
                 except httpx.ConnectError:
-                    return self._failure(requested_url, FetchErrorCode.CONNECTION_FAILED, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url, FetchErrorCode.CONNECTION_FAILED, started, current.url, redirect_count, redirects
+                    )
                 except httpx.HTTPError:
-                    return self._failure(requested_url, FetchErrorCode.UNEXPECTED_FETCH_ERROR, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url,
+                        FetchErrorCode.UNEXPECTED_FETCH_ERROR,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                    )
                 except Exception:
                     logger.exception("safe_fetch_unexpected_error", extra={"request_id": "-", "endpoint": "fetcher"})
-                    return self._failure(requested_url, FetchErrorCode.UNEXPECTED_FETCH_ERROR, started, current.url, redirect_count, redirects)
+                    return self._failure(
+                        requested_url,
+                        FetchErrorCode.UNEXPECTED_FETCH_ERROR,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                    )
 
                 try:
                     content_type = _content_type(response.headers.get("content-type"))
                     content_length = _content_length(response.headers.get("content-length"))
                     if response.status_code in REDIRECT_STATUSES:
                         if redirect_count >= self.settings.max_redirects:
-                            return self._failure(requested_url, FetchErrorCode.REDIRECT_LIMIT_EXCEEDED, started, current.url, redirect_count, redirects)
+                            return self._failure(
+                                requested_url,
+                                FetchErrorCode.REDIRECT_LIMIT_EXCEEDED,
+                                started,
+                                current.url,
+                                redirect_count,
+                                redirects,
+                            )
                         location = response.headers.get("location")
                         if not location:
-                            return self._failure(requested_url, FetchErrorCode.HTTP_ERROR, started, current.url, redirect_count, redirects, response.status_code)
+                            return self._failure(
+                                requested_url,
+                                FetchErrorCode.HTTP_ERROR,
+                                started,
+                                current.url,
+                                redirect_count,
+                                redirects,
+                                response.status_code,
+                            )
                         try:
                             next_url = validate_url(urljoin(current.url, location), self.settings)
                         except FetchError as exc:
-                            raise FetchError(FetchErrorCode.UNSAFE_REDIRECT, "The redirect destination is not allowed.") from exc
+                            raise FetchError(
+                                FetchErrorCode.UNSAFE_REDIRECT, "The redirect destination is not allowed."
+                            ) from exc
                         if next_url.hostname != validated.hostname:
-                            return self._failure(requested_url, FetchErrorCode.UNSAFE_REDIRECT, started, current.url, redirect_count, redirects, response.status_code)
+                            return self._failure(
+                                requested_url,
+                                FetchErrorCode.UNSAFE_REDIRECT,
+                                started,
+                                current.url,
+                                redirect_count,
+                                redirects,
+                                response.status_code,
+                            )
                         redirects.append(next_url.url)
                         current = next_url
                         continue
 
                     if response.status_code >= 400:
-                        return self._failure(requested_url, FetchErrorCode.HTTP_ERROR, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.HTTP_ERROR,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                            response.status_code,
+                            content_type,
+                            content_length,
+                        )
                     if content_type not in HTML_CONTENT_TYPES:
-                        return self._failure(requested_url, FetchErrorCode.UNSUPPORTED_CONTENT_TYPE, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.UNSUPPORTED_CONTENT_TYPE,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                            response.status_code,
+                            content_type,
+                            content_length,
+                        )
                     if content_length is not None and content_length > self.settings.max_crawl_response_size_bytes:
-                        return self._failure(requested_url, FetchErrorCode.RESPONSE_TOO_LARGE, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.RESPONSE_TOO_LARGE,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                            response.status_code,
+                            content_type,
+                            content_length,
+                        )
 
                     remaining = deadline - time.perf_counter()
                     if remaining <= 0:
-                        return self._failure(requested_url, FetchErrorCode.OVERALL_TIMEOUT, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                        return self._failure(
+                            requested_url,
+                            FetchErrorCode.OVERALL_TIMEOUT,
+                            started,
+                            current.url,
+                            redirect_count,
+                            redirects,
+                            response.status_code,
+                            content_type,
+                            content_length,
+                        )
                     body, bytes_read = await self._read_bounded(response, remaining)
                     return FetchResult(
                         requested_url=requested_url,
@@ -242,11 +346,41 @@ class SafeFetcher:
                         body=body,
                     )
                 except FetchError as exc:
-                    return self._failure(requested_url, exc.code, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                    return self._failure(
+                        requested_url,
+                        exc.code,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                        response.status_code,
+                        content_type,
+                        content_length,
+                    )
                 except asyncio.TimeoutError:
-                    return self._failure(requested_url, FetchErrorCode.READ_TIMEOUT, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                    return self._failure(
+                        requested_url,
+                        FetchErrorCode.READ_TIMEOUT,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                        response.status_code,
+                        content_type,
+                        content_length,
+                    )
                 except httpx.ReadTimeout:
-                    return self._failure(requested_url, FetchErrorCode.READ_TIMEOUT, started, current.url, redirect_count, redirects, response.status_code, content_type, content_length)
+                    return self._failure(
+                        requested_url,
+                        FetchErrorCode.READ_TIMEOUT,
+                        started,
+                        current.url,
+                        redirect_count,
+                        redirects,
+                        response.status_code,
+                        content_type,
+                        content_length,
+                    )
                 finally:
                     await response.aclose()
                     self._client.cookies.clear()

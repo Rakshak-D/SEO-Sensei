@@ -5,10 +5,10 @@ older local integrations from importing the former free-form model module.
 """
 
 try:
-    from .app.schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
+    from .app.schemas.requests import ArticleGenerationRequest, URLAnalysisRequest
     from .app.schemas.responses import ArticleGenerationResponse, SEOBoostResponse, URLAnalysisResponse
 except ImportError:
-    from app.schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
+    from app.schemas.requests import ArticleGenerationRequest, URLAnalysisRequest
     from app.schemas.responses import ArticleGenerationResponse, SEOBoostResponse, URLAnalysisResponse
 
 UrlRequest = URLAnalysisRequest

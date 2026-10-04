@@ -56,9 +56,11 @@ class ArticleGenerationResult(BaseModel):
 
     title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
     content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50_000)]
-    seo_suggestions: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2_000)]] = Field(
-        default_factory=list,
-        max_length=10,
+    seo_suggestions: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2_000)]] = (
+        Field(
+            default_factory=list,
+            max_length=10,
+        )
     )
 
 

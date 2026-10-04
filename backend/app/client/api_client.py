@@ -51,7 +51,9 @@ class DashboardAPIClient:
         return self._parse(response, HealthResponse)
 
     def analyze_url(self, url: str, include_ai_recommendations: bool = True) -> URLAnalysisResponse:
-        request = URLAnalysisRequest(url=url, include_ai_recommendations=include_ai_recommendations)
+        request = URLAnalysisRequest.model_validate(
+            {"url": url, "include_ai_recommendations": include_ai_recommendations}
+        )
         response = self._request("POST", "/analyse-url", request.model_dump(mode="json"))
         return self._parse(response, URLAnalysisResponse)
 
@@ -60,11 +62,13 @@ class DashboardAPIClient:
         return self._parse(response, ArticleGenerationResponse)
 
     def boost_seo(self, url: str) -> SEOBoostResponse:
-        request = SEOBoostRequest(url=url)
+        request = SEOBoostRequest.model_validate({"url": url})
         response = self._request("POST", "/boost-seo", request.model_dump(mode="json"))
         return self._parse(response, SEOBoostResponse)
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, authenticated: bool = True) -> httpx.Response:
+    def _request(
+        self, method: str, path: str, payload: dict[str, Any] | None = None, authenticated: bool = True
+    ) -> httpx.Response:
         request_id = uuid.uuid4().hex
         headers = {"Accept": "application/json", "X-Request-ID": request_id}
         if authenticated:
@@ -73,9 +77,13 @@ class DashboardAPIClient:
             with httpx.Client(timeout=self._timeout, transport=self._transport, follow_redirects=False) as client:
                 response = client.request(method, f"{self._base_url}{path}", json=payload, headers=headers)
         except httpx.TimeoutException as exc:
-            raise DashboardAPIError("timeout", "The SEO API timed out. Please try again.", request_id=request_id) from exc
+            raise DashboardAPIError(
+                "timeout", "The SEO API timed out. Please try again.", request_id=request_id
+            ) from exc
         except httpx.HTTPError as exc:
-            raise DashboardAPIError("api_unavailable", "The SEO API could not be reached.", request_id=request_id) from exc
+            raise DashboardAPIError(
+                "api_unavailable", "The SEO API could not be reached.", request_id=request_id
+            ) from exc
 
         if response.is_success:
             return response
@@ -87,7 +95,9 @@ class DashboardAPIClient:
         try:
             return model.model_validate(response.json())
         except (ValueError, ValidationError) as exc:
-            raise DashboardAPIError("malformed_response", "The SEO API returned an invalid response.", response.status_code) from exc
+            raise DashboardAPIError(
+                "malformed_response", "The SEO API returned an invalid response.", response.status_code
+            ) from exc
 
     @staticmethod
     def _raise_api_error(response: httpx.Response, fallback_request_id: str) -> None:

@@ -102,7 +102,13 @@ class RequestContextMiddleware:
             if too_large:
                 response = JSONResponse(
                     status_code=413,
-                    content={"error": {"code": "invalid_request", "message": "Request body is too large.", "request_id": request_id}},
+                    content={
+                        "error": {
+                            "code": "invalid_request",
+                            "message": "Request body is too large.",
+                            "request_id": request_id,
+                        }
+                    },
                     headers={"X-Request-ID": request_id},
                 )
                 await response(scope, receive, send)
@@ -129,8 +135,8 @@ class RequestContextMiddleware:
 
 
 app.add_middleware(RequestContextMiddleware, max_body_size=settings.max_request_body_size_bytes)
-app.add_exception_handler(APIError, api_error_handler)
-app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, unhandled_error_handler)
 
 
@@ -204,7 +210,9 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
                         state=AIRecommendationState.UNAVAILABLE,
                         message="AI recommendations are temporarily unavailable. Deterministic findings remain available.",
                     )
-        return URLAnalysisResponse.model_validate({**analysis.model_dump(mode="json"), "ai_recommendations": ai_recommendations})
+        return URLAnalysisResponse.model_validate(
+            {**analysis.model_dump(mode="json"), "ai_recommendations": ai_recommendations}
+        )
     except APIError:
         raise
     except Exception:

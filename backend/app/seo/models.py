@@ -76,7 +76,9 @@ class PageMetadata(BaseModel):
     canonical: Annotated[str, StringConstraints(max_length=2_048)] | None = None
     canonical_resolved: Annotated[str, StringConstraints(max_length=2_048)] | None = None
     canonical_relationship: Literal["missing", "valid_same_host", "valid_other_host", "relative", "malformed"]
-    robots_directives: list[Annotated[str, StringConstraints(max_length=64)]] = Field(default_factory=list, max_length=30)
+    robots_directives: list[Annotated[str, StringConstraints(max_length=64)]] = Field(
+        default_factory=list, max_length=30
+    )
     language: Annotated[str, StringConstraints(max_length=32)] | None = None
     viewport: Annotated[str, StringConstraints(max_length=500)] | None = None
     charset: Annotated[str, StringConstraints(max_length=64)] | None = None

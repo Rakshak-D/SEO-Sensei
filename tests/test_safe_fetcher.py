@@ -307,7 +307,6 @@ def test_overall_timeout_is_typed(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_crawler_consumes_only_safe_fetch_result() -> None:
-    pytest.importorskip("bs4")
     from backend import seo_crawler
 
     class FakeFetcher:
@@ -324,5 +323,5 @@ def test_crawler_consumes_only_safe_fetch_result() -> None:
 
     result = run(seo_crawler.get_full_seo_analysis_for_url("https://example.test", fetcher=FakeFetcher()))
     assert result["status"] == "success"
-    assert result["title"] == "Bounded"
-    assert result["headers"]["h1"] == ["Heading"]
+    assert result["metadata"]["title"] == "Bounded"
+    assert result["headings"]["h1"] == ["Heading"]

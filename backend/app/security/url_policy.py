@@ -144,7 +144,7 @@ async def resolve_safe_addresses(validated: ValidatedURL) -> tuple[str, ...]:
 
     addresses: list[str] = []
     for record in records:
-        address = record[4][0]
+        address = str(record[4][0])
         parsed = classify_ip(address)
         normalized = str(parsed)
         if normalized not in addresses:

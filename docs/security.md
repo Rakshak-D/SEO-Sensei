@@ -36,7 +36,7 @@ Fetch failures use typed internal categories such as `blocked_destination`, `dns
 
 ## No arbitrary proxy behavior
 
-The analysis API accepts a target URL only to obtain bounded HTML for SEO analysis. It does not return arbitrary response objects, headers, binary payloads, redirect histories beyond the bounded internal result, or unrestricted network protocols. The Streamlit path calls the same crawler, which calls the same `SafeFetcher`; there is no second `requests`, `urllib`, or direct HTTP implementation.
+The analysis API accepts a target URL only to obtain bounded HTML for SEO analysis. It does not return arbitrary response objects, headers, binary payloads, redirect histories beyond the bounded internal result, or unrestricted network protocols. The Streamlit dashboard calls the authenticated FastAPI API through its typed client; only the API path reaches the crawler and `SafeFetcher`. There is no second `requests`, `urllib`, or direct page-fetching implementation in the dashboard.
 
 ## API access and resource limits
 

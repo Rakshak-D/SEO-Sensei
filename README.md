@@ -1,11 +1,11 @@
-# 🚀 Metamorph SEO Dashboard
+# 🧭 SEO-Sensei
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-brightgreen)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.33.0-red)](https://streamlit.io/)
 [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-2.5--flash-blue)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Metamorph SEO Dashboard** is an advanced AI-powered SEO intelligence platform that combines comprehensive website analysis, competitor research, and AI-driven content generation into a single, powerful toolkit.
+**SEO-Sensei** is an evidence-first SEO analysis platform with deterministic scoring and optional AI recommendations. The Streamlit dashboard is an authenticated API client; crawling and AI execution remain server-side.
 
 ![Extension Preview](assests/images/Extension.png)
 
@@ -81,8 +81,13 @@ pip install -r requirements.txt
 
 3. **Configure Environment Variables**
 ```bash
-# Create .env file
-echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+# Copy the safe template, then set deployment-side values.
+copy .env.example .env
+# Required for the protected API in production:
+# API_ACCESS_TOKEN=replace-with-a-local-or-deployment-token
+# Dashboard server-to-server configuration:
+# API_BASE_URL=http://127.0.0.1:8000
+# DASHBOARD_API_ACCESS_TOKEN=replace-with-the-api-token
 ```
 
 4. **Start the Backend Server**
@@ -103,6 +108,10 @@ streamlit run dashboard.py
 - Enable "Developer mode"
 - Click "Load unpacked" and select the `frontend/` directory
 - The Metamorph SEO Assistant icon will appear in your toolbar
+
+The Streamlit dashboard is an API client. Run it with `API_BASE_URL` and
+`DASHBOARD_API_ACCESS_TOKEN` configured; it does not fetch pages or call Gemini
+directly. See [`docs/dashboard.md`](docs/dashboard.md) for the security model.
 
 ---
 

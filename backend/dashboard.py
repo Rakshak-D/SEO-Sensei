@@ -1,767 +1,246 @@
-import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
-import asyncio
-import logging
-from typing import Dict, Any
+"""SEO-Sensei Streamlit dashboard.
+
+The dashboard is a presentation client only. All crawling, deterministic SEO
+analysis, scoring, and Gemini work happens behind the authenticated FastAPI
+API.
+"""
+
+from __future__ import annotations
+
 import urllib.parse
 
-# Import your existing utilities
-from seo_crawler import get_full_seo_analysis_for_url
-from app.ai.gemini import AIServiceError, GeminiService
-from app.ai.models import AIRecommendationState
+import streamlit as st
+from pydantic import ValidationError
+
+from app.client.api_client import DashboardAPIClient, DashboardAPIError
 from app.config import get_settings
-from app.logging_config import configure_logging
 from app.schemas.requests import ArticleGenerationRequest
-from app.seo.models import SEOAnalysis
+from app.schemas.responses import URLAnalysisResponse
 
-# --- Page & Service Setup ---
-st.set_page_config(
-    page_title="SEO-Sensei Dashboard",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
-# --- PROFESSIONAL STYLING (Clean, Aligned, Modern Dark Theme) ---
-st.markdown("""
-<style>
-/* Global Typography and Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-body, [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0a0e17 100%);
-    background-attachment: fixed;
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #e2e8f0;
-    line-height: 1.6;
-}
+st.set_page_config(page_title="SEO-Sensei", page_icon="🧭", layout="wide", initial_sidebar_state="expanded")
 
-/* Main Container */
-.main .block-container {
-    padding: 1rem 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-}
 
-/* Hero Section - Centered and Prominent */
-.hero-section {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: rgba(15, 20, 25, 0.6);
-    border-radius: 24px;
-    margin-bottom: 4rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(59, 130, 246, 0.1);
-    border-bottom: 2px solid rgba(59, 130, 246, 0.3);
-}
-
-.main-title {
-    font-size: 4rem !important;
-    font-weight: 800 !important;
-    color: #3b82f6 !important;
-    margin-bottom: 1rem;
-    letter-spacing: -0.025em;
-    text-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
-}
-
-.subtitle {
-    font-size: 1.25rem !important;
-    color: #94a3b8 !important;
-    font-weight: 400 !important;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-/* Section Headers - Aligned with Icon */
-.section-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
-}
-
-.section-icon {
-    font-size: 2.5rem;
-    margin-right: 1rem;
-    flex-shrink: 0;
-}
-
-.section-title {
-    color: #f8fafc !important;
-    font-size: 2.25rem !important;
-    font-weight: 700 !important;
-    margin: 0 !important;
-    letter-spacing: -0.01em;
-}
-
-/* Glassmorphism Containers - Subtle and Clean */
-.glass-container {
-    background: rgba(15, 20, 25, 0.6);
-    border: 1px solid rgba(59, 130, 246, 0.15);
-    border-radius: 20px;
-    padding: 3rem;
-    margin-bottom: 3rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
-    border-top: 2px solid rgba(59, 130, 246, 0.3);
-}
-
-.glass-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: rgba(59, 130, 246, 0.3);
-}
-
-/* Sub-cards for Analysis */
-.analysis-card {
-    background: rgba(20, 25, 30, 0.6);
-    border: 1px solid rgba(59, 130, 246, 0.1);
-    border-radius: 16px;
-    padding: 2rem;
-    margin: 1.5rem 0;
-}
-
-.score-display {
-    font-size: 4rem !important;
-    font-weight: 900 !important;
-    color: #3b82f6 !important;
-    text-align: center;
-    margin: 1.5rem 0;
-    text-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
-}
-
-/* Inputs - Clean and Aligned */
-[data-testid="stTextInput"] input, 
-[data-testid="stSelectbox"] div > div > div {
-    background: rgba(20, 25, 30, 0.8) !important;
-    color: #f8fafc !important;
-    border: 1px solid rgba(59, 130, 246, 0.3) !important;
-    border-radius: 12px !important;
-    padding: 1rem !important;
-    font-size: 1rem !important;
-}
-
-[data-testid="stTextInput"] label, 
-[data-testid="stSelectbox"] label {
-    color: #94a3b8 !important;
-    font-weight: 500 !important;
-    margin-bottom: 0.5rem !important;
-}
-
-/* Buttons - Professional Hover Effects */
-[data-testid="stButton"] button {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 12px !important;
-    padding: 1rem 2rem !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3) !important;
-    transition: all 0.2s ease !important;
-    min-height: 44px !important;
-}
-
-[data-testid="stButton"] button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-}
-
-/* Metrics - Use Streamlit's Built-in for Better Alignment */
-[data-testid="metric-container"] {
-    background: rgba(20, 25, 30, 0.6) !important;
-    border: 1px solid rgba(59, 130, 246, 0.1) !important;
-    border-radius: 16px !important;
-    padding: 1.5rem !important;
-    text-align: center !important;
-    margin: 1rem 0 !important;
-}
-
-[data-testid="metric-container"] .stMetricLabel {
-    color: #94a3b8 !important;
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-}
-
-[data-testid="metric-container"] .stMetricValue {
-    color: #f8fafc !important;
-    font-size: 2.5rem !important;
-    font-weight: 700 !important;
-}
-
-/* List Items - Clean Bullets */
-.strength-item, .issue-item, .keyword-item, .idea-item {
-    padding: 1rem;
-    margin: 0.75rem 0;
-    border-left: 4px solid #10b981;
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: 0 12px 12px 0;
-    padding-left: 1.5rem;
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.issue-item {
-    border-left-color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.keyword-item, .idea-item {
-    border-left-color: #f59e0b;
-    background: rgba(245, 158, 11, 0.1);
-}
-
-/* Plotly - Clean and Bordered */
-.plotly-chart {
-    border-radius: 16px !important;
-    overflow: hidden !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
-    margin: 2rem 0 !important;
-}
-
-/* Fix Legend for Long Names */
-.plotly .legend {
-    padding: 0.5rem !important;
-    background: rgba(15, 20, 25, 0.8) !important;
-    border-radius: 8px !important;
-    border: 1px solid rgba(59, 130, 246, 0.2) !important;
-}
-
-.plotly .legendtext {
-    font-size: 0.85rem !important;
-    max-width: 200px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    color: #e2e8f0 !important;
-}
-
-/* Form Alignment */
-[data-testid="column"] > div {
-    width: 100% !important;
-}
-
-/* Descriptions and Infos */
-.stInfo, .stWarning, .stError, .stSuccess {
-    border-radius: 12px !important;
-    border: none !important;
-    padding: 1rem !important;
-    margin: 1rem 0 !important;
-}
-
-.stInfo {
-    background-color: rgba(34, 197, 94, 0.1) !important;
-    border-left: 4px solid #22c55e !important;
-}
-
-.stWarning {
-    background-color: rgba(245, 158, 11, 0.1) !important;
-    border-left: 4px solid #f59e0b !important;
-}
-
-.stError {
-    background-color: rgba(239, 68, 68, 0.1) !important;
-    border-left: 4px solid #ef4444 !important;
-}
-
-.stSuccess {
-    background-color: rgba(34, 197, 94, 0.1) !important;
-    border-left: 4px solid #22c55e !important;
-}
-
-/* Footer */
-.footer {
-    text-align: center;
-    color: #64748b;
-    padding: 3rem 2rem;
-    background: rgba(15, 20, 25, 0.6);
-    border-radius: 20px;
-    margin-top: 4rem;
-    border: 1px solid rgba(59, 130, 246, 0.1);
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .main-title { font-size: 2.75rem !important; }
-    .section-title { font-size: 1.75rem !important; }
-    .glass-container { padding: 2rem !important; }
-    .plotly .legend { 
-        flex-direction: column !important; 
-        align-items: flex-start !important; 
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-# --- HERO SECTION ---
-st.markdown("""
-<div class="hero-section">
-    <h1 class="main-title">🚀 SEO-Sensei Dashboard</h1>
-    <p class="subtitle">Advanced AI-Powered SEO Intelligence Platform – Unlock Insights, Optimize Effortlessly</p>
-</div>
-""", unsafe_allow_html=True)
-
-# --- ASYNC EVENT LOOP FIX ---
-@st.cache_resource
-def get_event_loop():
-    try:
-        loop = asyncio.get_event_loop_policy().get_event_loop()
-    except RuntimeError as e:
-        if "There is no current event loop in thread" in str(e):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        else:
-            raise
-    return loop
-
-def run_async_in_session(coro):
-    loop = get_event_loop()
-    return loop.run_until_complete(coro)
-
-loop = get_event_loop()
-
-configure_logging()
-settings = get_settings()
-
-@st.cache_resource
-def get_gemini_service():
-    try:
-        if not settings.gemini_api_key:
-            return None
-        return GeminiService(settings)
-    except AIServiceError:
-        st.warning("AI features are unavailable. Deterministic analysis remains available.")
+def api_client() -> DashboardAPIClient | None:
+    settings = get_settings()
+    if not settings.api_base_url or not settings.dashboard_api_access_token:
         return None
-
-service = get_gemini_service()
-
-# --- Re-usable Data Fetcher ---
-async def get_analysis_data_async(url: str, service_instance: GeminiService | None = None) -> Dict[str, Any]:
-    try:
-        scraped_data = await get_full_seo_analysis_for_url(url)
-        url_host = urllib.parse.urlsplit(url).hostname or "unknown-host"
-        
-        if not scraped_data or scraped_data.get("status") == "failed":
-            logging.warning("dashboard_fetch_failed host=%s status=%s", url_host, scraped_data.get("status_code"))
-            return {"error": "The requested page could not be analyzed."}
-        
-        return scraped_data
-    
-    except Exception:
-        logging.error("dashboard_analysis_failed host=%s", urllib.parse.urlsplit(url).hostname or "unknown-host", exc_info=True)
-        return {"error": "The page analysis failed."}
+    return DashboardAPIClient(settings.api_base_url, settings.dashboard_api_access_token, settings.request_timeout_seconds)
 
 
-def get_analysis_score(data: Dict[str, Any]) -> int:
-    return int(data.get("deterministic_score", {}).get("overall_score", 0))
+def basic_url_error(value: str) -> str | None:
+    if not value.strip():
+        return "Enter a URL to analyze."
+    if len(value) > 2_048:
+        return "That URL is too long."
+    parsed = urllib.parse.urlsplit(value.strip())
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return "Use a complete HTTP or HTTPS URL."
+    return None
 
 
-def get_check_messages(data: Dict[str, Any], status: str) -> list[str]:
-    messages: list[str] = []
-    for check in data.get("checks", []):
-        if check.get("status") == status:
-            messages.append(check.get("title", "Deterministic check"))
-    return messages
-
-# --- Section 1: Site vs. Site Comparison ---
-st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-st.markdown("""
-<div class="section-header">
-    <span class="section-icon">🏆</span>
-    <h2 class="section-title">Site vs. Site Comparison</h2>
-</div>
-""", unsafe_allow_html=True)
-st.markdown("""
-<p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; max-width: 800px;">
-    Compare two websites side-by-side to uncover strengths, weaknesses, and optimization opportunities on core SEO metrics.
-</p>
-""", unsafe_allow_html=True)
-
-# Inputs with Labels
-col1, col2 = st.columns([1, 1], gap="medium")
-with col1:
-    st.markdown("<label style='color: #94a3b8; font-weight: 500; margin-bottom: 0.5rem; display: block;'>Website 1</label>", unsafe_allow_html=True)
-    url1 = st.text_input("", placeholder="https://example.com", key="url1_input")
-with col2:
-    st.markdown("<label style='color: #94a3b8; font-weight: 500; margin-bottom: 0.5rem; display: block;'>Website 2</label>", unsafe_allow_html=True)
-    url2 = st.text_input("", placeholder="https://competitor.com", key="url2_input")
-
-# Buttons
-col_btn1, col_btn2 = st.columns([1, 1], gap="medium")
-with col_btn1:
-    compare_btn = st.button("🔍 Compare Sites", type="primary", use_container_width=True)
-with col_btn2:
-    clear_btn = st.button("🗑️ Clear Comparison", use_container_width=True)
-
-if compare_btn:
-    if url1 and url2:
-        with st.spinner(f"🔍 Analyzing {url1} and {url2}..."):
-            async def run_analyses():
-                task1 = get_analysis_data_async(url1, service)
-                task2 = get_analysis_data_async(url2, service)
-                results = await asyncio.gather(task1, task2, return_exceptions=True)
-                return results
-            
-            results = run_async_in_session(run_analyses())
-            
-            st.session_state.data1 = results[0] if not isinstance(results[0], Exception) else {"error": str(results[0])}
-            st.session_state.data2 = results[1] if not isinstance(results[1], Exception) else {"error": str(results[1])}
+def show_api_error(error: DashboardAPIError) -> None:
+    if error.code == "rate_limited":
+        retry = f" Try again in about {error.retry_after} seconds." if error.retry_after else " Try again later."
+        st.warning(error.message + retry)
+    elif error.code in {"auth_required", "auth_invalid", "configuration_error"}:
+        st.error(error.message)
+    elif error.code in {"invalid_url", "unsupported_url", "blocked_destination"}:
+        st.warning(error.message)
     else:
-        st.warning("⚠️ Please enter two valid URLs to compare.")
+        st.error(error.message)
+    if error.request_id:
+        st.caption(f"Request ID: `{error.request_id}`")
 
-if clear_btn:
-    st.session_state.pop('data1', None)
-    st.session_state.pop('data2', None)
-    st.success("Comparison cleared!")
 
-# Display Results
-if 'data1' in st.session_state and 'data2' in st.session_state:
-    data1 = st.session_state.data1
-    data2 = st.session_state.data2
-    
-    if "error" in data1:
-        st.error(f"❌ Error analyzing {url1}: {data1['error']}")
-    if "error" in data2:
-        st.error(f"❌ Error analyzing {url2}: {data2['error']}")
-    
-    if "error" not in data1 and "error" not in data2:
-        st.markdown("""
-        <div class="section-header">
-            <span class="section-icon">📊</span>
-            <h3 style="color: #f8fafc; font-size: 1.75rem; font-weight: 600;">High-Level Comparison</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Improved Bar Chart with Truncated Names
-        parsed_url1 = urllib.parse.urlparse(url1)
-        domain1 = parsed_url1.netloc.replace('www.', '') if parsed_url1.netloc else 'Site 1'
-        parsed_url2 = urllib.parse.urlparse(url2)
-        domain2 = parsed_url2.netloc.replace('www.', '') if parsed_url2.netloc else 'Site 2'
-        
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            name=domain1, 
-            x=['SEO Score'], 
-            y=[get_analysis_score(data1)],
-            marker_color='#3b82f6',
-            marker_line_color='#60a5fa',
-            marker_line_width=2,
-            text=[f"{get_analysis_score(data1)}/100"],
-            textposition='auto'
-        ))
-        fig.add_trace(go.Bar(
-            name=domain2, 
-            x=['SEO Score'], 
-            y=[get_analysis_score(data2)],
-            marker_color='#ef4444',
-            marker_line_color='#f87171',
-            marker_line_width=2,
-            text=[f"{get_analysis_score(data2)}/100"],
-            textposition='auto'
-        ))
-        
-        fig.update_layout(
-            title_text='SEO Score Comparison',
-            title_font=dict(size=20, color='#f8fafc'),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#e2e8f0', size=14),
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1,
-                bgcolor='rgba(15, 20, 25, 0.9)',
-                bordercolor='rgba(59, 130, 246, 0.3)',
-                borderwidth=1
-            ),
-            bargap=0.3,
-            margin=dict(t=60, b=20, l=0, r=0),
-            height=400
-        )
-        st.plotly_chart(fig, use_container_width=True)
+def render_score(analysis: URLAnalysisResponse) -> None:
+    score = analysis.deterministic_score.overall_score
+    st.subheader("Deterministic score")
+    left, middle, right = st.columns([1, 2, 1])
+    with left:
+        st.metric("Overall", f"{score}/100")
+    with middle:
+        st.progress(score / 100, text=f"Engineering heuristic · {score}/100")
+        st.caption("Reproducible from fetched HTML and transport metadata. Not a Google ranking prediction.")
+    with right:
+        st.metric("Visible words", analysis.lexical_signals.visible_word_count)
 
-        # Side-by-Side Columns
-        col_res1, col_res2 = st.columns(2, gap="large")
-        
-        with col_res1:
-            st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h4 style="color: #f8fafc; font-size: 1.5rem; margin-bottom: 1rem;">🌐 {domain1.capitalize()}</h4>
-                <div class="score-display">{get_analysis_score(data1)}/100</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
-                st.metric("SEO Score", f"{get_analysis_score(data1)}", delta=None)
-            with col_m2:
-                st.metric("Visible Words", data1.get('lexical_signals', {}).get('visible_word_count', 0))
-            
-            with st.container():
-                st.markdown('<h5 style="color: #10b981; margin-bottom: 1rem;">✅ Strengths</h5>', unsafe_allow_html=True)
-                strengths1 = get_check_messages(data1, "pass")
-                if strengths1:
-                    for item in strengths1:
-                        st.markdown(f'<div class="strength-item">{item}</div>', unsafe_allow_html=True)
-                else:
-                    st.info("No strengths identified yet.")
-            
-            with st.container():
-                st.markdown('<h5 style="color: #ef4444; margin-bottom: 1rem;">❌ Critical Issues</h5>', unsafe_allow_html=True)
-                issues1 = get_check_messages(data1, "fail") + get_check_messages(data1, "warning")
-                if issues1:
-                    for item in issues1:
-                        st.markdown(f'<div class="issue-item">{item}</div>', unsafe_allow_html=True)
-                else:
-                    st.success("No critical issues detected!")
+    st.markdown("**Category scores**")
+    columns = st.columns(4)
+    for index, category in enumerate(analysis.deterministic_score.categories):
+        with columns[index % 4]:
+            label = category.category.value.replace("_", " ").title()
+            st.metric(label, f"{category.points_earned:.1f}/{category.max_points:.0f}")
 
-        with col_res2:
-            st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h4 style="color: #f8fafc; font-size: 1.5rem; margin-bottom: 1rem;">🌐 {domain2.capitalize()}</h4>
-                <div class="score-display">{get_analysis_score(data2)}/100</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col_m3, col_m4 = st.columns(2)
-            with col_m3:
-                st.metric("SEO Score", f"{get_analysis_score(data2)}", delta=None)
-            with col_m4:
-                st.metric("Visible Words", data2.get('lexical_signals', {}).get('visible_word_count', 0))
-            
-            with st.container():
-                st.markdown('<h5 style="color: #10b981; margin-bottom: 1rem;">✅ Strengths</h5>', unsafe_allow_html=True)
-                strengths2 = get_check_messages(data2, "pass")
-                if strengths2:
-                    for item in strengths2:
-                        st.markdown(f'<div class="strength-item">{item}</div>', unsafe_allow_html=True)
-                else:
-                    st.info("No strengths identified yet.")
-            
-            with st.container():
-                st.markdown('<h5 style="color: #ef4444; margin-bottom: 1rem;">❌ Critical Issues</h5>', unsafe_allow_html=True)
-                issues2 = get_check_messages(data2, "fail") + get_check_messages(data2, "warning")
-                if issues2:
-                    for item in issues2:
-                        st.markdown(f'<div class="issue-item">{item}</div>', unsafe_allow_html=True)
-                else:
-                    st.success("No critical issues detected!")
 
-st.markdown('</div>', unsafe_allow_html=True)
+def render_checks(analysis: URLAnalysisResponse) -> None:
+    st.subheader("Deterministic findings")
+    for status, label in (("fail", "Needs attention"), ("warning", "Watch list"), ("pass", "Passing checks")):
+        checks = [check for check in analysis.checks if check.status.value == status]
+        with st.expander(f"{label} · {len(checks)}", expanded=status == "fail"):
+            if not checks:
+                st.caption("None recorded.")
+            for check in checks:
+                st.write(check.title, f"({check.id})")
+                st.write(check.evidence.observed)
+                st.caption(check.recommendation)
 
-# --- Section 2: Gap Analysis & Content Generation ---
-st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-st.markdown("""
-<div class="section-header">
-    <span class="section-icon">🔍</span>
-    <h2 class="section-title">Gap Analysis & Content Generation</h2>
-</div>
-""", unsafe_allow_html=True)
-st.markdown("""
-<p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; max-width: 800px;">
-    Dive deep into your site's SEO gaps and leverage AI to generate tailored content strategies and drafts.
-</p>
-""", unsafe_allow_html=True)
 
-gap_url = st.text_input("Enter your URL for gap analysis", placeholder="https://my-website.com", key="gap_url_input", label_visibility="collapsed")
-
-if st.button("📊 Analyze Gaps", type="primary", use_container_width=True):
-    if service and gap_url:
-        with st.spinner("🔍 Analyzing SEO gaps..."):
-            async def run_gap_analysis():
-                analysis_data = await get_analysis_data_async(gap_url, service)
-                
-                if "error" in analysis_data:
-                    return analysis_data, None
-                
-                try:
-                    result = await service.recommendations(
-                        SEOAnalysis.model_validate({key: value for key, value in analysis_data.items() if key != "status"})
-                    )
-                except Exception:
-                    return analysis_data, {"state": "unavailable"}
-                if result.state != AIRecommendationState.AVAILABLE:
-                    return analysis_data, {"state": result.state.value, "message": result.message}
-                return analysis_data, {
-                    "state": "available",
-                    "gap_summary": "Recommendations are grounded in the deterministic findings above.",
-                    "lacking_keywords": [],
-                    "content_ideas": [item.recommendation for item in result.recommendations],
-                }
-            
-            analysis_data, gap_data = run_async_in_session(run_gap_analysis())
-
-            if "error" in analysis_data:
-                st.error(analysis_data['error'])
-            else:
-                st.session_state.analysis_data = analysis_data
-                st.session_state.gap_data = gap_data
-    else:
-        st.warning("⚠️ Please enter a valid URL to analyze.")
-
-# Display Gap Results
-if 'gap_data' in st.session_state:
-    analysis_data = st.session_state.analysis_data
-    gap_data = st.session_state.gap_data
-    
-    if not gap_data or not isinstance(gap_data, dict) or gap_data.get("state") != "available":
-         st.info(gap_data.get("message", "AI recommendations are unavailable. Deterministic findings remain available.") if gap_data else "AI recommendations are unavailable.")
-    else:
-        # Gauge Chart
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=get_analysis_score(analysis_data),
-            title={'text': "Overall SEO Score", 'font': {'color': '#f8fafc', 'size': 24}},
-            delta={'reference': 80},
-            gauge={
-                'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#94a3b8"},
-                'bar': {'color': "#3b82f6"},
-                'bgcolor': "rgba(0,0,0,0)",
-                'borderwidth': 2,
-                'bordercolor': "rgba(59, 130, 246, 0.2)",
-                'steps': [
-                    {'range': [0, 50], 'color': 'rgba(239, 68, 68, 0.3)'},
-                    {'range': [50, 80], 'color': 'rgba(245, 158, 11, 0.3)'},
-                    {'range': [80, 100], 'color': 'rgba(16, 185, 129, 0.3)'}],
-                'threshold': {
-                    'line': {'color': "rgba(16, 185, 129, 1)", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 90}
+def render_report(analysis: URLAnalysisResponse) -> None:
+    render_score(analysis)
+    st.divider()
+    overview, technical, content, sharing = st.tabs(["Overview", "Technical", "Content", "Sharing"])
+    with overview:
+        metadata = analysis.metadata
+        st.subheader("Page metadata")
+        st.write("Title:", metadata.title or "Missing", f"({metadata.title_length} characters)")
+        st.write("Description:", metadata.description or "Missing", f"({metadata.description_length} characters)")
+        st.write("Canonical:", metadata.canonical_resolved or metadata.canonical or "Missing")
+        st.write("Robots:", ", ".join(metadata.robots_directives) or "No directives detected")
+        st.subheader("Fetch metadata")
+        st.write("Final URL:", analysis.final_url)
+        st.write("HTTP status:", analysis.fetch.status_code)
+        st.write("Content type:", analysis.fetch.content_type or "unknown content type")
+        st.write("Bytes:", f"{analysis.fetch.bytes_read:,}", "· elapsed:", f"{analysis.fetch.elapsed_time:.2f}s")
+        st.write("Redirects:", analysis.fetch.redirect_count, "· HTTPS:", analysis.final_url.startswith("https://"))
+    with technical:
+        st.subheader("Technical and indexability")
+        st.json(
+            {
+                "language": analysis.metadata.language,
+                "viewport": analysis.metadata.viewport,
+                "charset": analysis.metadata.charset,
+                "mixed_content_references": analysis.metadata.mixed_content_reference_count,
+                "hreflang_links": [link.model_dump() for link in analysis.hreflang.links],
+                "malformed_hreflang": analysis.hreflang.malformed_count,
             }
-        ))
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font={'color': "#e2e8f0", 'family': "Inter"},
-            height=350,
-            margin=dict(l=20, r=20, t=50, b=20)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Images")
+        st.json(analysis.images.model_dump())
+        st.subheader("Links")
+        st.json(analysis.links.model_dump())
+    with content:
+        st.subheader("Heading structure")
+        st.write(f"H1: {len(analysis.headings.h1)} · H2: {len(analysis.headings.h2)} · H3: {len(analysis.headings.h3)}")
+        if analysis.headings.h1:
+            st.write("H1 headings:", analysis.headings.h1)
+        if analysis.headings.hierarchy_jumps:
+            st.warning("Heading jumps: " + ", ".join(analysis.headings.hierarchy_jumps))
+        st.subheader("Lexical signals")
+        st.caption("Frequent terms are descriptive signals, not inferred keywords or ranking factors.")
+        st.write([(term.term, term.count) for term in analysis.lexical_signals.frequent_terms])
+        st.subheader("Structured data")
+        st.json(analysis.structured_data.model_dump())
+    with sharing:
+        st.subheader("Social metadata")
+        st.json(analysis.social_metadata.model_dump())
 
-        st.markdown("""
-        <div class="section-header">
-            <span class="section-icon">📋</span>
-            <h3 style="color: #f8fafc; font-size: 1.75rem; font-weight: 600;">AI-Powered Gap Summary</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        st.info(gap_data.get('gap_summary', 'No summary available.'))
-        
-        # Columns for Keywords and Ideas
-        col_k, col_i = st.columns(2, gap="large")
-        with col_k:
-            st.markdown('<h4 style="color: #f8fafc; margin-bottom: 1rem;">🔑 Lacking Keywords</h4>', unsafe_allow_html=True)
-            keywords = gap_data.get('lacking_keywords', [])
-            if keywords:
-                for i, keyword in enumerate(keywords, 1):
-                    st.write(f"{i}. {keyword}")
-            else:
-                st.info("No lacking keywords identified.")
-                
-        with col_i:
-            st.markdown('<h4 style="color: #f8fafc; margin-bottom: 1rem;">💡 New Content Ideas</h4>', unsafe_allow_html=True)
-            ideas = gap_data.get('content_ideas', [])
-            if ideas:
-                for i, idea in enumerate(ideas, 1):
-                    st.write(f"{i}. {idea}")
-            else:
-                st.info("No content ideas generated.")
+    render_checks(analysis)
+    st.divider()
+    st.subheader("Optional AI recommendations")
+    st.caption("Gemini interprets deterministic findings; it never changes the score.")
+    ai = analysis.ai_recommendations
+    if ai is None:
+        st.info("AI recommendations were not requested.")
+    elif ai.state.value != "available":
+        st.info(ai.message or "AI recommendations are unavailable. The deterministic report remains authoritative.")
+    else:
+        for recommendation in ai.recommendations:
+            with st.expander(f"{recommendation.priority.value.upper()} · {recommendation.issue}"):
+                st.write(recommendation.explanation)
+                st.write("Action:", recommendation.recommendation)
+                if recommendation.evidence:
+                    st.caption(f"Evidence: {recommendation.evidence}")
 
-        # Content Generation
-        st.markdown("""
-        <div class="section-header">
-            <span class="section-icon">✍️</span>
-            <h3 style="color: #f8fafc; font-size: 1.75rem; font-weight: 600;">AI Content Generation</h3>
-        </div>
-        <p style="color: #94a3b8; margin-bottom: 2rem;">Select an idea and tone to craft a professional article draft optimized for SEO.</p>
-        """, unsafe_allow_html=True)
-        
-        with st.form("content_gen_form", clear_on_submit=False):
-            col_f1, col_f2 = st.columns(2, gap="medium")
-            with col_f1:
-                content_ideas_list = gap_data.get('content_ideas', [])
-                idea = st.selectbox("Select Content Idea", options=content_ideas_list if content_ideas_list else ["No ideas available"])
-            with col_f2:
-                tone = st.selectbox("Content Tone", options=["Professional", "Friendly", "Authoritative", "Witty", "Conversational"])
-            
-            submitted = st.form_submit_button("🚀 Generate Draft", use_container_width=True)
-            
-            if submitted and idea != "No ideas available":
-                with st.spinner(f"✍️ Generating content for '{idea}'..."):
-                    async def run_article_gen():
-                        return await service.generate_article(
-                            ArticleGenerationRequest(
-                                topic=idea,
-                                keywords=gap_data.get('lacking_keywords', []),
-                                tone=tone.lower(),
-                            )
-                        )
-                    
-                    try:
-                        article_data = run_async_in_session(run_article_gen()).model_dump()
-                    except AIServiceError:
-                        article_data = None
-                
-                if article_data:
-                    st.success("✅ Content generated successfully!")
-                    st.subheader(article_data.get("title", "Generated Article"))
-                    st.text_area("Generated article", article_data.get("content", ""), height=400, disabled=True)
-                    
-                    st.markdown('<h4 style="color: #f8fafc; margin-bottom: 1rem;">🎯 Integrated SEO Suggestions</h4>', unsafe_allow_html=True)
-                    suggestions = article_data.get('seo_suggestions', [])
-                    if suggestions:
-                        for i, suggestion in enumerate(suggestions, 1):
-                            st.write(f"{i}. {suggestion}")
-                    else:
-                        st.info("General SEO best practices apply – focus on keyword density and readability.")
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.title("SEO-Sensei")
+st.caption("A disciplined SEO workbench: inspect what the page actually exposes, then decide what to improve.")
 
-# --- Section 3: Competitor Finder ---
-st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-st.markdown("""
-<div class="section-header">
-    <span class="section-icon">🎯</span>
-    <h2 class="section-title">Top Competitor Finder</h2>
-</div>
-""", unsafe_allow_html=True)
-st.markdown("""
-<p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; max-width: 800px;">
-    Identify your fiercest competitors in the niche – get actionable intel to outrank them.
-</p>
-""", unsafe_allow_html=True)
+client = api_client()
+if client is None:
+    st.error("Dashboard API configuration is incomplete. Set API_BASE_URL and DASHBOARD_API_ACCESS_TOKEN in the dashboard environment.")
+else:
+    with st.sidebar:
+        st.subheader("API connection")
+        st.caption("Server-side credentials are used by this dashboard process and are never shown in the page.")
+        if st.button("Check API health", use_container_width=True):
+            try:
+                health = client.health()
+                st.success(f"API online · {health.environment}")
+                if health.status != "ok":
+                    st.warning("The API is reachable but reports degraded optional services.")
+            except DashboardAPIError as error:
+                show_api_error(error)
 
-with st.form("competitor_form"):
-    col_c1, col_c2 = st.columns(2, gap="medium")
-    with col_c1:
-        comp_domain = st.text_input("Your Domain", placeholder="my-website.com")
-    with col_c2:
-        comp_industry = st.text_input("Industry/Niche", placeholder="e.g., E-commerce Fashion or SaaS Tools")
-    
-    submitted = st.form_submit_button("🔍 Discover Competitors", type="primary", use_container_width=True)
+    st.header("Analyze a page")
+    with st.form("analysis_form"):
+        url = st.text_input("Page URL", placeholder="https://example.com", help="The API performs all fetching and SSRF checks.")
+        include_ai = st.checkbox("Request optional Gemini recommendations", value=True)
+        submitted = st.form_submit_button("Analyze page", type="primary", use_container_width=True)
 
     if submitted:
-        st.info("Competitor discovery is deferred in this production iteration. Use deterministic URL analysis for sites you already know.")
+        validation_error = basic_url_error(url)
+        if validation_error:
+            st.warning(validation_error)
+        else:
+            with st.spinner("Sending the page to the SEO-Sensei API…"):
+                try:
+                    st.session_state.analysis = client.analyze_url(url.strip(), include_ai_recommendations=include_ai)
+                    st.session_state.analysis_url = url.strip()
+                except DashboardAPIError as error:
+                    show_api_error(error)
+                except ValidationError:
+                    st.error("The API response could not be displayed safely.")
 
-st.markdown('</div>', unsafe_allow_html=True)
+    analysis = st.session_state.get("analysis")
+    if isinstance(analysis, URLAnalysisResponse):
+        st.caption("Analyzing URL")
+        st.code(st.session_state.get("analysis_url", analysis.requested_url), language=None)
+        render_report(analysis)
 
-# --- Footer ---
-st.markdown("""
-<div class="footer">
-    © 2025 SEO-Sensei Dashboard | Elevate Your Search Game
-</div>
-""", unsafe_allow_html=True)
+    st.divider()
+    st.header("Content tools")
+    st.caption("These actions use the authenticated API and are separate from the deterministic score.")
+    article_tab, boost_tab = st.tabs(["Article draft", "Meta description boost"])
+    with article_tab:
+        with st.form("article_form"):
+            topic = st.text_input("Topic", max_chars=500)
+            keywords = st.text_input("Related terms (comma separated)")
+            tone = st.selectbox("Tone", ["professional", "friendly", "authoritative", "witty", "conversational"])
+            article_submitted = st.form_submit_button("Generate article", use_container_width=True)
+        if article_submitted:
+            try:
+                request = ArticleGenerationRequest(
+                    topic=topic,
+                    keywords=[item.strip() for item in keywords.split(",") if item.strip()][:20],
+                    tone=tone,
+                )
+                with st.spinner("Generating a bounded plain-text draft…"):
+                    article = client.generate_article(request)
+                st.success(article.title)
+                st.text_area("Generated article", article.content, height=360, disabled=True)
+                if article.seo_suggestions:
+                    st.write("Suggestions", article.seo_suggestions)
+            except ValidationError:
+                st.warning("Enter a topic and keep the related-term list within the configured limits.")
+            except DashboardAPIError as error:
+                show_api_error(error)
+    with boost_tab:
+        with st.form("boost_form"):
+            boost_url = st.text_input("URL to improve", value=st.session_state.get("analysis_url", ""))
+            boost_submitted = st.form_submit_button("Suggest a description", use_container_width=True)
+        if boost_submitted:
+            validation_error = basic_url_error(boost_url)
+            if validation_error:
+                st.warning(validation_error)
+            else:
+                try:
+                    with st.spinner("Analyzing the page and drafting a description…"):
+                        boost = client.boost_seo(boost_url.strip())
+                    st.write(boost.suggested_description)
+                except DashboardAPIError as error:
+                    show_api_error(error)
+                except ValidationError:
+                    st.warning("Enter a valid HTTP or HTTPS URL.")
+
+st.caption("SEO-Sensei · deterministic evidence first, optional AI second")

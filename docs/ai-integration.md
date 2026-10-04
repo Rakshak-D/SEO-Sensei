@@ -27,3 +27,5 @@ URL analysis can request optional recommendations. A failure returns a typed sta
 ## Configuration
 
 `GEMINI_API_KEY` is optional for deterministic analysis. AI features additionally use `AI_REQUEST_TIMEOUT_SECONDS`, `AI_RETRY_COUNT`, `AI_RETRY_BACKOFF_SECONDS`, `AI_MAX_CONCURRENCY`, `MAX_AI_INPUT_SIZE`, `MAX_AI_OUTPUT_SIZE`, `MAX_AI_RECOMMENDATION_COUNT`, and `MAX_AI_RECOMMENDATION_LENGTH`. Values and placeholders are listed in `.env.example`; secrets are deployment-side only.
+
+AI endpoints are also protected by the API bearer token and separate in-process rate limits. The optional AI recommendation flag on URL analysis is rate-limited before fetching begins.

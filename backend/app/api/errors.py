@@ -17,6 +17,7 @@ class APIError(Exception):
     code: str
     message: str
     status_code: int
+    headers: dict[str, str] | None = None
 
 
 INVALID_REQUEST = "invalid_request"
@@ -25,6 +26,8 @@ UNSUPPORTED_URL = "unsupported_url"
 RESOURCE_UNAVAILABLE = "resource_unavailable"
 UPSTREAM_AI_UNAVAILABLE = "upstream_ai_unavailable"
 RATE_LIMITED = "rate_limited"
+AUTH_REQUIRED = "auth_required"
+AUTH_INVALID = "auth_invalid"
 INTERNAL_SERVER_ERROR = "internal_server_error"
 
 ERROR_STATUS_CODES = {
@@ -34,6 +37,8 @@ ERROR_STATUS_CODES = {
     RESOURCE_UNAVAILABLE: 502,
     UPSTREAM_AI_UNAVAILABLE: 503,
     RATE_LIMITED: 429,
+    AUTH_REQUIRED: 401,
+    AUTH_INVALID: 401,
     INTERNAL_SERVER_ERROR: 500,
 }
 
@@ -44,7 +49,11 @@ def error_payload(request: Request, code: str, message: str) -> dict[str, Any]:
 
 
 async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=error_payload(request, exc.code, exc.message))
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_payload(request, exc.code, exc.message),
+        headers=exc.headers,
+    )
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

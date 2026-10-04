@@ -37,3 +37,15 @@ Fetch failures use typed internal categories such as `blocked_destination`, `dns
 ## No arbitrary proxy behavior
 
 The analysis API accepts a target URL only to obtain bounded HTML for SEO analysis. It does not return arbitrary response objects, headers, binary payloads, redirect histories beyond the bounded internal result, or unrestricted network protocols. The Streamlit path calls the same crawler, which calls the same `SafeFetcher`; there is no second `requests`, `urllib`, or direct HTTP implementation.
+
+## API access and resource limits
+
+`/health` and `/` are public lightweight endpoints. URL analysis, AI recommendations, SEO boost, and article generation require `Authorization: Bearer <API_ACCESS_TOKEN>`. Tokens are compared with a constant-time comparison, are never accepted in query parameters, and are never included in logs, responses, or browser-extension source. Production startup fails when `API_ACCESS_TOKEN` is missing; development and tests must supply an explicit local/test token.
+
+Protected operations use an in-process limiter keyed by a non-reversible token fingerprint and the direct peer IP address. Default limits are configured separately for analysis, AI work, article generation, and boost operations with per-minute and per-hour windows. Rejections return `429`, `Retry-After`, and the standard request-ID error contract. Expired entries are cleaned up and the key store is bounded. The limiter is intentionally single-instance; multiple API instances require a shared limiter in a future phase.
+
+Forwarded client-IP headers are not trusted. The direct socket peer is used unless a future deployment explicitly adds trusted-proxy handling. CORS origins are configuration-driven, wildcard origins are rejected, and the `Authorization` header is explicitly allowed for configured origins. Authenticated API responses are marked `Cache-Control: no-store`.
+
+The Chrome extension contains no deployment credential. Consequently, a production extension cannot call protected endpoints until a separate extension authentication design is implemented; local development must use an explicitly configured development access path rather than embedding a shared secret in JavaScript.
+
+Authentication errors use `auth_required` or `auth_invalid`; rate-limit errors use `rate_limited`. All preserve the request ID and expose no token, hash, limiter state, or internal diagnostics.

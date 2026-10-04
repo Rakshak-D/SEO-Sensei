@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from backend.app.config import Settings
+from backend.app.config import ConfigurationError, Settings
 from backend.app.schemas.requests import ArticleGenerationRequest, URLAnalysisRequest
 from backend.app.schemas.responses import ErrorResponse
 from backend.app.seo.models import SEOScore
@@ -32,8 +32,15 @@ def test_valid_configuration_loading() -> None:
 
 
 def test_production_configuration_allows_optional_gemini() -> None:
-    settings = Settings.from_environment({"APP_ENV": "production", "GEMINI_API_KEY": ""})
+    settings = Settings.from_environment(
+        {"APP_ENV": "production", "GEMINI_API_KEY": "", "API_ACCESS_TOKEN": "production-test-token"}
+    )
     assert settings.gemini_api_key is None
+
+
+def test_production_configuration_requires_api_token() -> None:
+    with pytest.raises(ConfigurationError, match="API_ACCESS_TOKEN"):
+        Settings.from_environment({"APP_ENV": "production", "GEMINI_API_KEY": ""})
 
 
 def test_url_schema_accepts_http_and_https() -> None:
@@ -91,6 +98,7 @@ def test_error_response_structure_and_request_id() -> None:
 def api_client(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setenv("API_ACCESS_TOKEN", "test-token")
     monkeypatch.setenv("ALLOWED_CORS_ORIGINS", "http://localhost:8501")
 
     import backend.app.config as config
@@ -108,7 +116,7 @@ def test_request_id_is_present_on_success_and_validation_error(api_client: TestC
     assert response.status_code == 200
     assert response.headers["x-request-id"]
 
-    invalid = api_client.post("/generate-article", json={})
+    invalid = api_client.post("/generate-article", json={}, headers={"Authorization": "Bearer test-token"})
     assert invalid.status_code == 422
     assert invalid.headers["x-request-id"]
     assert invalid.json()["error"]["code"] == "invalid_request"
@@ -131,13 +139,18 @@ def test_unconfigured_ai_returns_safe_public_error(api_client: TestClient) -> No
     response = api_client.post(
         "/generate-article",
         json={"topic": "SEO foundations", "keywords": ["seo"], "tone": "professional"},
+        headers={"Authorization": "Bearer test-token"},
     )
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "upstream_ai_unavailable"
     assert "Traceback" not in response.text
     assert "GEMINI_API_KEY" not in response.text
 
-    boost = api_client.post("/boost-seo", json={"url": "https://example.com/"})
+    boost = api_client.post(
+        "/boost-seo",
+        json={"url": "https://example.com/"},
+        headers={"Authorization": "Bearer test-token"},
+    )
     assert boost.status_code == 503
     assert boost.json()["error"]["code"] == "upstream_ai_unavailable"
     assert "example.com" not in boost.text
@@ -164,8 +177,9 @@ def test_analysis_api_returns_deterministic_contract_without_gemini(
     import backend.seo_crawler as crawler
 
     monkeypatch.setattr(crawler, "get_full_seo_analysis_for_url", fake_analysis)
-    first = api_client.post("/analyse-url", json={"url": "https://example.com/"})
-    second = api_client.post("/analyse-url", json={"url": "https://example.com/"})
+    headers = {"Authorization": "Bearer test-token"}
+    first = api_client.post("/analyse-url", json={"url": "https://example.com/"}, headers=headers)
+    second = api_client.post("/analyse-url", json={"url": "https://example.com/"}, headers=headers)
     assert first.status_code == second.status_code == 200
     assert first.json()["deterministic_score"] == second.json()["deterministic_score"]
     assert "html" not in first.json()
@@ -174,6 +188,7 @@ def test_analysis_api_returns_deterministic_contract_without_gemini(
     with_ai = api_client.post(
         "/analyse-url",
         json={"url": "https://example.com/", "include_ai_recommendations": True},
+        headers=headers,
     )
     assert with_ai.status_code == 200
     assert with_ai.json()["ai_recommendations"]["state"] == "configuration_error"

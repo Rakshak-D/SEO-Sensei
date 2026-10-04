@@ -47,6 +47,15 @@ class Settings(BaseModel):
     ai_max_concurrency: int = Field(default=3, ge=1, le=20)
     max_ai_recommendation_count: int = Field(default=5, ge=1, le=10)
     max_ai_recommendation_length: int = Field(default=1_000, ge=100, le=2_000)
+    analysis_rate_limit_per_minute: int = Field(default=30, ge=1, le=10_000)
+    analysis_rate_limit_per_hour: int = Field(default=300, ge=1, le=100_000)
+    ai_rate_limit_per_minute: int = Field(default=10, ge=1, le=10_000)
+    ai_rate_limit_per_hour: int = Field(default=60, ge=1, le=100_000)
+    article_rate_limit_per_minute: int = Field(default=3, ge=1, le=10_000)
+    article_rate_limit_per_hour: int = Field(default=20, ge=1, le=100_000)
+    boost_rate_limit_per_minute: int = Field(default=5, ge=1, le=10_000)
+    boost_rate_limit_per_hour: int = Field(default=30, ge=1, le=100_000)
+    rate_limit_max_keys: int = Field(default=10_000, ge=100, le=100_000)
 
     @field_validator("allowed_cors_origins", mode="before")
     @classmethod
@@ -93,12 +102,26 @@ class Settings(BaseModel):
             "ai_max_concurrency": source.get("AI_MAX_CONCURRENCY", 3),
             "max_ai_recommendation_count": source.get("MAX_AI_RECOMMENDATION_COUNT", 5),
             "max_ai_recommendation_length": source.get("MAX_AI_RECOMMENDATION_LENGTH", 1_000),
+            "analysis_rate_limit_per_minute": source.get("ANALYSIS_RATE_LIMIT_PER_MINUTE", 30),
+            "analysis_rate_limit_per_hour": source.get("ANALYSIS_RATE_LIMIT_PER_HOUR", 300),
+            "ai_rate_limit_per_minute": source.get("AI_RATE_LIMIT_PER_MINUTE", 10),
+            "ai_rate_limit_per_hour": source.get("AI_RATE_LIMIT_PER_HOUR", 60),
+            "article_rate_limit_per_minute": source.get("ARTICLE_RATE_LIMIT_PER_MINUTE", 3),
+            "article_rate_limit_per_hour": source.get("ARTICLE_RATE_LIMIT_PER_HOUR", 20),
+            "boost_rate_limit_per_minute": source.get("BOOST_RATE_LIMIT_PER_MINUTE", 5),
+            "boost_rate_limit_per_hour": source.get("BOOST_RATE_LIMIT_PER_HOUR", 30),
+            "rate_limit_max_keys": source.get("RATE_LIMIT_MAX_KEYS", 10_000),
         }
 
         try:
             settings = cls.model_validate(values)
         except ValueError as exc:
             raise ConfigurationError("Application configuration is invalid.") from exc
+
+        if settings.environment in {"production", "prod"} and not settings.api_access_token:
+            raise ConfigurationError("API_ACCESS_TOKEN is required when APP_ENV is production.")
+        if "*" in settings.allowed_cors_origins:
+            raise ConfigurationError("Wildcard CORS origins are not permitted for this API.")
 
         return settings
 

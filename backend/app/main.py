@@ -8,7 +8,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -27,6 +27,8 @@ from .api.errors import (
 )
 from .ai.gemini import AIServiceError, GeminiService
 from .ai.models import AIRecommendationState, AIRecommendationsResult
+from .api.auth import require_auth
+from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
 from .logging_config import configure_logging
 from .schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
@@ -50,6 +52,7 @@ if settings.gemini_api_key:
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     application.state.safe_fetcher = SafeFetcher(settings)
+    application.state.rate_limiter = InMemoryRateLimiter(settings)
     try:
         yield
     finally:
@@ -62,13 +65,14 @@ app = FastAPI(
     description="URL SEO analysis and AI-assisted recommendations.",
     lifespan=lifespan,
 )
+app.state.settings = settings
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_cors_origins,
     allow_credentials=settings.cors_allow_credentials and bool(settings.allowed_cors_origins),
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
 
 
@@ -110,6 +114,8 @@ class RequestContextMiddleware:
             if message["type"] == "http.response.start":
                 response_headers = list(message.get("headers", []))
                 response_headers.append((b"x-request-id", request_id.encode("ascii")))
+                if scope.get("path") != "/health":
+                    response_headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": response_headers}
                 logger.info(
                     "request_complete status=%s duration_ms=%.2f",
@@ -148,13 +154,19 @@ async def health() -> HealthResponse:
     return HealthResponse(status="ok" if service is not None else "degraded", environment=settings.environment)
 
 
-@app.post("/analyse-url", response_model=URLAnalysisResponse)
+@app.post(
+    "/analyse-url",
+    response_model=URLAnalysisResponse,
+    dependencies=[Depends(require_auth), Depends(rate_limit_for("analysis"))],
+)
 async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysisResponse:
     url_received = str(payload.url)
     if len(url_received) > settings.max_url_length:
         raise APIError(INVALID_URL, "The URL is too long.", 422)
 
     try:
+        if payload.include_ai_recommendations:
+            await enforce_rate_limit(request, "ai")
         try:
             from ..seo_crawler import get_full_seo_analysis_for_url
         except ImportError:
@@ -200,7 +212,11 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
         raise APIError(INTERNAL_SERVER_ERROR, "The URL could not be analyzed.", 500)
 
 
-@app.post("/generate-article", response_model=ArticleGenerationResponse)
+@app.post(
+    "/generate-article",
+    response_model=ArticleGenerationResponse,
+    dependencies=[Depends(require_auth), Depends(rate_limit_for("article"))],
+)
 async def generate_article(payload: ArticleGenerationRequest, request: Request) -> ArticleGenerationResponse:
     try:
         result = await _service_or_error().generate_article(
@@ -217,7 +233,11 @@ async def generate_article(payload: ArticleGenerationRequest, request: Request) 
         raise APIError(INTERNAL_SERVER_ERROR, "The article could not be generated.", 500)
 
 
-@app.post("/boost-seo", response_model=SEOBoostResponse)
+@app.post(
+    "/boost-seo",
+    response_model=SEOBoostResponse,
+    dependencies=[Depends(require_auth), Depends(rate_limit_for("boost"))],
+)
 async def post_boost_seo(payload: SEOBoostRequest, request: Request) -> SEOBoostResponse:
     try:
         ai_service = _service_or_error()

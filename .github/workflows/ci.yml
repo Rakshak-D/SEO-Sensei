@@ -49,3 +49,22 @@ jobs:
         run: python -c "import json; json.load(open('frontend/manifest.json', encoding='utf-8'))"
       - name: Run repository security checks
         run: python tools/security_checks.py
+
+  container-validation:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      API_ACCESS_TOKEN: ci-test-token
+      GEMINI_API_KEY: ""
+      ALLOWED_CORS_ORIGINS: https://dashboard.example.test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare safe Compose environment
+        run: cp .env.example .env
+      - name: Validate Compose configuration
+        run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
+      - name: Build API image
+        run: docker build --file Dockerfile.api --tag seo-sensei-api:ci .
+      - name: Build dashboard image
+        run: docker build --file Dockerfile.dashboard --tag seo-sensei-dashboard:ci .

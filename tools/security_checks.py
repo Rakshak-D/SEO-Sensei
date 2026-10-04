@@ -10,16 +10,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = (ROOT / "backend", ROOT / "frontend", ROOT / "tests", ROOT / "tools")
 TEXT_SUFFIXES = {".py", ".js", ".html", ".css", ".json", ".toml", ".yml", ".yaml"}
+SPECIAL_FILES = {"Dockerfile.api", "Dockerfile.dashboard", ".dockerignore", "compose.yaml", "compose.dev.yaml"}
 
 
 def files() -> list[Path]:
-    return [
+    source_files = [
         path
         for root in SOURCE_ROOTS
         if root.exists()
         for path in root.rglob("*")
-        if path.is_file() and path.suffix in TEXT_SUFFIXES
+        if path.is_file() and (path.suffix in TEXT_SUFFIXES or path.name in SPECIAL_FILES)
     ]
+    return source_files + [ROOT / name for name in SPECIAL_FILES if (ROOT / name).is_file()]
 
 
 def main() -> int:
@@ -61,6 +63,21 @@ def main() -> int:
 
         if re.search(r"AIza[0-9A-Za-z_-]{20,}", text):
             failures.append(f"{relative}: possible Gemini credential")
+
+        if path.name in SPECIAL_FILES:
+            for pattern, label in (
+                (r"COPY\s+\.env", "secret environment file copied into an image"),
+                (
+                    r"privileged:\s*true|network_mode:\s*host|/var/run/docker\.sock",
+                    "unsafe container privilege/network setting",
+                ),
+                (
+                    r"ENV\s+[^\n]*(?:API_ACCESS_TOKEN|GEMINI_API_KEY|DASHBOARD_API_ACCESS_TOKEN)",
+                    "secret configured in an image layer",
+                ),
+            ):
+                if re.search(pattern, text, flags=re.IGNORECASE):
+                    failures.append(f"{relative}: {label}")
 
     for name in (".env", ".env.local", ".env.production"):
         if (ROOT / name).exists():

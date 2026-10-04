@@ -81,6 +81,22 @@ GitHub Actions runs these checks on pushes to `main` and pull requests to
 `main` without live websites, Gemini credentials, or browser credentials.
 Details are in [`docs/development.md`](docs/development.md).
 
+## Container development
+
+The API and dashboard can run as separate non-root containers. For local
+Compose, copy `.env.example` to `.env`, set `API_ACCESS_TOKEN`, then run:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml build
+docker compose -f compose.yaml -f compose.dev.yaml up -d
+curl http://127.0.0.1:8000/health
+```
+
+The dashboard is available at `http://127.0.0.1:8501`; inside Compose it calls
+the API at `http://api:8000`. The development overlay publishes the API on host
+loopback. Detailed production topology, health checks, secrets, and ingress
+assumptions are documented in [`docs/deployment.md`](docs/deployment.md).
+
 ## Architecture
 
 ```mermaid

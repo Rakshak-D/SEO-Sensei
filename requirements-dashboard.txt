@@ -1,0 +1,4 @@
+-r requirements-common.txt
+
+# Streamlit dashboard client
+streamlit==1.33.0

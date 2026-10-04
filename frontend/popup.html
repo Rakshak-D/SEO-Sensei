@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metamorph SEO</title>
+    <title>SEO-Sensei</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🔍 Metamorph SEO</h1>
+            <h1>🔍 SEO-Sensei</h1>
         </header>
         
         <main>
             <button id="analyzeBtn" class="btn btn-primary">Analyze This Page</button>
             
             <div id="welcome" class="message-card">
-                <p>Click "Analyze" to get AI-powered SEO insights for the current page.</p>
+                <p>Click "Analyze" to get deterministic SEO checks for the current page.</p>
             </div>
 
             <div id="loader" class="loader" style="display: none;">
                 <div class="spinner"></div>
-                <p>Analyzing with Gemini...</p>
+                <p>Analyzing page...</p>
             </div>
             
             <div id="error" class="error-card" style="display: none;">
@@ -44,9 +44,6 @@
                         <h2>SEO Boost Suggestions</h2>
                         <p class="data-label">Suggested Meta Description</p>
                         <p id="boostMeta" class="data-value"></p>
-                        <p class="data-label">Suggested Meta Keywords</p>
-                        <ul id="boostTags" class="results-list compact">
-                            </ul>
                     </div>
                 </div>
 
@@ -54,14 +51,10 @@
                     <h2>Page Details</h2>
                     <p class="data-label">Title</p>
                     <p id="pageTitleValue" class="data-value">...</p>
-                    
-                    <p class="data-label">Top Keywords (from text)</p>
-                    <ul id="keywordsList" class="results-list compact">
-                        </ul>
                 </div>
                 
                 <div class="results-section">
-                    <h2>💡 AI Suggestions</h2>
+                    <h2>💡 Recommendations</h2>
                     <ul id="suggestionsList" class="results-list">
                         </ul>
                 </div>
@@ -79,7 +72,7 @@
                 </div>
 
                 <div class="results-section">
-                    <h2>Content Quality</h2>
+                    <h2>Content Signal</h2>
                     <p id="qualityValue" class="data-value"></p>
                 </div>
                 

@@ -34,7 +34,7 @@
 ### 🔧 Chrome Extension
 - **One-Click Analysis**: Instant SEO insights for any webpage
 - **Real-time Scoring**: Get AI-powered SEO scores while browsing
-- **Meta Tag Generation**: Auto-generate missing descriptions and keywords
+- **Meta Tag Generation**: Auto-generate missing descriptions
 - **Quick Boost Suggestions**: Immediate improvement recommendations
 
 ---
@@ -192,7 +192,7 @@ Analyzes a URL for comprehensive SEO metrics.
 **Response:**
 ```json
 {
-  "seo_score": 85,
+  "deterministic_score": {"overall_score": 85},
   "ai_suggestions": ["Improve meta description", "Add header tags"],
   "strengths": ["Good page speed", "Mobile responsive"],
   "critical_issues": ["Missing alt tags", "No SSL"],

@@ -1,21 +1,20 @@
-# DEMO/backend/dashboard.py
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import asyncio
-import os
 import logging
-from dotenv import load_dotenv
 from typing import Dict, Any
 import urllib.parse
 
 # Import your existing utilities
 from seo_crawler import get_full_seo_analysis_for_url
 from utils.gemini_helper import GeminiService
+from app.config import get_settings
+from app.logging_config import configure_logging
 
 # --- Page & Service Setup ---
 st.set_page_config(
-    page_title="Metamorph SEO Dashboard", 
+    page_title="SEO-Sensei Dashboard",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -306,7 +305,7 @@ body, [data-testid="stAppViewContainer"] {
 # --- HERO SECTION ---
 st.markdown("""
 <div class="hero-section">
-    <h1 class="main-title">🚀 Metamorph SEO Dashboard</h1>
+    <h1 class="main-title">🚀 SEO-Sensei Dashboard</h1>
     <p class="subtitle">Advanced AI-Powered SEO Intelligence Platform – Unlock Insights, Optimize Effortlessly</p>
 </div>
 """, unsafe_allow_html=True)
@@ -330,15 +329,15 @@ def run_async_in_session(coro):
 
 loop = get_event_loop()
 
-# Load environment variables
-load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+configure_logging()
+settings = get_settings()
 
 @st.cache_resource
 def get_gemini_service():
     try:
-        return GeminiService()
+        if not settings.gemini_api_key:
+            raise ValueError("Gemini API key is not configured.")
+        return GeminiService(api_key=settings.gemini_api_key)
     except ValueError as e:
         st.error("Fatal Error: GEMINI_API_KEY not found. Please set it in .env file.")
         return None
@@ -347,24 +346,31 @@ service = get_gemini_service()
 
 # --- Re-usable Data Fetcher ---
 async def get_analysis_data_async(url: str, service_instance: GeminiService) -> Dict[str, Any]:
-    if not service_instance:
-        return {"error": "Gemini Service not initialized."}
-    
     try:
         scraped_data = await get_full_seo_analysis_for_url(url)
+        url_host = urllib.parse.urlsplit(url).hostname or "unknown-host"
         
         if not scraped_data or scraped_data.get("status") == "failed":
-            error_msg = f"Failed to scrape {url}. Status: {scraped_data.get('status_code')}"
-            logging.warning(error_msg)
-            return {"error": error_msg}
+            logging.warning("dashboard_fetch_failed host=%s status=%s", url_host, scraped_data.get("status_code"))
+            return {"error": "The requested page could not be analyzed."}
         
-        ai_analysis = await service_instance.analyze_seo_with_ai(scraped_data)
-        
-        return {**scraped_data, **ai_analysis}
+        return scraped_data
     
-    except Exception as e:
-        logging.error(f"Error analyzing {url}: {e}", exc_info=True)
-        return {"error": f"An error occurred: {e}"}
+    except Exception:
+        logging.error("dashboard_analysis_failed host=%s", urllib.parse.urlsplit(url).hostname or "unknown-host", exc_info=True)
+        return {"error": "The page analysis failed."}
+
+
+def get_analysis_score(data: Dict[str, Any]) -> int:
+    return int(data.get("deterministic_score", {}).get("overall_score", 0))
+
+
+def get_check_messages(data: Dict[str, Any], status: str) -> list[str]:
+    messages: list[str] = []
+    for check in data.get("checks", []):
+        if check.get("status") == status:
+            messages.append(check.get("title", "Deterministic check"))
+    return messages
 
 # --- Section 1: Site vs. Site Comparison ---
 st.markdown('<div class="glass-container">', unsafe_allow_html=True)
@@ -397,7 +403,7 @@ with col_btn2:
     clear_btn = st.button("🗑️ Clear Comparison", use_container_width=True)
 
 if compare_btn:
-    if service and url1 and url2:
+    if url1 and url2:
         with st.spinner(f"🔍 Analyzing {url1} and {url2}..."):
             async def run_analyses():
                 task1 = get_analysis_data_async(url1, service)
@@ -445,21 +451,21 @@ if 'data1' in st.session_state and 'data2' in st.session_state:
         fig.add_trace(go.Bar(
             name=domain1, 
             x=['SEO Score'], 
-            y=[data1.get('seo_score', 0)], 
+            y=[get_analysis_score(data1)],
             marker_color='#3b82f6',
             marker_line_color='#60a5fa',
             marker_line_width=2,
-            text=[f"{data1.get('seo_score', 0)}/100"],
+            text=[f"{get_analysis_score(data1)}/100"],
             textposition='auto'
         ))
         fig.add_trace(go.Bar(
             name=domain2, 
             x=['SEO Score'], 
-            y=[data2.get('seo_score', 0)], 
+            y=[get_analysis_score(data2)],
             marker_color='#ef4444',
             marker_line_color='#f87171',
             marker_line_width=2,
-            text=[f"{data2.get('seo_score', 0)}/100"],
+            text=[f"{get_analysis_score(data2)}/100"],
             textposition='auto'
         ))
         
@@ -493,19 +499,19 @@ if 'data1' in st.session_state and 'data2' in st.session_state:
             st.markdown(f"""
             <div style="text-align: center; margin-bottom: 2rem;">
                 <h4 style="color: #f8fafc; font-size: 1.5rem; margin-bottom: 1rem;">🌐 {domain1.capitalize()}</h4>
-                <div class="score-display">{data1.get("seo_score", 0)}/100</div>
+                <div class="score-display">{get_analysis_score(data1)}/100</div>
             </div>
             """, unsafe_allow_html=True)
             
             col_m1, col_m2 = st.columns(2)
             with col_m1:
-                st.metric("SEO Score", f"{data1.get('seo_score', 0)}", delta=None)
+                st.metric("SEO Score", f"{get_analysis_score(data1)}", delta=None)
             with col_m2:
-                st.metric("Content Quality", data1.get('content_quality', 'N/A').title())
+                st.metric("Visible Words", data1.get('lexical_signals', {}).get('visible_word_count', 0))
             
             with st.container():
                 st.markdown('<h5 style="color: #10b981; margin-bottom: 1rem;">✅ Strengths</h5>', unsafe_allow_html=True)
-                strengths1 = data1.get('strengths', [])
+                strengths1 = get_check_messages(data1, "pass")
                 if strengths1:
                     for item in strengths1:
                         st.markdown(f'<div class="strength-item">{item}</div>', unsafe_allow_html=True)
@@ -514,7 +520,7 @@ if 'data1' in st.session_state and 'data2' in st.session_state:
             
             with st.container():
                 st.markdown('<h5 style="color: #ef4444; margin-bottom: 1rem;">❌ Critical Issues</h5>', unsafe_allow_html=True)
-                issues1 = data1.get('critical_issues', [])
+                issues1 = get_check_messages(data1, "fail") + get_check_messages(data1, "warning")
                 if issues1:
                     for item in issues1:
                         st.markdown(f'<div class="issue-item">{item}</div>', unsafe_allow_html=True)
@@ -525,19 +531,19 @@ if 'data1' in st.session_state and 'data2' in st.session_state:
             st.markdown(f"""
             <div style="text-align: center; margin-bottom: 2rem;">
                 <h4 style="color: #f8fafc; font-size: 1.5rem; margin-bottom: 1rem;">🌐 {domain2.capitalize()}</h4>
-                <div class="score-display">{data2.get("seo_score", 0)}/100</div>
+                <div class="score-display">{get_analysis_score(data2)}/100</div>
             </div>
             """, unsafe_allow_html=True)
             
             col_m3, col_m4 = st.columns(2)
             with col_m3:
-                st.metric("SEO Score", f"{data2.get('seo_score', 0)}", delta=None)
+                st.metric("SEO Score", f"{get_analysis_score(data2)}", delta=None)
             with col_m4:
-                st.metric("Content Quality", data2.get('content_quality', 'N/A').title())
+                st.metric("Visible Words", data2.get('lexical_signals', {}).get('visible_word_count', 0))
             
             with st.container():
                 st.markdown('<h5 style="color: #10b981; margin-bottom: 1rem;">✅ Strengths</h5>', unsafe_allow_html=True)
-                strengths2 = data2.get('strengths', [])
+                strengths2 = get_check_messages(data2, "pass")
                 if strengths2:
                     for item in strengths2:
                         st.markdown(f'<div class="strength-item">{item}</div>', unsafe_allow_html=True)
@@ -546,7 +552,7 @@ if 'data1' in st.session_state and 'data2' in st.session_state:
             
             with st.container():
                 st.markdown('<h5 style="color: #ef4444; margin-bottom: 1rem;">❌ Critical Issues</h5>', unsafe_allow_html=True)
-                issues2 = data2.get('critical_issues', [])
+                issues2 = get_check_messages(data2, "fail") + get_check_messages(data2, "warning")
                 if issues2:
                     for item in issues2:
                         st.markdown(f'<div class="issue-item">{item}</div>', unsafe_allow_html=True)
@@ -619,7 +625,7 @@ if 'gap_data' in st.session_state:
         # Gauge Chart
         fig = go.Figure(go.Indicator(
             mode="gauge+number+delta",
-            value=analysis_data.get('seo_score', 0),
+            value=get_analysis_score(analysis_data),
             title={'text': "Overall SEO Score", 'font': {'color': '#f8fafc', 'size': 24}},
             delta={'reference': 80},
             gauge={
@@ -806,6 +812,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- Footer ---
 st.markdown("""
 <div class="footer">
-    © 2025 Metamorph SEO Dashboard | Elevate Your Search Game
+    © 2025 SEO-Sensei Dashboard | Elevate Your Search Game
 </div>
 """, unsafe_allow_html=True)

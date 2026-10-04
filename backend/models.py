@@ -1,41 +1,26 @@
-# DEMO/backend/models.py
-from pydantic import BaseModel
-from typing import List, Optional, Dict
+"""Compatibility exports for the typed application schemas.
 
-# --- Models for Article Writer ---
+New code should import from ``backend.app.schemas`` directly. The aliases keep
+older local integrations from importing the former free-form model module.
+"""
 
-class ArticleRequest(BaseModel):
-    topic: str
-    keywords: List[str]
-    tone: str
+try:
+    from .app.schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
+    from .app.schemas.responses import ArticleGenerationResponse, SEOBoostResponse, URLAnalysisResponse
+except ImportError:
+    from app.schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
+    from app.schemas.responses import ArticleGenerationResponse, SEOBoostResponse, URLAnalysisResponse
 
-class ArticleResponse(BaseModel):
-    title: str
-    content: str
-    seo_suggestions: List[str]
+UrlRequest = URLAnalysisRequest
+AnalyseResponse = URLAnalysisResponse
+ArticleRequest = ArticleGenerationRequest
+ArticleResponse = ArticleGenerationResponse
+SeoBoostResponse = SEOBoostResponse
 
-# --- Models for Page Analyzer ---
-
-class UrlRequest(BaseModel):
-    url: str
-
-class AnalyseResponse(BaseModel):
-    # From Gemini
-    seo_score: int
-    ai_suggestions: List[str]
-    strengths: List[str]
-    critical_issues: List[str]
-    content_quality: str
-    
-    # From Crawler
-    page_title: str
-    meta_description: str
-    keywords: List[str]
-    status_code: int
-    headers: Dict[str, List[str]]
-
-# --- NEW: Model for SEO Boost (Extension) ---
-
-class SeoBoostResponse(BaseModel):
-    suggested_description: str
-    suggested_keywords: List[str]
+__all__ = [
+    "UrlRequest",
+    "AnalyseResponse",
+    "ArticleRequest",
+    "ArticleResponse",
+    "SeoBoostResponse",
+]

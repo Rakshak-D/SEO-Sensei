@@ -1,0 +1,101 @@
+"""Typed, centralized application configuration.
+
+This module deliberately contains configuration loading only. It does not
+implement URL/network safety policy; that is a later hardening phase.
+"""
+
+from __future__ import annotations
+
+import os
+from functools import lru_cache
+from typing import Any
+
+from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class ConfigurationError(RuntimeError):
+    """Raised when required production configuration is missing or invalid."""
+
+
+class Settings(BaseModel):
+    """Application settings loaded from environment variables."""
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    environment: str = Field(default="development", min_length=1, max_length=32)
+    gemini_api_key: str | None = Field(default=None, min_length=1)
+    allowed_cors_origins: list[str] = Field(default_factory=list)
+    api_access_token: str | None = Field(default=None, min_length=1)
+    cors_allow_credentials: bool = False
+
+    request_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
+    max_request_body_size_bytes: int = Field(default=1_000_000, gt=0, le=10_000_000)
+    max_crawl_response_size_bytes: int = Field(default=2_000_000, gt=0, le=20_000_000)
+    max_redirects: int = Field(default=3, ge=0, le=10)
+    max_fetch_connections: int = Field(default=10, ge=1, le=100)
+    max_fetch_keepalive_connections: int = Field(default=5, ge=0, le=100)
+    max_url_length: int = Field(default=2_048, ge=256, le=8_192)
+    max_topic_length: int = Field(default=500, ge=32, le=5_000)
+    max_keyword_count: int = Field(default=20, ge=1, le=100)
+    max_keyword_length: int = Field(default=80, ge=8, le=500)
+    max_ai_input_size: int = Field(default=30_000, ge=1_000, le=200_000)
+    max_ai_output_size: int = Field(default=50_000, ge=1_000, le=500_000)
+
+    @field_validator("allowed_cors_origins", mode="before")
+    @classmethod
+    def parse_origins(cls, value: Any) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return list(value)
+
+    @field_validator("environment")
+    @classmethod
+    def normalize_environment(cls, value: str) -> str:
+        return value.strip().lower()
+
+    @classmethod
+    def from_environment(cls, environ: dict[str, str] | None = None) -> "Settings":
+        """Load settings without ever printing secret values."""
+
+        load_dotenv()
+        source = os.environ if environ is None else environ
+
+        values: dict[str, Any] = {
+            "environment": source.get("APP_ENV", "development"),
+            "gemini_api_key": source.get("GEMINI_API_KEY") or None,
+            "allowed_cors_origins": source.get("ALLOWED_CORS_ORIGINS", ""),
+            "api_access_token": source.get("API_ACCESS_TOKEN") or None,
+            "cors_allow_credentials": source.get("CORS_ALLOW_CREDENTIALS", "false"),
+            "request_timeout_seconds": source.get("REQUEST_TIMEOUT_SECONDS", 10.0),
+            "max_request_body_size_bytes": source.get("MAX_REQUEST_BODY_SIZE_BYTES", 1_000_000),
+            "max_crawl_response_size_bytes": source.get("MAX_CRAWL_RESPONSE_SIZE_BYTES", 2_000_000),
+            "max_redirects": source.get("MAX_REDIRECTS", 3),
+            "max_fetch_connections": source.get("MAX_FETCH_CONNECTIONS", 10),
+            "max_fetch_keepalive_connections": source.get("MAX_FETCH_KEEPALIVE_CONNECTIONS", 5),
+            "max_url_length": source.get("MAX_URL_LENGTH", 2_048),
+            "max_topic_length": source.get("MAX_TOPIC_LENGTH", 500),
+            "max_keyword_count": source.get("MAX_KEYWORD_COUNT", 20),
+            "max_keyword_length": source.get("MAX_KEYWORD_LENGTH", 80),
+            "max_ai_input_size": source.get("MAX_AI_INPUT_SIZE", 30_000),
+            "max_ai_output_size": source.get("MAX_AI_OUTPUT_SIZE", 50_000),
+        }
+
+        try:
+            settings = cls.model_validate(values)
+        except ValueError as exc:
+            raise ConfigurationError("Application configuration is invalid.") from exc
+
+        if settings.environment in {"production", "prod"} and not settings.gemini_api_key:
+            raise ConfigurationError("GEMINI_API_KEY is required when APP_ENV is production.")
+
+        return settings
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Return the process-wide immutable settings instance."""
+
+    return Settings.from_environment()

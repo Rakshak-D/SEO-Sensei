@@ -64,6 +64,14 @@ jobs:
         run: cp .env.example .env
       - name: Validate Compose configuration
         run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
+      - name: Validate Caddy configuration
+        run: >-
+          docker run --rm
+          -e APP_DOMAIN=app.example.com
+          -e API_DOMAIN=api.example.com
+          -e ACME_EMAIL=ops@example.com
+          -v "${{ github.workspace }}/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Build API image
         run: docker build --file Dockerfile.api --tag seo-sensei-api:ci .
       - name: Build dashboard image

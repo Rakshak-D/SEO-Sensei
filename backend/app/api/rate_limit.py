@@ -13,6 +13,7 @@ from fastapi import Request
 
 from ..config import Settings
 from .errors import APIError, RATE_LIMITED
+from .proxy import client_ip as proxy_client_ip
 
 
 @dataclass(frozen=True)
@@ -81,9 +82,10 @@ class InMemoryRateLimiter:
 
 
 def client_ip(request: Request) -> str:
-    """Use the direct peer address; forwarded headers are not trusted."""
+    """Resolve client identity using only explicitly trusted proxy headers."""
 
-    return request.client.host if request.client else "unknown"
+    settings: Settings = request.app.state.settings
+    return proxy_client_ip(request, tuple(settings.trusted_proxy_networks))
 
 
 async def enforce_rate_limit(request: Request, operation: str) -> None:

@@ -2,3 +2,8 @@ services:
   api:
     ports:
       - "${API_HOST_BIND:-127.0.0.1}:${API_HOST_PORT:-8000}:8000"
+  dashboard:
+    ports:
+      - "${DASHBOARD_HOST_BIND:-127.0.0.1}:${DASHBOARD_HOST_PORT:-8501}:8501"
+  caddy:
+    profiles: ["production"]

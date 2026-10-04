@@ -93,9 +93,10 @@ curl http://127.0.0.1:8000/health
 ```
 
 The dashboard is available at `http://127.0.0.1:8501`; inside Compose it calls
-the API at `http://api:8000`. The development overlay publishes the API on host
-loopback. Detailed production topology, health checks, secrets, and ingress
-assumptions are documented in [`docs/deployment.md`](docs/deployment.md).
+the API at `http://api:8000`. The development overlay publishes the API and
+dashboard on host loopback. Production Compose publishes only Caddy on ports 80
+and 443. Detailed topology, health checks, secrets, and ingress assumptions are
+documented in [`docs/deployment.md`](docs/deployment.md).
 
 ## Architecture
 

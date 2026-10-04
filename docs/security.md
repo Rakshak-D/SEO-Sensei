@@ -44,8 +44,18 @@ The analysis API accepts a target URL only to obtain bounded HTML for SEO analys
 
 Protected operations use an in-process limiter keyed by a non-reversible token fingerprint and the direct peer IP address. Default limits are configured separately for analysis, AI work, article generation, and boost operations with per-minute and per-hour windows. Rejections return `429`, `Retry-After`, and the standard request-ID error contract. Expired entries are cleaned up and the key store is bounded. The limiter is intentionally single-instance; multiple API instances require a shared limiter in a future phase.
 
-Forwarded client-IP headers are not trusted. The direct socket peer is used unless a future deployment explicitly adds trusted-proxy handling. CORS origins are configuration-driven, wildcard origins are rejected, and the `Authorization` header is explicitly allowed for configured origins. Authenticated API responses are marked `Cache-Control: no-store`.
+Forwarded client-IP headers are trusted only through the explicit proxy policy documented below. Direct or untrusted peers use the direct socket address. CORS origins are configuration-driven, wildcard origins are rejected, and the `Authorization` header is explicitly allowed for configured origins. Authenticated API responses are marked `Cache-Control: no-store`.
 
 The Chrome extension contains no bundled deployment credential. It can be configured by an operator with a locally stored token for a self-hosted/private deployment, but it is not a multi-user identity system and should not distribute one shared token to an untrusted public audience. The extension requests access only for its configured API origin.
+
+## Reverse proxy headers
+
+Production Compose places Caddy at the public boundary. FastAPI accepts
+`X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host` only when the
+immediate peer belongs to `TRUSTED_PROXY_NETWORKS`. The supplied deployment
+configuration trusts only Caddy's static private address (`172.30.0.2/32`).
+Direct clients and untrusted peers cannot spoof client IP or HTTPS state through
+forwarded headers. The rate limiter continues to combine the bearer-token
+fingerprint with the verified client IP and remains process-local.
 
 Authentication errors use `auth_required` or `auth_invalid`; rate-limit errors use `rate_limited`. All preserve the request ID and expose no token, hash, limiter state, or internal diagnostics.

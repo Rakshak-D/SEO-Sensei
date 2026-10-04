@@ -1,4 +1,34 @@
 services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN must be configured}
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN must be configured}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be configured}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.2
+    depends_on:
+      api:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   api:
     build:
       context: .
@@ -10,6 +40,8 @@ services:
       PORT: ${API_CONTAINER_PORT:-8000}
     expose:
       - "8000"
+    networks:
+      - app_net
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -34,8 +66,10 @@ services:
     environment:
       API_BASE_URL: http://api:8000
       PORT: ${DASHBOARD_CONTAINER_PORT:-8501}
-    ports:
-      - "${DASHBOARD_HOST_BIND:-127.0.0.1}:${DASHBOARD_HOST_PORT:-8501}:8501"
+    expose:
+      - "8501"
+    networks:
+      - app_net
     depends_on:
       api:
         condition: service_healthy
@@ -53,3 +87,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+networks:
+  app_net:
+    name: seo_sensei_network
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  caddy_data:
+  caddy_config:

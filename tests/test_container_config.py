@@ -36,6 +36,11 @@ def test_compose_keeps_api_private_and_uses_service_dns_for_dashboard() -> None:
     compose = text("compose.yaml")
     dev = text("compose.dev.yaml")
     assert "api:" in compose and "dashboard:" in compose
+    assert "caddy:" in compose
+    assert "caddy_data:" in compose
+    caddy_section = compose[compose.index("  caddy:") : compose.index("  api:")]
+    assert "env_file" not in caddy_section
+    assert "API_ACCESS_TOKEN" not in caddy_section
     assert "API_BASE_URL: http://api:8000" in compose
     assert "expose:" in compose
     assert '"${API_HOST_BIND:-127.0.0.1}:${API_HOST_PORT:-8000}:8000"' in dev
@@ -44,6 +49,7 @@ def test_compose_keeps_api_private_and_uses_service_dns_for_dashboard() -> None:
     assert "privileged: true" not in compose
     assert "network_mode: host" not in compose
     assert "/var/run/docker.sock" not in compose
+    assert '"80:80"' in compose and '"443:443"' in compose
 
 
 def test_container_configuration_does_not_bake_secrets() -> None:
@@ -52,3 +58,13 @@ def test_container_configuration_does_not_bake_secrets() -> None:
         assert "COPY .env" not in contents
         assert "AIza" not in contents
         assert "replace-with" not in contents
+
+
+def test_caddy_routes_separate_configured_hosts_without_credentials() -> None:
+    caddy = text("Caddyfile")
+    assert "{$APP_DOMAIN}" in caddy
+    assert "{$API_DOMAIN}" in caddy
+    assert "reverse_proxy dashboard:8501" in caddy
+    assert "reverse_proxy api:8000" in caddy
+    assert "Authorization delete" in caddy
+    assert "Bearer" not in caddy

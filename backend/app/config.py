@@ -7,6 +7,7 @@ implement URL/network safety policy; that is a later hardening phase.
 from __future__ import annotations
 
 import os
+import ipaddress
 from functools import lru_cache
 from typing import Any
 
@@ -30,6 +31,7 @@ class Settings(BaseModel):
     api_base_url: str | None = Field(default=None, max_length=500)
     dashboard_api_access_token: str | None = Field(default=None, min_length=1)
     cors_allow_credentials: bool = False
+    trusted_proxy_networks: list[str] = Field(default_factory=list)
 
     request_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
     max_request_body_size_bytes: int = Field(default=1_000_000, gt=0, le=10_000_000)
@@ -68,6 +70,25 @@ class Settings(BaseModel):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return list(value)
 
+    @field_validator("trusted_proxy_networks", mode="before")
+    @classmethod
+    def parse_proxy_networks(cls, value: Any) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            return [network.strip() for network in value.split(",") if network.strip()]
+        return list(value)
+
+    @field_validator("trusted_proxy_networks")
+    @classmethod
+    def validate_proxy_networks(cls, value: list[str]) -> list[str]:
+        for network in value:
+            try:
+                ipaddress.ip_network(network, strict=False)
+            except ValueError as exc:
+                raise ValueError("Invalid trusted proxy network.") from exc
+        return value
+
     @field_validator("environment")
     @classmethod
     def normalize_environment(cls, value: str) -> str:
@@ -88,6 +109,7 @@ class Settings(BaseModel):
             "api_base_url": source.get("API_BASE_URL") or None,
             "dashboard_api_access_token": source.get("DASHBOARD_API_ACCESS_TOKEN") or None,
             "cors_allow_credentials": source.get("CORS_ALLOW_CREDENTIALS", "false"),
+            "trusted_proxy_networks": source.get("TRUSTED_PROXY_NETWORKS", ""),
             "request_timeout_seconds": source.get("REQUEST_TIMEOUT_SECONDS", 10.0),
             "max_request_body_size_bytes": source.get("MAX_REQUEST_BODY_SIZE_BYTES", 1_000_000),
             "max_crawl_response_size_bytes": source.get("MAX_CRAWL_RESPONSE_SIZE_BYTES", 2_000_000),

@@ -1,19 +1,22 @@
-# Container deployment foundation
+# Production ingress and container deployment
 
-SEO-Sensei has two stateless containers:
+SEO-Sensei uses Caddy as the only public ingress and keeps the application
+containers private:
 
 ```mermaid
 flowchart LR
-    Browser[Browser or extension] --> Ingress[Later TLS/HTTP ingress]
-    Ingress --> Dashboard[dashboard container :8501]
-    Ingress --> API[api container :8000]
+    Browser[Browser or extension] --> Caddy[Caddy :80/:443]
+    Caddy --> Dashboard[dashboard container :8501]
+    Caddy --> API[api container :8000]
     Dashboard -->|private Docker DNS: api:8000| API
     API --> Fetcher[SafeFetcher]
     API --> Gemini[Optional Gemini service]
 ```
 
 The API and dashboard remain separate processes and images. The extension is a
-browser-loaded artifact and is not part of either image.
+browser-loaded artifact and is not part of either image. Caddy routes
+`APP_DOMAIN` to the dashboard and `API_DOMAIN` to the API; separate hostnames
+avoid path-prefix rewriting and simplify Streamlit websocket traffic and CORS.
 
 ## Images and startup
 
@@ -32,8 +35,8 @@ container start.
 
 ## Local Compose
 
-Create a local environment file and set the fake/local credentials to real local
-values:
+Create a local environment file and set the local credentials and fake hostnames
+to appropriate values:
 
 ```bash
 copy .env.example .env  # PowerShell; use cp on Linux/macOS
@@ -49,11 +52,15 @@ container would refer to the dashboard container itself. The development
 overlay publishes the API only on host loopback for local extension/API
 testing.
 
-The default `compose.yaml` publishes only the dashboard on host loopback and
-keeps the API on the private Compose network. For a deployment behind an
-ingress, remove or replace the dashboard port mapping as appropriate and route
-the ingress to the two service ports. TLS, public DNS, and proxy configuration
-are intentionally not implemented here.
+The production `compose.yaml` publishes only Caddy on ports 80 and 443. API and
+dashboard ports are exposed only to the Compose network. `compose.dev.yaml`
+adds loopback-only API and dashboard ports and disables Caddy for convenient
+local HTTP development. Do not use that overlay as a public deployment.
+
+When `APP_DOMAIN` and `API_DOMAIN` resolve to the host, Caddy automatically
+obtains certificates through ACME and redirects HTTP to HTTPS. The dashboard
+is available at `https://app.example.com` and the extension should be pointed
+at `https://api.example.com` (replace both examples with the configured values).
 
 ## Configuration and secrets
 
@@ -61,6 +68,8 @@ Required for protected production API operation:
 
 - `API_ACCESS_TOKEN`
 - `ALLOWED_CORS_ORIGINS` appropriate to browser clients
+- `APP_DOMAIN`, `API_DOMAIN`, and `ACME_EMAIL` for Caddy-managed HTTPS
+- `TRUSTED_PROXY_NETWORKS`, containing only the configured Caddy peer/network
 
 `GEMINI_API_KEY` is optional. If it is empty, deterministic analysis remains
 available and AI functionality reports a controlled unavailable/configuration
@@ -89,9 +98,33 @@ The containers use read-only root filesystems, a `/tmp` tmpfs, dropped Linux
 capabilities, and `no-new-privileges`. These settings assume a normal container
 runtime; no privileged mode, host networking, or Docker socket is required.
 
+Caddy stores ACME certificates and its runtime configuration in the named
+`caddy_data` and `caddy_config` volumes. These are the only persistent volumes;
+back them up as deployment metadata, protect them like infrastructure state,
+and do not place application secrets in them. The API and dashboard have no
+persistent application state.
+
+## Proxy trust, CORS, and limits
+
+Caddy preserves the method, body, status, and websocket upgrade traffic while
+reverse-proxying. FastAPI remains responsible for bearer authentication and
+authorization. The API trusts forwarded client identity only from the static
+Caddy address configured in `TRUSTED_PROXY_NETWORKS`; arbitrary client headers
+are ignored. Caddy removes Authorization and Cookie fields from its access-log
+format and the application never accepts query-string authentication.
+
+Set `ALLOWED_CORS_ORIGINS` to the exact browser origins that need API access,
+such as the deployed dashboard origin and the extension origin. Do not use `*`.
+The proxy applies a 1 MB API request-body ceiling, matching the application's
+1,000,000-byte body limit as defense in depth. SafeFetcher, Gemini, and API
+timeouts remain application-controlled; Caddy does not impose a shorter
+request timeout on normal API operations.
+
 ## What this phase does not provide
 
-This is a containerization foundation, not a complete public deployment. It does
-not provide TLS certificates, a reverse proxy, cloud infrastructure, a registry,
-automatic deployment, persistent users, or distributed rate limiting. A later
-ingress must expose the API origin used by the extension and dashboard clients.
+This phase provides a Caddy-based ingress configuration but is not a complete
+cloud deployment. It does not provide DNS automation, cloud infrastructure, a
+registry, automatic deployment, persistent users, or distributed rate limiting.
+Real DNS records and ports 80/443 must reach the host before public ACME HTTPS
+can succeed. TLS terminates at Caddy; internal API traffic remains HTTP on the
+private Docker network.

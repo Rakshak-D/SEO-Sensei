@@ -10,7 +10,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOTS = (ROOT / "backend", ROOT / "frontend", ROOT / "tests", ROOT / "tools")
 TEXT_SUFFIXES = {".py", ".js", ".html", ".css", ".json", ".toml", ".yml", ".yaml"}
-SPECIAL_FILES = {"Dockerfile.api", "Dockerfile.dashboard", ".dockerignore", "compose.yaml", "compose.dev.yaml"}
+SPECIAL_FILES = {
+    "Dockerfile.api",
+    "Dockerfile.dashboard",
+    ".dockerignore",
+    "compose.yaml",
+    "compose.dev.yaml",
+    "Caddyfile",
+}
 
 
 def files() -> list[Path]:

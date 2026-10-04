@@ -1,0 +1,48 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+    encode gzip
+    reverse_proxy dashboard:8501
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Frame-Options "SAMEORIGIN"
+    }
+    log {
+        output stdout
+        format filter {
+            request>headers>Authorization delete
+            request>headers>Cookie delete
+            request>uri query {
+                token delete
+            }
+        }
+    }
+}
+
+{$API_DOMAIN} {
+    encode gzip
+    request_body {
+        max_size 1MB
+    }
+    reverse_proxy api:8000
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Frame-Options "DENY"
+    }
+    log {
+        output stdout
+        format filter {
+            request>headers>Authorization delete
+            request>headers>Cookie delete
+            request>uri query {
+                token delete
+            }
+        }
+    }
+}

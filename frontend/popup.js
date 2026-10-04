@@ -90,10 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    url: currentAnalysisData.final_url,
-                    page_title: currentAnalysisData.metadata.title,
-                    meta_description: currentAnalysisData.metadata.description,
-                    content_quality: "unknown"
+                    url: currentAnalysisData.final_url
                 }),
             });
 

@@ -8,9 +8,12 @@ import urllib.parse
 
 # Import your existing utilities
 from seo_crawler import get_full_seo_analysis_for_url
-from utils.gemini_helper import GeminiService
+from app.ai.gemini import AIServiceError, GeminiService
+from app.ai.models import AIRecommendationState
 from app.config import get_settings
 from app.logging_config import configure_logging
+from app.schemas.requests import ArticleGenerationRequest
+from app.seo.models import SEOAnalysis
 
 # --- Page & Service Setup ---
 st.set_page_config(
@@ -336,16 +339,16 @@ settings = get_settings()
 def get_gemini_service():
     try:
         if not settings.gemini_api_key:
-            raise ValueError("Gemini API key is not configured.")
-        return GeminiService(api_key=settings.gemini_api_key)
-    except ValueError as e:
-        st.error("Fatal Error: GEMINI_API_KEY not found. Please set it in .env file.")
+            return None
+        return GeminiService(settings)
+    except AIServiceError:
+        st.warning("AI features are unavailable. Deterministic analysis remains available.")
         return None
 
 service = get_gemini_service()
 
 # --- Re-usable Data Fetcher ---
-async def get_analysis_data_async(url: str, service_instance: GeminiService) -> Dict[str, Any]:
+async def get_analysis_data_async(url: str, service_instance: GeminiService | None = None) -> Dict[str, Any]:
     try:
         scraped_data = await get_full_seo_analysis_for_url(url)
         url_host = urllib.parse.urlsplit(url).hostname or "unknown-host"
@@ -586,23 +589,20 @@ if st.button("📊 Analyze Gaps", type="primary", use_container_width=True):
                 if "error" in analysis_data:
                     return analysis_data, None
                 
-                gap_prompt = f"""
-                Analyze this webpage's SEO data: {analysis_data}
-                Compare this to an 'ideal' website (100/100 SEO score).
-                Identify critical gaps. Suggest 3-5 'lacking keywords' 
-                and 3-5 'new content ideas' to fill these gaps.
-                
-                Return a single, valid JSON object:
-                {{
-                    "gap_summary": "A concise summary of key gaps (1-2 sentences).",
-                    "lacking_keywords": ["keyword1", "keyword2"],
-                    "content_ideas": ["Idea 1: Title and brief description", "Idea 2: ..."]
-                }}
-                """
-                gap_response = await service.model.generate_content_async(gap_prompt)
-                gap_data = service._extract_json(gap_response.text)
-                
-                return analysis_data, gap_data
+                try:
+                    result = await service.recommendations(
+                        SEOAnalysis.model_validate({key: value for key, value in analysis_data.items() if key != "status"})
+                    )
+                except Exception:
+                    return analysis_data, {"state": "unavailable"}
+                if result.state != AIRecommendationState.AVAILABLE:
+                    return analysis_data, {"state": result.state.value, "message": result.message}
+                return analysis_data, {
+                    "state": "available",
+                    "gap_summary": "Recommendations are grounded in the deterministic findings above.",
+                    "lacking_keywords": [],
+                    "content_ideas": [item.recommendation for item in result.recommendations],
+                }
             
             analysis_data, gap_data = run_async_in_session(run_gap_analysis())
 
@@ -619,8 +619,8 @@ if 'gap_data' in st.session_state:
     analysis_data = st.session_state.analysis_data
     gap_data = st.session_state.gap_data
     
-    if not gap_data or not isinstance(gap_data, dict) or "gap_summary" not in gap_data:
-         st.error("❌ AI gap analysis failed to return valid data. Please try again.")
+    if not gap_data or not isinstance(gap_data, dict) or gap_data.get("state") != "available":
+         st.info(gap_data.get("message", "AI recommendations are unavailable. Deterministic findings remain available.") if gap_data else "AI recommendations are unavailable.")
     else:
         # Gauge Chart
         fig = go.Figure(go.Indicator(
@@ -668,7 +668,7 @@ if 'gap_data' in st.session_state:
             keywords = gap_data.get('lacking_keywords', [])
             if keywords:
                 for i, keyword in enumerate(keywords, 1):
-                    st.markdown(f'<div class="keyword-item"><strong>{i}.</strong> {keyword}</div>', unsafe_allow_html=True)
+                    st.write(f"{i}. {keyword}")
             else:
                 st.info("No lacking keywords identified.")
                 
@@ -677,7 +677,7 @@ if 'gap_data' in st.session_state:
             ideas = gap_data.get('content_ideas', [])
             if ideas:
                 for i, idea in enumerate(ideas, 1):
-                    st.markdown(f'<div class="idea-item"><strong>{i}.</strong> {idea}</div>', unsafe_allow_html=True)
+                    st.write(f"{i}. {idea}")
             else:
                 st.info("No content ideas generated.")
 
@@ -703,40 +703,29 @@ if 'gap_data' in st.session_state:
             if submitted and idea != "No ideas available":
                 with st.spinner(f"✍️ Generating content for '{idea}'..."):
                     async def run_article_gen():
-                        return await service.generate_article_with_ai(
-                            topic=idea,
-                            keywords=gap_data.get('lacking_keywords', []),
-                            tone=tone
+                        return await service.generate_article(
+                            ArticleGenerationRequest(
+                                topic=idea,
+                                keywords=gap_data.get('lacking_keywords', []),
+                                tone=tone.lower(),
+                            )
                         )
                     
-                    article_data = run_async_in_session(run_article_gen())
+                    try:
+                        article_data = run_async_in_session(run_article_gen()).model_dump()
+                    except AIServiceError:
+                        article_data = None
                 
                 if article_data:
                     st.success("✅ Content generated successfully!")
-                    st.markdown(f'<h4 style="color: #f8fafc; text-align: center; margin-bottom: 1.5rem;">📝 {article_data.get("title", "Generated Article")}</h4>', unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                    <div style="
-                        background: rgba(20, 25, 30, 0.6);
-                        border: 1px solid rgba(59, 130, 246, 0.1);
-                        border-radius: 16px;
-                        padding: 2rem;
-                        margin: 1.5rem 0;
-                        color: #e2e8f0;
-                        line-height: 1.8;
-                        max-height: 500px;
-                        overflow-y: auto;
-                        font-size: 1.05rem;
-                    ">
-                        {article_data.get('content', 'Content generation encountered an issue.')}
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.subheader(article_data.get("title", "Generated Article"))
+                    st.text_area("Generated article", article_data.get("content", ""), height=400, disabled=True)
                     
                     st.markdown('<h4 style="color: #f8fafc; margin-bottom: 1rem;">🎯 Integrated SEO Suggestions</h4>', unsafe_allow_html=True)
                     suggestions = article_data.get('seo_suggestions', [])
                     if suggestions:
                         for i, suggestion in enumerate(suggestions, 1):
-                            st.markdown(f'<div class="strength-item"><strong>{i}.</strong> {suggestion}</div>', unsafe_allow_html=True)
+                            st.write(f"{i}. {suggestion}")
                     else:
                         st.info("General SEO best practices apply – focus on keyword density and readability.")
 
@@ -766,46 +755,7 @@ with st.form("competitor_form"):
     submitted = st.form_submit_button("🔍 Discover Competitors", type="primary", use_container_width=True)
 
     if submitted:
-        if service and comp_domain and comp_industry:
-            with st.spinner(f"🌐 Researching competitors for {comp_domain} in {comp_industry}..."):
-                async def run_competitor_find():
-                    competitor_prompt = f"""
-                    As an elite SEO expert, for domain {comp_domain} in {comp_industry}, 
-                    list the top 5 most direct, high-authority competitors. 
-                    Focus on sites with similar audience, content, and traffic.
-                    
-                    Respond ONLY with a JSON array of clean domain URLs: ["example.com", "competitor2.com"]
-                    """
-                    comp_response = await service.model.generate_content_async(competitor_prompt)
-                    return service._extract_json(comp_response.text)
-
-                competitors = run_async_in_session(run_competitor_find())
-                
-                if competitors and isinstance(competitors, list) and len(competitors) > 0:
-                    st.success(f"✅ Identified {len(competitors)} top competitors!")
-                    st.markdown(f'<h3 style="color: #f8fafc; text-align: center; margin-bottom: 2rem;">🏅 Key Competitors in {comp_industry}</h3>', unsafe_allow_html=True)
-                    
-                    for i, competitor in enumerate(competitors[:5], 1):  # Limit to 5
-                        st.markdown(f"""
-                        <div style="
-                            background: rgba(20, 25, 30, 0.6);
-                            border: 1px solid rgba(59, 130, 246, 0.2);
-                            border-radius: 12px;
-                            padding: 1.5rem;
-                            margin: 1rem 0;
-                            text-align: center;
-                            transition: all 0.2s ease;
-                        " onmouseover="this.style.background='rgba(59, 130, 246, 0.1)';" onmouseout="this.style.background='rgba(20, 25, 30, 0.6)';">
-                            <strong style="color: #3b82f6; font-size: 1.2rem;">{i}.</strong> 
-                            <a href="https://{competitor}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;">{competitor}</a>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    st.info("💡 Pro Tip: Paste these domains into the comparison tool above for a full SEO breakdown.")
-                else:
-                    st.error("❌ Unable to generate competitors. Refine your industry description and try again.")
-        else:
-            st.warning("⚠️ Provide both your domain and industry for accurate results.")
+        st.info("Competitor discovery is deferred in this production iteration. Use deterministic URL analysis for sites you already know.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 

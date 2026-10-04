@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from typing_extensions import Annotated
 
+from ..ai.models import AIRecommendationsResult, ArticleGenerationResult, SEOBoostResult
 from ..seo.models import SEOAnalysis
 
 
@@ -17,21 +18,15 @@ ShortText = Annotated[str, StringConstraints(max_length=500)]
 class URLAnalysisResponse(SEOAnalysis):
     """Public response for deterministic URL analysis."""
 
+    ai_recommendations: AIRecommendationsResult | None = None
+
+
+class ArticleGenerationResponse(ArticleGenerationResult):
     pass
 
 
-class ArticleGenerationResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    title: Annotated[str, Field(min_length=1, max_length=500)]
-    content: Annotated[str, Field(min_length=1, max_length=50_000)]
-    seo_suggestions: list[ResponseText] = Field(default_factory=list, max_length=10)
-
-
-class SEOBoostResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    suggested_description: Annotated[str, Field(max_length=320)]
+class SEOBoostResponse(SEOBoostResult):
+    pass
 
 
 class HealthResponse(BaseModel):

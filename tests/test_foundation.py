@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from backend.app.config import ConfigurationError, Settings
+from backend.app.config import Settings
 from backend.app.schemas.requests import ArticleGenerationRequest, URLAnalysisRequest
 from backend.app.schemas.responses import ErrorResponse
 from backend.app.seo.models import SEOScore
@@ -31,9 +31,9 @@ def test_valid_configuration_loading() -> None:
     assert settings.allowed_cors_origins == ["http://localhost:8501", "chrome-extension://test"]
 
 
-def test_production_configuration_requires_gemini_key() -> None:
-    with pytest.raises(ConfigurationError, match="GEMINI_API_KEY"):
-        Settings.from_environment({"APP_ENV": "production", "GEMINI_API_KEY": ""})
+def test_production_configuration_allows_optional_gemini() -> None:
+    settings = Settings.from_environment({"APP_ENV": "production", "GEMINI_API_KEY": ""})
+    assert settings.gemini_api_key is None
 
 
 def test_url_schema_accepts_http_and_https() -> None:
@@ -137,6 +137,11 @@ def test_unconfigured_ai_returns_safe_public_error(api_client: TestClient) -> No
     assert "Traceback" not in response.text
     assert "GEMINI_API_KEY" not in response.text
 
+    boost = api_client.post("/boost-seo", json={"url": "https://example.com/"})
+    assert boost.status_code == 503
+    assert boost.json()["error"]["code"] == "upstream_ai_unavailable"
+    assert "example.com" not in boost.text
+
 
 def test_analysis_api_returns_deterministic_contract_without_gemini(
     api_client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -165,3 +170,11 @@ def test_analysis_api_returns_deterministic_contract_without_gemini(
     assert first.json()["deterministic_score"] == second.json()["deterministic_score"]
     assert "html" not in first.json()
     assert "meta_keywords" not in first.json()
+
+    with_ai = api_client.post(
+        "/analyse-url",
+        json={"url": "https://example.com/", "include_ai_recommendations": True},
+    )
+    assert with_ai.status_code == 200
+    assert with_ai.json()["ai_recommendations"]["state"] == "configuration_error"
+    assert with_ai.json()["deterministic_score"] == first.json()["deterministic_score"]

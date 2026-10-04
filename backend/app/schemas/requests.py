@@ -16,6 +16,7 @@ class URLAnalysisRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: Annotated[HttpUrl, Field(max_length=2_048)]
+    include_ai_recommendations: bool = False
 
 
 class ArticleGenerationRequest(BaseModel):
@@ -27,11 +28,8 @@ class ArticleGenerationRequest(BaseModel):
 
 
 class SEOBoostRequest(BaseModel):
-    """Client-provided page facts for a boost request, never internal analysis state."""
+    """Request a suggestion from server-generated deterministic findings."""
 
     model_config = ConfigDict(extra="forbid")
 
-    url: Annotated[HttpUrl, Field(max_length=2_048)] | None = None
-    page_title: Annotated[str, Field(max_length=500)] = ""
-    meta_description: Annotated[str, Field(max_length=2_000)] = ""
-    content_quality: Literal["poor", "fair", "good", "excellent", "unknown"] = "unknown"
+    url: Annotated[HttpUrl, Field(max_length=2_048)]

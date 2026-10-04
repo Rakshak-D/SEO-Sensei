@@ -7,7 +7,6 @@ import re
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -26,27 +25,26 @@ from .api.errors import (
     unhandled_error_handler,
     validation_error_handler,
 )
+from .ai.gemini import AIServiceError, GeminiService
+from .ai.models import AIRecommendationState, AIRecommendationsResult
 from .config import Settings, get_settings
 from .logging_config import configure_logging
 from .schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
 from .schemas.responses import ArticleGenerationResponse, HealthResponse, SEOBoostResponse, URLAnalysisResponse
 from .security.fetcher import SafeFetcher
+from .seo.models import SEOAnalysis
 
 
 REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 logger = logging.getLogger("seo_sensei.api")
 settings: Settings = get_settings()
 configure_logging()
-service: Any | None = None
+service: GeminiService | None = None
 if settings.gemini_api_key:
     try:
-        try:
-            from ..utils.gemini_helper import GeminiService
-        except ImportError:
-            from utils.gemini_helper import GeminiService
-        service = GeminiService(api_key=settings.gemini_api_key)
-    except ImportError as exc:
-        raise RuntimeError("The configured Gemini integration dependencies are unavailable.") from exc
+        service = GeminiService(settings)
+    except AIServiceError:
+        logger.warning("gemini_service_not_available_at_startup")
 
 
 @asynccontextmanager
@@ -130,7 +128,7 @@ app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_error_handler)
 
 
-def _service_or_error() -> Any:
+def _service_or_error() -> GeminiService:
     if service is None:
         raise APIError(UPSTREAM_AI_UNAVAILABLE, "AI analysis is not configured.", 503)
     return service
@@ -174,7 +172,27 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
             raise APIError(RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502)
 
         analysis_data = {key: value for key, value in scraped_data.items() if key != "status"}
-        return URLAnalysisResponse.model_validate(analysis_data)
+        analysis = SEOAnalysis.model_validate(analysis_data)
+        ai_recommendations: AIRecommendationsResult | None = None
+        if payload.include_ai_recommendations:
+            if service is None:
+                ai_recommendations = AIRecommendationsResult(
+                    state=AIRecommendationState.CONFIGURATION_ERROR,
+                    message="AI recommendations are not configured. Deterministic findings remain available.",
+                )
+            else:
+                try:
+                    ai_recommendations = await service.recommendations(
+                        analysis,
+                        request_id=getattr(request.state, "request_id", None),
+                    )
+                except Exception:
+                    logger.warning("ai_recommendations_failed", extra=_log_context(request, "/analyse-url"))
+                    ai_recommendations = AIRecommendationsResult(
+                        state=AIRecommendationState.UNAVAILABLE,
+                        message="AI recommendations are temporarily unavailable. Deterministic findings remain available.",
+                    )
+        return URLAnalysisResponse.model_validate({**analysis.model_dump(mode="json"), "ai_recommendations": ai_recommendations})
     except APIError:
         raise
     except Exception:
@@ -185,8 +203,13 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
 @app.post("/generate-article", response_model=ArticleGenerationResponse)
 async def generate_article(payload: ArticleGenerationRequest, request: Request) -> ArticleGenerationResponse:
     try:
-        result = await _service_or_error().generate_article_with_ai(payload.topic, list(payload.keywords), payload.tone)
+        result = await _service_or_error().generate_article(
+            payload,
+            request_id=getattr(request.state, "request_id", None),
+        )
         return ArticleGenerationResponse.model_validate(result)
+    except AIServiceError:
+        raise APIError(UPSTREAM_AI_UNAVAILABLE, "Article generation is temporarily unavailable.", 503)
     except APIError:
         raise
     except Exception:
@@ -197,8 +220,22 @@ async def generate_article(payload: ArticleGenerationRequest, request: Request) 
 @app.post("/boost-seo", response_model=SEOBoostResponse)
 async def post_boost_seo(payload: SEOBoostRequest, request: Request) -> SEOBoostResponse:
     try:
-        result = await _service_or_error().generate_seo_boost(payload.model_dump(mode="json"))
+        ai_service = _service_or_error()
+        try:
+            from ..seo_crawler import get_full_seo_analysis_for_url
+        except ImportError:
+            from seo_crawler import get_full_seo_analysis_for_url
+        scraped_data = await get_full_seo_analysis_for_url(str(payload.url), fetcher=request.app.state.safe_fetcher)
+        if not scraped_data or scraped_data.get("status") == "failed":
+            raise APIError(RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502)
+        analysis = SEOAnalysis.model_validate({key: value for key, value in scraped_data.items() if key != "status"})
+        result = await ai_service.generate_boost(
+            analysis,
+            request_id=getattr(request.state, "request_id", None),
+        )
         return SEOBoostResponse.model_validate(result)
+    except AIServiceError:
+        raise APIError(UPSTREAM_AI_UNAVAILABLE, "SEO boost suggestions are temporarily unavailable.", 503)
     except APIError:
         raise
     except Exception:

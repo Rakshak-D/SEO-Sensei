@@ -40,7 +40,13 @@ class Settings(BaseModel):
     max_keyword_count: int = Field(default=20, ge=1, le=100)
     max_keyword_length: int = Field(default=80, ge=8, le=500)
     max_ai_input_size: int = Field(default=30_000, ge=1_000, le=200_000)
-    max_ai_output_size: int = Field(default=50_000, ge=1_000, le=500_000)
+    max_ai_output_size: int = Field(default=50_000, ge=1_000, le=50_000)
+    ai_request_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
+    ai_retry_count: int = Field(default=1, ge=0, le=3)
+    ai_retry_backoff_seconds: float = Field(default=0.5, ge=0, le=10)
+    ai_max_concurrency: int = Field(default=3, ge=1, le=20)
+    max_ai_recommendation_count: int = Field(default=5, ge=1, le=10)
+    max_ai_recommendation_length: int = Field(default=1_000, ge=100, le=2_000)
 
     @field_validator("allowed_cors_origins", mode="before")
     @classmethod
@@ -81,15 +87,18 @@ class Settings(BaseModel):
             "max_keyword_length": source.get("MAX_KEYWORD_LENGTH", 80),
             "max_ai_input_size": source.get("MAX_AI_INPUT_SIZE", 30_000),
             "max_ai_output_size": source.get("MAX_AI_OUTPUT_SIZE", 50_000),
+            "ai_request_timeout_seconds": source.get("AI_REQUEST_TIMEOUT_SECONDS", 20.0),
+            "ai_retry_count": source.get("AI_RETRY_COUNT", 1),
+            "ai_retry_backoff_seconds": source.get("AI_RETRY_BACKOFF_SECONDS", 0.5),
+            "ai_max_concurrency": source.get("AI_MAX_CONCURRENCY", 3),
+            "max_ai_recommendation_count": source.get("MAX_AI_RECOMMENDATION_COUNT", 5),
+            "max_ai_recommendation_length": source.get("MAX_AI_RECOMMENDATION_LENGTH", 1_000),
         }
 
         try:
             settings = cls.model_validate(values)
         except ValueError as exc:
             raise ConfigurationError("Application configuration is invalid.") from exc
-
-        if settings.environment in {"production", "prod"} and not settings.gemini_api_key:
-            raise ConfigurationError("GEMINI_API_KEY is required when APP_ENV is production.")
 
         return settings
 

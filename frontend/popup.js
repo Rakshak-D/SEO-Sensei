@@ -1,233 +1,102 @@
-document.addEventListener("DOMContentLoaded", () => {
-    // Get all DOM elements
-    const analyzeBtn = document.getElementById("analyzeBtn");
-    const loader = document.getElementById("loader");
-    const errorEl = document.getElementById("error");
-    const resultsEl = document.getElementById("results");
-    const welcomeEl = document.getElementById("welcome");
-    const dashboardBtn = document.getElementById("dashboardBtn");
-    const boostBtn = document.getElementById("boostBtn");
+(function () {
+    "use strict";
+    const api = globalThis.SeoSenseiApi;
+    const $ = (id) => document.getElementById(id);
+    let current = null;
 
-    // --- Result fields ---
-    const scoreValueEl = document.getElementById("scoreValue");
-    const scoreCardEl = document.getElementById("scoreCard");
-    const suggestionsListEl = document.getElementById("suggestionsList");
-    const issuesListEl = document.getElementById("issuesList");
-    const strengthsListEl = document.getElementById("strengthsList");
-    const qualityValueEl = document.getElementById("qualityValue");
-    const pageTitleValueEl = document.getElementById("pageTitleValue");
-    const toggleDetailsBtn = document.getElementById("toggleDetailsBtn");
-    const extraDetailsEl = document.getElementById("extraDetails");
-    const statusCodeValueEl = document.getElementById("statusCodeValue");
-    const metaDescriptionValueEl = document.getElementById("metaDescriptionValue");
-    const headersListEl = document.getElementById("headersList");
-
-    const boostResultsEl = document.getElementById("boostResults");
-    const boostMetaEl = document.getElementById("boostMeta");
-
-    // API URLs
-    const API_BASE_URL = "http://127.0.0.1:8000";
-    const ANALYZE_API_URL = `${API_BASE_URL}/analyse-url`;
-    const BOOST_API_URL = `${API_BASE_URL}/boost-seo`;
-
-    let currentAnalysisData = null;
-
-    // Main function to call the API
-    const analyzePage = async () => {
-        // 1. Set UI to Loading state
-        showLoading();
-
-        try {
-            // 2. Get the active tab URL
-            const [tab] = await chrome.tabs.query({
-                active: true,
-                currentWindow: true,
-            });
-
-            if (!tab.url) {
-                showError("Could not get current tab URL.");
-                return;
-            }
-            
-            // 3. Call the backend
-            const response = await fetch(ANALYZE_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: tab.url }),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error?.message || errData.detail || `HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            currentAnalysisData = data;
-
-            // 4. Show results
-            showResults(data);
-
-        } catch (e) {
-            console.error("Analysis failed:", e);
-            showError(`⚠ ${e.message}`);
-        }
-    };
-
-    const getSeoBoost = async () => {
-        if (!currentAnalysisData) {
-            showError("No analysis data to boost.");
-            return;
-        }
-        
-        // Show loader and hide old boost results.
-        loader.style.display = "flex";
-        boostResultsEl.style.display = "none";
-        errorEl.style.display = "none";
-
-        try {
-            const response = await fetch(BOOST_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    url: currentAnalysisData.final_url
-                }),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error?.message || errData.detail || `HTTP error! Status: ${response.status}`);
-            }
-
-            const boostData = await response.json();
-            
-            // Populate boost results
-            boostMetaEl.textContent = boostData.suggested_description || "N/A";
-            // Show boost results
-            loader.style.display = "none";
-            boostResultsEl.style.display = "block";
-
-        } catch (e) {
-            console.error("Boost failed:", e);
-            showError(`⚠ ${e.message}`);
-        }
-    };
-
-    // --- UI State Functions ---
-
-    function showLoading() {
-        welcomeEl.style.display = "none";
-        resultsEl.style.display = "none";
-        errorEl.style.display = "none";
-        loader.style.display = "flex";
-        extraDetailsEl.style.display = "none";
-        toggleDetailsBtn.textContent = "Show More Details";
-        
-        boostBtn.style.display = "none";
-        boostResultsEl.style.display = "none";
-        currentAnalysisData = null;
+    function addText(parent, className, text) {
+        const node = document.createElement("span");
+        node.className = className || "";
+        node.textContent = String(text ?? "");
+        parent.appendChild(node);
+        return node;
     }
 
-    function showError(message) {
-        loader.style.display = "none";
-        welcomeEl.style.display = "none";
-        resultsEl.style.display = "none";
-        errorEl.textContent = message;
-        errorEl.style.display = "block";
+    function showError(error) {
+        $("errorPanel").hidden = false;
+        $("errorTitle").textContent = ["auth_required", "auth_invalid", "configuration_error"].includes(error.code) ? "API configuration needed" : "Analysis unavailable";
+        $("errorMessage").textContent = error.message || "The API request could not be completed.";
+        $("errorRequestId").textContent = error.requestId ? `Request ID: ${error.requestId}` : "";
+        $("statusText").textContent = "No analysis loaded.";
     }
 
-    function showResults(data) {
-        // 1. Set deterministic score and color.
-        const score = data.deterministic_score.overall_score;
-        scoreValueEl.textContent = `${score}/100`;
-        scoreCardEl.className = "score-card"; // Reset classes
-        if (score > 80) {
-            scoreCardEl.classList.add("score-green");
-        } else if (score >= 60) {
-            scoreCardEl.classList.add("score-yellow");
-        } else {
-            scoreCardEl.classList.add("score-red");
-        }
+    function clearError() { $("errorPanel").hidden = true; $("errorMessage").textContent = ""; $("errorRequestId").textContent = ""; }
 
-        // 2. Populate deterministic check lists.
-        populateList(suggestionsListEl, data.checks.filter(check => check.status === "warning").map(check => check.recommendation));
-        populateList(issuesListEl, data.checks.filter(check => check.status === "fail").map(check => check.title));
-        populateList(strengthsListEl, data.checks.filter(check => check.status === "pass").map(check => check.title));
-
-        // 3. Set bounded content signal.
-        qualityValueEl.textContent = `${data.lexical_signals.visible_word_count} visible words`;
-
-        // 4. Populate Page Details
-        pageTitleValueEl.textContent = data.metadata.title || "N/A";
-
-        // 5. Populate Extra Details (hidden)
-        statusCodeValueEl.textContent = data.fetch.status_code || "N/A";
-        metaDescriptionValueEl.textContent = data.metadata.description || "No meta description found.";
-        
-        populateHeadersList(headersListEl, data.headings);
-
-        // 6. Show the results container
-        loader.style.display = "none";
-        welcomeEl.style.display = "none";
-        errorEl.style.display = "none";
-        resultsEl.style.display = "block";
-
-        boostBtn.style.display = "block";
-    }
-
-    // --- Helper Functions ---
-
-    function populateList(listElement, items, emptyMessage = "None found.") {
-        listElement.innerHTML = "";
-        if (items && items.length > 0) {
-            items.forEach(text => {
-                const li = document.createElement("li");
-                li.textContent = text;
-                listElement.appendChild(li);
-            });
-        } else {
-            const li = document.createElement("li");
-            li.textContent = emptyMessage;
-            li.className = "empty-list-item";
-            listElement.appendChild(li);
-        }
-    }
-    
-    function populateHeadersList(element, headers) {
-        element.innerHTML = "";
-        let count = 0;
-        const escapeHTML = (str) => str.replace(/[&<>"']/g, (match) => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[match]));
-
-        ['h1', 'h2', 'h3'].forEach(tag => {
-            if (headers[tag] && headers[tag].length > 0) {
-                headers[tag].forEach(text => {
-                    const p = document.createElement("p");
-                    p.innerHTML = `<strong>${tag.toUpperCase()}:</strong> ${escapeHTML(text)}`;
-                    element.appendChild(p);
-                    count++;
-                });
-            }
+    function renderCategories(categories) {
+        const grid = $("categoryGrid"); grid.replaceChildren();
+        (Array.isArray(categories) ? categories : []).slice(0, 8).forEach((category) => {
+            const card = document.createElement("div"); card.className = "category-card";
+            addText(card, "category-name", String(category.category || "").replaceAll("_", " "));
+            addText(card, "category-score", `${Number(category.points_earned || 0).toFixed(1)} / ${Number(category.max_points || 0).toFixed(0)}`);
+            grid.appendChild(card);
         });
-        if (count === 0) {
-            element.innerHTML = "<p>No H1, H2, or H3 tags found.</p>";
-        }
-    }
-    
-    function toggleExtraDetails() {
-        const isHidden = extraDetailsEl.style.display === "none";
-        extraDetailsEl.style.display = isHidden ? "block" : "none";
-        toggleDetailsBtn.textContent = isHidden ? "Hide Details" : "Show More Details";
     }
 
-    // --- Event Listeners ---
-    analyzeBtn.addEventListener("click", analyzePage);
-    toggleDetailsBtn.addEventListener("click", toggleExtraDetails);
-    
-    dashboardBtn.addEventListener("click", () => {
-        chrome.tabs.create({ url: "http://localhost:8501" });
-    });
+    function renderChecks(checks) {
+        const list = $("checksList"); list.replaceChildren();
+        const important = (Array.isArray(checks) ? checks : []).filter((check) => check.status === "fail" || check.status === "warning").slice(0, 8);
+        $("checkCount").textContent = String(important.length);
+        if (!important.length) { addText(list, "muted", "No failed or warning checks recorded."); return; }
+        important.forEach((check) => {
+            const item = document.createElement("div"); item.className = `check ${check.status === "fail" ? "fail" : ""}`;
+            addText(item, "check-title", `${String(check.status).toUpperCase()} · ${check.title || "Check"}`);
+            addText(item, "check-evidence", check.evidence && check.evidence.observed ? check.evidence.observed : "No evidence supplied.");
+            addText(item, "check-action", check.recommendation || "Review this finding.");
+            list.appendChild(item);
+        });
+    }
 
-    boostBtn.addEventListener("click", getSeoBoost);
-});
+    function detailRow(label, value) {
+        const row = document.createElement("div"); row.className = "detail-row";
+        addText(row, "", label);
+        const strong = document.createElement("strong"); strong.textContent = String(value ?? "—"); row.appendChild(strong);
+        return row;
+    }
+
+    function renderDetails(data) {
+        const page = $("pageSignals"); page.replaceChildren();
+        const metadata = data.metadata || {};
+        [
+            ["Title", metadata.title || "Missing"], ["Description", metadata.description || "Missing"],
+            ["Canonical", metadata.canonical_resolved || metadata.canonical || "Missing"],
+            ["Robots", Array.isArray(metadata.robots_directives) ? metadata.robots_directives.join(", ") || "None" : "None"],
+            ["Visible words", data.lexical_signals && data.lexical_signals.visible_word_count],
+            ["Images", data.images && data.images.total], ["Internal links", data.links && data.links.internal],
+        ].forEach(([label, value]) => page.appendChild(detailRow(label, value)));
+        const transport = $("transportSignals"); transport.replaceChildren();
+        const fetch = data.fetch || {};
+        [["HTTP status", fetch.status_code], ["Content type", fetch.content_type || "Unknown"], ["Bytes", fetch.bytes_read], ["Redirects", fetch.redirect_count], ["Final URL", data.final_url]].forEach(([label, value]) => transport.appendChild(detailRow(label, value)));
+    }
+
+    function renderAi(data) {
+        const ai = data.ai_recommendations; const state = ai && ai.state;
+        const list = $("aiList"); list.replaceChildren();
+        if (!ai || state !== "available") { $("aiState").textContent = ai && ai.message ? ai.message : "AI recommendations were not requested."; return; }
+        $("aiState").textContent = "Grounded in the deterministic findings above.";
+        (Array.isArray(ai.recommendations) ? ai.recommendations : []).slice(0, 5).forEach((recommendation) => {
+            const item = document.createElement("div"); item.className = "ai-item";
+            addText(item, "ai-priority", `${String(recommendation.priority || "medium").toUpperCase()} · ${recommendation.issue || "Recommendation"}`);
+            addText(item, "", recommendation.recommendation || recommendation.explanation || "Review the deterministic finding.");
+            list.appendChild(item);
+        });
+    }
+
+    function render(data, tab) {
+        current = data; clearError(); $("results").hidden = false; $("statusText").textContent = "Analysis complete.";
+        $("pageHost").textContent = new URL(data.final_url || tab.url).hostname;
+        $("pageTitle").textContent = data.metadata && data.metadata.title ? data.metadata.title : tab.title;
+        const score = Number(data.deterministic_score.overall_score); $("scoreValue").textContent = `${score}/100`; $("scoreRingValue").textContent = String(score); $("scoreRing").style.borderColor = score >= 80 ? "var(--mint)" : score >= 50 ? "var(--amber)" : "var(--coral)";
+        renderCategories(data.deterministic_score.categories); renderChecks(data.checks); renderDetails(data); renderAi(data);
+    }
+
+    async function analyze() {
+        const button = $("analyzeBtn"); button.disabled = true; clearError(); $("results").hidden = true; $("statusText").textContent = "Asking the API to inspect this page…";
+        try { const result = await api.analyzeCurrentTab(); render(result.analysis, result.tab); }
+        catch (error) { showError(error instanceof api.ExtensionApiError ? error : new api.ExtensionApiError("unknown", "The extension could not complete the request.")); }
+        finally { button.disabled = false; }
+    }
+
+    function openOptions() { chrome.runtime.openOptionsPage(); }
+    $("analyzeBtn").addEventListener("click", analyze); $("settingsBtn").addEventListener("click", openOptions); $("optionsLink").addEventListener("click", openOptions);
+    chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => { const tab = tabs[0]; if (tab && tab.url) { try { $("pageHost").textContent = new URL(tab.url).hostname; } catch (_) {} $("pageTitle").textContent = tab.title || "Ready to analyze."; } });
+}());

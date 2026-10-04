@@ -7,93 +7,33 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🔍 SEO-Sensei</h1>
+    <main class="shell">
+        <header class="brand-bar">
+            <div class="brand-mark" aria-hidden="true">⌁</div>
+            <div><p class="eyebrow">SEO-SENSEI / FIELD NOTE</p><h1>Page inspection</h1></div>
+            <button id="settingsBtn" class="icon-button" type="button" aria-label="Open settings">⚙</button>
         </header>
-        
-        <main>
-            <button id="analyzeBtn" class="btn btn-primary">Analyze This Page</button>
-            
-            <div id="welcome" class="message-card">
-                <p>Click "Analyze" to get deterministic SEO checks for the current page.</p>
-            </div>
-
-            <div id="loader" class="loader" style="display: none;">
-                <div class="spinner"></div>
-                <p>Analyzing page...</p>
-            </div>
-            
-            <div id="error" class="error-card" style="display: none;">
-                </div>
-
-            <div id="results" class="results-container" style="display: none;">
-                
-                <div id="scoreCard" class="score-card">
-                    <h2>SEO Score</h2>
-                    <p id="scoreValue">--/100</p>
-                </div>
-
-                <div class="button-row">
-                    <button id="boostBtn" class="btn btn-secondary btn-half">✨ Generate Boost</button>
-                    <button id="dashboardBtn" class="btn btn-secondary btn-half">🚀 Full Dashboard</button>
-                </div>
-
-                <div id="boostResults" class="results-container" style="display: none;">
-                    <div class="results-section">
-                        <h2>SEO Boost Suggestions</h2>
-                        <p class="data-label">Suggested Meta Description</p>
-                        <p id="boostMeta" class="data-value"></p>
-                    </div>
-                </div>
-
-                <div class="results-section">
-                    <h2>Page Details</h2>
-                    <p class="data-label">Title</p>
-                    <p id="pageTitleValue" class="data-value">...</p>
-                </div>
-                
-                <div class="results-section">
-                    <h2>💡 Recommendations</h2>
-                    <ul id="suggestionsList" class="results-list">
-                        </ul>
-                </div>
-
-                <div class="results-section">
-                    <h2>❌ Critical Issues</h2>
-                    <ul id="issuesList" class="results-list">
-                        </ul>
-                </div>
-
-                <div class="results-section">
-                    <h2>✅ Strengths</h2>
-                    <ul id="strengthsList" class="results-list">
-                        </ul>
-                </div>
-
-                <div class="results-section">
-                    <h2>Content Signal</h2>
-                    <p id="qualityValue" class="data-value"></p>
-                </div>
-                
-                <button id="toggleDetailsBtn" class="btn btn-secondary">Show More Details</button>
-                <div id="extraDetails" class="details-card" style="display: none;">
-                    <h2>Extra Details</h2>
-                    
-                    <p class="data-label">Status Code</p>
-                    <p id="statusCodeValue" class="data-value">...</p>
-                    
-                    <p class="data-label">Meta Description</p>
-                    <p id="metaDescriptionValue" class="data-value">...</p>
-
-                    <p class="data-label">Header Tags (H1, H2, H3)</p>
-                    <div id="headersList" class="data-value headers-list">
-                        </div>
-                </div>
-
-            </div>
-        </main>
-    </div>
+        <section class="page-context" aria-labelledby="pageLabel">
+            <p id="pageLabel" class="eyebrow">CURRENT TAB</p>
+            <p id="pageHost" class="page-host">No page selected</p>
+            <p id="pageTitle" class="page-title">Open a webpage, then analyze it.</p>
+        </section>
+        <button id="analyzeBtn" class="primary-button" type="button">Analyze current page <span aria-hidden="true">↗</span></button>
+        <p id="statusText" class="status-text" role="status">The API performs all fetching and safety checks.</p>
+        <section id="errorPanel" class="notice error-notice" hidden aria-live="polite">
+            <strong id="errorTitle">Analysis unavailable</strong><span id="errorMessage"></span><small id="errorRequestId"></small>
+        </section>
+        <section id="results" hidden aria-live="polite">
+            <div class="score-panel"><div><p class="eyebrow">DETERMINISTIC SCORE</p><p id="scoreValue" class="score-value">—</p><p class="muted">Reproducible page evidence</p></div><div id="scoreRing" class="score-ring" aria-hidden="true"><span id="scoreRingValue">—</span></div></div>
+            <div id="categoryGrid" class="category-grid"></div>
+            <section class="section-block"><div class="section-heading"><h2>Priority checks</h2><span id="checkCount" class="count-pill">0</span></div><div id="checksList" class="checks-list"></div></section>
+            <details class="detail-group" open><summary>Page signals</summary><div id="pageSignals" class="detail-content"></div></details>
+            <details class="detail-group"><summary>Transport</summary><div id="transportSignals" class="detail-content"></div></details>
+            <section class="ai-panel"><div class="section-heading"><h2>AI recommendations</h2><span class="ai-badge">OPTIONAL</span></div><p id="aiState" class="muted">Request analysis to see optional recommendations.</p><div id="aiList" class="ai-list"></div></section>
+        </section>
+        <footer class="footer-row"><span>Evidence first · AI second</span><button id="optionsLink" class="text-button" type="button">API settings</button></footer>
+    </main>
+    <script src="api-client.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

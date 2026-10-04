@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO-Sensei API settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <main class="settings-shell">
+        <p class="eyebrow">SEO-SENSEI / PRIVATE CLIENT</p>
+        <h1>API settings</h1>
+        <p class="intro">Connect this extension to a self-hosted or private SEO-Sensei API. This is an operator credential, not a multi-user identity system.</p>
+        <form id="settingsForm" novalidate>
+            <label for="apiBaseUrl">API base URL</label>
+            <input id="apiBaseUrl" type="url" placeholder="https://seo-sensei.example" autocomplete="url" required>
+            <small>Use the FastAPI origin only. Credentials, query strings, and fragments are rejected.</small>
+            <label for="apiToken">API access token</label>
+            <input id="apiToken" type="password" placeholder="Enter token (never shown after saving)" autocomplete="off" required>
+            <small>Stored locally in this browser profile and sent only to the configured API origin.</small>
+            <div class="actions"><button id="saveBtn" type="submit">Save configuration</button><button id="clearBtn" type="button" class="secondary">Clear</button></div>
+        </form>
+        <section class="connection-card">
+            <div><p class="eyebrow">CONNECTION</p><strong id="connectionState">Not configured</strong><p id="savedOrigin">No API origin saved.</p></div>
+            <button id="testBtn" type="button" class="secondary">Test /health</button>
+        </section>
+        <p id="message" class="message" role="status"></p>
+        <p class="privacy-note">The server-wide API token is never embedded in this extension. Anyone who can inspect an extension can inspect its local credential, so use this model only for a self-hosted/private deployment.</p>
+    </main>
+    <script src="api-client.js"></script>
+    <script src="options.js"></script>
+</body>
+</html>

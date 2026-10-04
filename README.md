@@ -113,6 +113,10 @@ The Streamlit dashboard is an API client. Run it with `API_BASE_URL` and
 `DASHBOARD_API_ACCESS_TOKEN` configured; it does not fetch pages or call Gemini
 directly. See [`docs/dashboard.md`](docs/dashboard.md) for the security model.
 
+The Chrome extension is also an API client. Load `frontend/` unpacked, open its
+API settings page, and enter the FastAPI origin plus a private deployment token.
+The token is never bundled in the extension. See [`docs/extension.md`](docs/extension.md).
+
 ---
 
 ## 📁 Project Structure

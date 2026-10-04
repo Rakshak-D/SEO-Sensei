@@ -46,6 +46,6 @@ Protected operations use an in-process limiter keyed by a non-reversible token f
 
 Forwarded client-IP headers are not trusted. The direct socket peer is used unless a future deployment explicitly adds trusted-proxy handling. CORS origins are configuration-driven, wildcard origins are rejected, and the `Authorization` header is explicitly allowed for configured origins. Authenticated API responses are marked `Cache-Control: no-store`.
 
-The Chrome extension contains no deployment credential. Consequently, a production extension cannot call protected endpoints until a separate extension authentication design is implemented; local development must use an explicitly configured development access path rather than embedding a shared secret in JavaScript.
+The Chrome extension contains no bundled deployment credential. It can be configured by an operator with a locally stored token for a self-hosted/private deployment, but it is not a multi-user identity system and should not distribute one shared token to an untrusted public audience. The extension requests access only for its configured API origin.
 
 Authentication errors use `auth_required` or `auth_invalid`; rate-limit errors use `rate_limited`. All preserve the request ID and expose no token, hash, limiter state, or internal diagnostics.

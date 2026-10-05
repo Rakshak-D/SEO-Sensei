@@ -181,6 +181,7 @@ class GeminiService:
                 response_mime_type="application/json",
                 response_schema=model_type,
                 max_output_tokens=min(8_192, self._settings.max_ai_output_size // 4),
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             )
         except (ImportError, TypeError, ValueError) as exc:
             raise AIServiceError(AIServiceErrorCode.CONFIGURATION) from exc
@@ -226,10 +227,12 @@ class GeminiService:
                 )
             except Exception as exc:
                 last_cause = exc
+                transient = _is_transient(exc)
                 logger.warning(
-                    "gemini_request_failed attempt=%s type=%s",
+                    "gemini_request_failed attempt=%s type=%s classification=%s",
                     attempt + 1,
                     type(exc).__name__,
+                    "transient" if transient else "permanent",
                     extra={
                         "request_id": request_id or "-",
                         "endpoint": "gemini",
@@ -240,7 +243,7 @@ class GeminiService:
                 if self._metrics is not None:
                     self._metrics.increment("ai_failures_total", "ai")
                 error = AIServiceError(AIServiceErrorCode.UNAVAILABLE)
-                if not _is_transient(exc):
+                if not transient:
                     raise error from exc
             if attempt >= self._settings.ai_retry_count:
                 raise error from last_cause
@@ -256,8 +259,32 @@ class GeminiService:
 
 
 def _is_transient(exc: Exception) -> bool:
+    """Return whether a provider failure is safe to retry conservatively."""
+
+    # google-genai APIError exposes the HTTP status in ``code`` and the
+    # provider status string in ``status``. Prefer these stable signals over
+    # parsing exception text, which may contain provider-specific prose.
+    code = getattr(exc, "code", None)
+    if isinstance(code, int) and (code == 429 or 500 <= code <= 599):
+        return True
+
+    status = getattr(exc, "status", None)
+    if isinstance(status, str) and status.upper() in {
+        "ABORTED",
+        "DEADLINE_EXCEEDED",
+        "INTERNAL",
+        "RESOURCE_EXHAUSTED",
+        "SERVICE_UNAVAILABLE",
+        "TOO_MANY_REQUESTS",
+        "UNAVAILABLE",
+    }:
+        return True
+
+    # Keep compatibility with transport exceptions and test doubles that do
+    # not expose google-genai's APIError attributes. Do not include generic
+    # client/authentication/error terms here.
     name = type(exc).__name__.lower()
-    return any(token in name for token in ("timeout", "unavailable", "resourceexhausted", "internal", "connection"))
+    return any(token in name for token in ("timeout", "connection", "unavailable", "resourceexhausted", "servererror"))
 
 
 def _prompt(task: str, page_data: dict[str, Any]) -> str:

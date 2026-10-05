@@ -36,7 +36,7 @@ Recommendation prompts receive a compact JSON summary: deterministic score/categ
 
 ## Timeouts and failures
 
-`AI_REQUEST_TIMEOUT_SECONDS` bounds each request. `AI_RETRY_COUNT` and `AI_RETRY_BACKOFF_SECONDS` control conservative retry of timeout/temporary-provider failures only. Authentication, configuration, malformed output, and invalid requests are not retried. `AI_MAX_CONCURRENCY` caps in-process concurrent Gemini calls.
+`AI_REQUEST_TIMEOUT_SECONDS` bounds each request. `AI_RETRY_COUNT` and `AI_RETRY_BACKOFF_SECONDS` control conservative retry of timeouts, transport failures, HTTP 503/temporary server errors, `UNAVAILABLE`, and appropriate resource-exhaustion responses. Authentication, configuration, malformed output, and invalid requests are not retried. After bounded retries are exhausted, provider outages degrade to the safe `unavailable` state. `AI_MAX_CONCURRENCY` caps in-process concurrent Gemini calls. Automatic function calling is explicitly disabled because SEO-Sensei does not use Gemini tools or remote actions.
 
 URL analysis can request optional recommendations. A failure returns a typed state (`unavailable`, `timed_out`, `invalid_response`, or `configuration_error`) and retains the full deterministic result. Article and boost endpoints are AI-only operations, so they return the existing safe `upstream_ai_unavailable` error contract when Gemini cannot serve them. Raw provider error text, prompts, and secrets are never returned to clients.
 

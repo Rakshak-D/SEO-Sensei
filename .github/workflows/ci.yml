@@ -49,6 +49,9 @@ jobs:
         run: python -c "import json; json.load(open('frontend/manifest.json', encoding='utf-8'))"
       - name: Run repository security checks
         run: python tools/security_checks.py
+      - name: Validate deployment script syntax
+        shell: bash
+        run: bash -n scripts/deploy.sh
 
   container-validation:
     runs-on: ubuntu-latest

@@ -130,3 +130,153 @@ registry, automatic deployment, persistent users, or distributed rate limiting.
 Real DNS records and ports 80/443 must reach the host before public ACME HTTPS
 can succeed. TLS terminates at Caddy; internal API traffic remains HTTP on the
 private Docker network.
+
+## AWS single-host deployment
+
+The supported first deployment target is one Ubuntu LTS x86_64 EC2 instance
+running the existing production `compose.yaml`:
+
+```text
+Internet → security group → EC2 → Docker Compose → Caddy → API/dashboard
+```
+
+### Recommended instance and operating system
+
+Start with a `t3.small` (2 vCPU, 2 GiB RAM) using a current Ubuntu LTS 64-bit
+AMI. The application has one API process, one Streamlit process, Caddy, bounded
+SafeFetcher pools, and bounded Gemini concurrency; this is a sensible small
+portfolio deployment size. Move to a larger instance only after observing real
+memory/CPU usage. No AWS price is assumed by this recommendation.
+
+The host needs outbound DNS and HTTPS access for package updates, Caddy ACME,
+and optional Gemini calls. The application itself does not require an IAM role
+or AWS API permissions. If an operator uses AWS CLI, keep those credentials
+outside the application host/container environment.
+
+### Security group and SSH
+
+Configure the EC2 security group with only:
+
+- TCP 80 from `0.0.0.0/0` for HTTP redirect and ACME HTTP validation.
+- TCP 443 from `0.0.0.0/0` for HTTPS application traffic.
+- TCP 22 only from the administrator's fixed public IP or restricted range.
+
+Do not open 8000, 8501, Docker's API socket, or arbitrary high ports. Use
+key-based SSH with an administrator-owned private key. Do not enable password
+SSH authentication or place private keys in this repository.
+
+### Host layout and Docker installation
+
+Use `/opt/seo-sensei` for the Git checkout and keep the production environment
+file outside Git, for example `/etc/seo-sensei/seo-sensei.env`:
+
+```bash
+sudo install -d -m 0755 /opt/seo-sensei /etc/seo-sensei
+sudo chown -R "$USER":"$USER" /opt/seo-sensei
+git clone <repository-url> /opt/seo-sensei
+cp /opt/seo-sensei/.env.example /etc/seo-sensei/seo-sensei.env
+sudo chmod 600 /etc/seo-sensei/seo-sensei.env
+```
+
+Install Docker Engine and the Compose plugin using the official Docker Ubuntu
+repository instructions for the selected Ubuntu LTS release. The required
+packages are Docker Engine, Docker CLI, containerd, Buildx, and the Compose
+plugin. Do not use an unverified third-party installer. Confirm with:
+
+```bash
+docker version
+docker compose version
+```
+
+### Environment and DNS
+
+Edit `/etc/seo-sensei/seo-sensei.env` without printing it. Set
+`APP_ENV=production` and `CONTAINER_APP_ENV=production`, real random values for
+`API_ACCESS_TOKEN` and `DASHBOARD_API_ACCESS_TOKEN`, and the optional
+`GEMINI_API_KEY`. Set `APP_DOMAIN` and `API_DOMAIN` to the public hostnames,
+`ACME_EMAIL` to the certificate contact, and keep
+`TRUSTED_PROXY_NETWORKS=172.30.0.2/32` unless the Compose network is
+deliberately changed. Set `ALLOWED_CORS_ORIGINS` to the exact dashboard and
+extension origins that need API access; never use `*`.
+
+Create DNS A records pointing both hostnames to the EC2 public address:
+
+```text
+app.example.com  A  <EC2 public address>
+api.example.com  A  <EC2 public address>
+```
+
+DNS records, the EC2 address, SSH key, security group, and secrets are operator
+actions and are not stored in Git.
+
+### Deploy and verify
+
+The repository provides `scripts/deploy.sh`. It validates the environment file
+without sourcing or printing it, validates Compose, pulls Caddy, builds the API
+and dashboard production images, starts the stack, waits for API/dashboard/Caddy
+health, and prints service status:
+
+```bash
+cd /opt/seo-sensei
+ENV_FILE=/etc/seo-sensei/seo-sensei.env ./scripts/deploy.sh
+```
+
+To update a clean checkout from `origin/main`, explicitly opt in:
+
+```bash
+UPDATE_SOURCE=true ENV_FILE=/etc/seo-sensei/seo-sensei.env ./scripts/deploy.sh
+```
+
+The script refuses to update a dirty working tree. It never enables Uvicorn
+reload, Streamlit development mode, shell tracing, or public API/dashboard
+ports. Public HTTPS checks can be enabled after DNS and certificates are ready:
+
+```bash
+VERIFY_PUBLIC_URLS=true ENV_FILE=/etc/seo-sensei/seo-sensei.env ./scripts/deploy.sh
+```
+
+Verify the public endpoints manually as well:
+
+```bash
+curl -I http://api.example.com/health       # should redirect to HTTPS
+curl https://api.example.com/health
+curl https://api.example.com/ready
+```
+
+The API health endpoints are public and lightweight. Analysis remains bearer
+authenticated; an unauthenticated analysis request should return 401. Use a
+controlled test target for an authenticated analysis smoke test rather than
+making a production deployment crawl an arbitrary site solely for validation.
+
+The dashboard is available at `https://app.example.com`. Configure the
+extension with `https://api.example.com` and its operator-managed token.
+
+### TLS, persistence, and recovery
+
+Caddy terminates TLS, redirects HTTP to HTTPS, supports Streamlit websocket
+traffic, and obtains certificates automatically once DNS and ports 80/443 are
+correct. The named `caddy_data` and `caddy_config` volumes persist certificate
+and Caddy state across container recreation. Back up those two Docker volumes
+as infrastructure state if recovery of existing ACME state matters; the API and
+dashboard have no application data that requires backup.
+
+All services use `restart: unless-stopped`, so Docker restart policy recovers
+them after a daemon or EC2 reboot. The host should have Docker enabled at boot.
+Test recovery with `docker compose restart` and, during a maintenance window,
+an EC2 reboot. If the API fails readiness, Compose health output and JSON
+container logs identify the failing service without exposing secrets.
+
+### Implemented, operator actions, and future work
+
+Implemented in this repository: production Compose, private API/dashboard
+services, Caddy HTTPS topology, health/readiness probes, non-root containers,
+restart policies, persistent Caddy volumes, and the deployment helper.
+
+Operator actions: create the EC2 instance and security group, install Docker,
+configure SSH, create DNS records, generate secrets, set the environment file
+permissions, and verify public TLS.
+
+Future infrastructure work: infrastructure-as-code, a registry/prebuilt-image
+pipeline, managed secret storage, autoscaling, load balancing, centralized
+metrics/logs, and distributed rate limiting. The current limiter remains local
+to the single API process/container.

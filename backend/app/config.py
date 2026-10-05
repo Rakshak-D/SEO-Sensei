@@ -26,6 +26,7 @@ class Settings(BaseModel):
 
     environment: str = Field(default="development", min_length=1, max_length=32)
     gemini_api_key: str | None = Field(default=None, min_length=1)
+    gemini_model: str = Field(default="gemini-3.8-flash", min_length=1, max_length=100)
     allowed_cors_origins: list[str] = Field(default_factory=list)
     api_access_token: str | None = Field(default=None, min_length=1)
     api_base_url: str | None = Field(default=None, max_length=500)
@@ -108,6 +109,7 @@ class Settings(BaseModel):
         values: dict[str, Any] = {
             "environment": source.get("APP_ENV", "development"),
             "gemini_api_key": source.get("GEMINI_API_KEY") or None,
+            "gemini_model": source.get("GEMINI_MODEL", "gemini-3.8-flash"),
             "allowed_cors_origins": source.get("ALLOWED_CORS_ORIGINS", ""),
             "api_access_token": source.get("API_ACCESS_TOKEN") or None,
             "api_base_url": source.get("API_BASE_URL") or None,

@@ -37,3 +37,17 @@ def test_extension_only_calls_relative_api_paths() -> None:
     assert '"/health"' in source
     assert "tab.url +" not in source
     assert "fetch(tab.url" not in source
+
+
+def test_extension_json_posts_set_content_type_without_changing_health_get() -> None:
+    source = (FRONTEND / "api-client.js").read_text(encoding="utf-8")
+
+    assert 'headers["Content-Type"] = "application/json"' in source
+    assert "body: options.body ? JSON.stringify(options.body) : undefined" in source
+    assert 'requestJson("/analyse-url", { method: "POST", body:' in source
+    assert 'requestJson("/boost-seo", { method: "POST", body:' in source
+    assert 'requestJson("/health", { authenticated: false })' in source
+    assert '"Accept": "application/json"' in source
+    assert '"X-Request-ID": requestId' in source
+    assert 'headers.Authorization = `Bearer ${config.token || ""}`' in source
+    assert "?token=" not in source

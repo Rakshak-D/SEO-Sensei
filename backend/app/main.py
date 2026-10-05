@@ -61,6 +61,9 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         await application.state.safe_fetcher.aclose()
+        gemini_service = getattr(application.state, "gemini_service", None)
+        if gemini_service is not None:
+            await gemini_service.aclose()
 
 
 app = FastAPI(

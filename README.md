@@ -26,7 +26,7 @@ scope. See [`docs/seo-scoring.md`](docs/seo-scoring.md) for score semantics.
 | --- | --- |
 | API | FastAPI, Uvicorn, Pydantic v2 |
 | Fetching | HTTPX/httpcore SafeFetcher with SSRF and size controls |
-| AI | Google Generative AI SDK behind a typed service boundary |
+| AI | Google GenAI SDK (`google-genai`) behind a typed service boundary |
 | Dashboard | Streamlit API client |
 | Extension | Vanilla JavaScript, Manifest V3 |
 | Quality | Pytest, coverage, Ruff, Mypy, GitHub Actions |

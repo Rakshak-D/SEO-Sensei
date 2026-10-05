@@ -76,6 +76,7 @@
         await ensurePermission(baseUrl);
         const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
         const headers = { "Accept": "application/json", "X-Request-ID": requestId };
+        if (options.body) headers["Content-Type"] = "application/json";
         if (options.authenticated !== false) headers.Authorization = `Bearer ${config.token || ""}`;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

@@ -150,26 +150,36 @@ class GeminiService:
             raise AIServiceError(AIServiceErrorCode.INPUT_TOO_LARGE)
         response = await self._request(prompt, model_type, request_id=request_id)
 
-        parsed = getattr(response, "parsed", None)
-        if parsed is not None:
+        # The provider's text is the authoritative complete JSON document. In
+        # particular, google-genai may populate ``parsed`` with an unexpected
+        # wrapper or a failed intermediate value even when ``text`` is valid.
+        # Never let that SDK convenience field reject valid provider output.
+        text = getattr(response, "text", None)
+        if text is not None and not isinstance(text, str):
+            self._log_invalid_response(request_id, TypeError())
+            raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
+        if isinstance(text, str) and text:
+            if len(text) > self._settings.max_ai_output_size:
+                raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
             try:
-                result = parsed if isinstance(parsed, model_type) else model_type.model_validate(parsed, strict=True)
-                if len(result.model_dump_json()) > self._settings.max_ai_output_size:
-                    raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
-                return result
-            except AIServiceError:
-                raise
+                # Validate the complete response only. Do not extract JSON
+                # fragments, strip fences, or accept partial documents.
+                return model_type.model_validate_json(text, strict=True)
             except (ValidationError, TypeError, ValueError) as exc:
                 self._log_invalid_response(request_id, exc)
                 raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE) from exc
 
-        text = getattr(response, "text", None)
-        if not isinstance(text, str) or not text or len(text) > self._settings.max_ai_output_size:
+        # Some SDK responses expose only ``parsed``. Use it as a narrow
+        # optimization only when it is already the expected application model;
+        # arbitrary dicts or provider-specific wrappers are not trusted here.
+        parsed = getattr(response, "parsed", None)
+        if not isinstance(parsed, model_type):
             raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
         try:
-            # Validate the complete provider document. No substring or fence
-            # extraction is permitted at this boundary.
-            return model_type.model_validate_json(text, strict=True)
+            result = model_type.model_validate(parsed.model_dump(mode="python"), strict=True)
+            if len(result.model_dump_json()) > self._settings.max_ai_output_size:
+                raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE)
+            return result
         except (ValidationError, TypeError, ValueError) as exc:
             self._log_invalid_response(request_id, exc)
             raise AIServiceError(AIServiceErrorCode.INVALID_RESPONSE) from exc
@@ -252,9 +262,13 @@ class GeminiService:
         raise AIServiceError(AIServiceErrorCode.UNAVAILABLE)
 
     def _log_invalid_response(self, request_id: str | None, exc: Exception) -> None:
+        validation_errors: list[dict[str, Any]] = []
+        if isinstance(exc, ValidationError):
+            validation_errors = [{"type": error.get("type"), "loc": error.get("loc")} for error in exc.errors()[:10]]
         logger.warning(
-            "gemini_response_invalid type=%s",
+            "gemini_response_invalid type=%s validation=%s",
             type(exc).__name__,
+            validation_errors,
             extra={"request_id": request_id or "-", "endpoint": "gemini", "operation": "ai"},
         )
 

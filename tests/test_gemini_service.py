@@ -284,9 +284,54 @@ def test_parsed_structured_result_is_validated() -> None:
     from backend.app.ai.models import SEORecommendationsResponse
 
     parsed = SEORecommendationsResponse.model_validate(json.loads(recommendation_json()))
-    response = Response(parsed=parsed)
+    response = Response(text=recommendation_json(), parsed=parsed)
     result = asyncio.run(service([response])[0].recommendations(analysis()))
     assert result.state == AIRecommendationState.AVAILABLE
+
+
+def test_valid_text_is_used_when_parsed_is_missing_or_invalid() -> None:
+    valid = recommendation_json()
+    for parsed in (None, {"unexpected": "provider wrapper"}):
+        result = asyncio.run(service([Response(text=valid, parsed=parsed)])[0].recommendations(analysis()))
+        assert result.state == AIRecommendationState.AVAILABLE
+
+
+def test_invalid_text_is_rejected_even_when_parsed_is_valid() -> None:
+    from backend.app.ai.models import SEORecommendationsResponse
+
+    parsed = SEORecommendationsResponse.model_validate(json.loads(recommendation_json()))
+    result = asyncio.run(service([Response(text="not json", parsed=parsed)])[0].recommendations(analysis()))
+    assert result.state == AIRecommendationState.INVALID_RESPONSE
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        json.dumps({"recommendations": [{"issue": "missing required fields"}]}),
+        json.dumps(
+            {
+                "recommendations": [
+                    {
+                        "issue": "Missing H1",
+                        "explanation": "The deterministic findings show no usable H1.",
+                        "priority": "high",
+                        "recommendation": "Add a clear primary heading.",
+                        "unexpected": "must be rejected",
+                    }
+                ]
+            }
+        ),
+        "{malformed json",
+    ],
+)
+def test_invalid_complete_json_documents_are_rejected(text: str) -> None:
+    with pytest.raises(AIServiceError) as exc:
+        asyncio.run(
+            service([text])[0].generate_article(
+                ArticleGenerationRequest(topic="topic", keywords=["seo"], tone="professional")
+            )
+        )
+    assert exc.value.code == AIServiceErrorCode.INVALID_RESPONSE
 
 
 def test_provider_schema_projection_preserves_application_structure() -> None:

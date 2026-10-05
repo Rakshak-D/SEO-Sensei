@@ -21,6 +21,7 @@ from .models import (
     SEOBoostResult,
     SEORecommendationsResponse,
 )
+from .provider_schema import gemini_response_schema
 
 
 logger = logging.getLogger("seo_sensei.ai")
@@ -179,7 +180,7 @@ class GeminiService:
 
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=model_type,
+                response_schema=gemini_response_schema(model_type),
                 max_output_tokens=min(8_192, self._settings.max_ai_output_size // 4),
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             )

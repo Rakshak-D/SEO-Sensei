@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+import subprocess
 from pathlib import Path
 
 
@@ -87,8 +88,15 @@ def main() -> int:
                     failures.append(f"{relative}: {label}")
 
     for name in (".env", ".env.local", ".env.production"):
-        if (ROOT / name).exists():
-            failures.append(f"{name}: secret environment file exists in the workspace")
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", name],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        if tracked.returncode == 0:
+            failures.append(f"{name}: secret environment file is tracked")
 
     if failures:
         print("Repository security checks failed:")

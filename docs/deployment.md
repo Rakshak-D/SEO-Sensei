@@ -131,9 +131,11 @@ Real DNS records and ports 80/443 must reach the host before public ACME HTTPS
 can succeed. TLS terminates at Caddy; internal API traffic remains HTTP on the
 private Docker network.
 
-## AWS single-host deployment
+## Optional paid AWS single-host deployment
 
-The supported first deployment target is one Ubuntu LTS x86_64 EC2 instance
+The preferred free target is documented in
+[`free-deployment.md`](free-deployment.md). If AWS is selected instead, one
+Ubuntu LTS x86_64 EC2 instance
 running the existing production `compose.yaml`:
 
 ```text

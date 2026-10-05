@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Idempotent single-host deployment for an EC2 + Docker Compose installation.
+# Idempotent single-host deployment for a Linux VM + Docker Compose installation.
 # The script intentionally never sources or prints the environment file.
 
 set -Eeuo pipefail

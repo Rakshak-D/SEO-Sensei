@@ -19,8 +19,13 @@ Gemini SDK directly.
 
 ## Validation and limits
 
-The service requests JSON mode with a Pydantic response schema through
+The service requests JSON mode with a sanitized Gemini-compatible projection
+of the Pydantic response schema through
 `GenerateContentConfig(response_mime_type="application/json", response_schema=...)`.
+The projection removes provider-incompatible Pydantic keywords such as
+`additionalProperties`, string length constraints, defaults, and unnecessary
+references while preserving object structure, required fields, arrays, and
+enums. The application models remain authoritative for final validation.
 When the SDK returns `response.parsed`, the complete parsed value is validated
 again with the application model. Otherwise the complete response text is
 validated as JSON by Pydantic. No substring, regular-expression, or Markdown

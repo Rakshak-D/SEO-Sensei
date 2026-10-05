@@ -96,16 +96,20 @@ The dashboard is available at `http://127.0.0.1:8501`; inside Compose it calls
 the API at `http://api:8000`. The development overlay publishes the API and
 dashboard on host loopback. Production Compose publishes only Caddy on ports 80
 and 443. Detailed topology, health checks, secrets, and ingress assumptions are
-documented in [`docs/deployment.md`](docs/deployment.md), including the
-supported single-EC2 deployment workflow.
+documented in [`docs/deployment.md`](docs/deployment.md). The preferred
+single-VM free deployment is documented in
+[`docs/free-deployment.md`](docs/free-deployment.md).
 
-## AWS deployment
+## Free deployment
 
-The supported first production deployment is one Ubuntu LTS EC2 instance
-running Docker Compose behind Caddy. Configure DNS, the EC2 security group, and
-an EC2-side environment file, then run
-`ENV_FILE=/etc/seo-sensei/seo-sensei.env ./scripts/deploy.sh`. See the complete
-[AWS deployment guide](docs/deployment.md#aws-single-host-deployment).
+The preferred $0-first deployment is one Ubuntu LTS ARM64 VM from Oracle Cloud
+Infrastructure Always Free running Docker Compose behind Caddy. Configure the
+OCI networking, DNS, and an instance-side environment file, then run
+`ENV_FILE=/etc/seo-sensei/seo-sensei.env ./scripts/deploy.sh`. See the
+[OCI Always Free deployment guide](docs/free-deployment.md).
+
+The general [deployment guide](docs/deployment.md) documents the shared
+topology and an optional paid AWS single-host alternative.
 
 ## Architecture
 

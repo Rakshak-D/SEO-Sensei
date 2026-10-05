@@ -67,4 +67,6 @@ def test_caddy_routes_separate_configured_hosts_without_credentials() -> None:
     assert "reverse_proxy dashboard:8501" in caddy
     assert "reverse_proxy api:8000" in caddy
     assert "Authorization delete" in caddy
+    assert caddy.count("delete token") == 2
+    assert "token delete" not in caddy
     assert "Bearer" not in caddy

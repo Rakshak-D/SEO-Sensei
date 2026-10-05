@@ -73,4 +73,7 @@ def request_scheme(request: Request, trusted_networks: tuple[str, ...] = ()) -> 
 def request_host(request: Request, trusted_networks: tuple[str, ...] = ()) -> str:
     """Return the request host, accepting X-Forwarded-Host only from Caddy."""
 
-    return forwarded_value(request, "x-forwarded-host", trusted_networks) or request.headers.get("host", "")
+    forwarded = forwarded_value(request, "x-forwarded-host", trusted_networks)
+    if forwarded is not None:
+        return forwarded
+    return request.headers.get("host") or ""

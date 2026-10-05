@@ -54,11 +54,22 @@ def test_trusted_proxy_forwarded_identity_and_https_are_accepted() -> None:
 def test_untrusted_peer_cannot_spoof_forwarded_identity_or_scheme() -> None:
     current = request(
         "198.51.100.10",
-        {"X-Forwarded-For": "203.0.113.7", "X-Forwarded-Proto": "https"},
+        {
+            "X-Forwarded-For": "203.0.113.7",
+            "X-Forwarded-Proto": "https",
+            "X-Forwarded-Host": "attacker.example",
+        },
     )
     networks = tuple(settings().trusted_proxy_networks)
     assert client_ip(current, networks) == "198.51.100.10"
     assert request_scheme(current, networks) == "http"
+    assert request_host(current, networks) == ""
+
+
+def test_missing_host_returns_a_string() -> None:
+    current = request("198.51.100.10", {})
+
+    assert request_host(current, tuple(settings().trusted_proxy_networks)) == ""
 
 
 def test_invalid_trusted_proxy_network_is_rejected() -> None:

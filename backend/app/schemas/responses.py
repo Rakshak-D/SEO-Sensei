@@ -32,9 +32,10 @@ class SEOBoostResponse(SEOBoostResult):
 class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ok", "degraded"]
+    status: Literal["ok", "degraded", "not_ready"]
     service: str = "SEO-Sensei API"
     environment: str
+    version: str = "1.0.0"
 
 
 class ErrorDetail(BaseModel):

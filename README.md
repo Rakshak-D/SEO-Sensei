@@ -117,6 +117,7 @@ Security and operational details:
 - [`docs/dashboard.md`](docs/dashboard.md)
 - [`docs/extension.md`](docs/extension.md)
 - [`docs/development.md`](docs/development.md)
+- [`docs/operations.md`](docs/operations.md)
 
 ## License
 

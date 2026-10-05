@@ -59,3 +59,8 @@ forwarded headers. The rate limiter continues to combine the bearer-token
 fingerprint with the verified client IP and remains process-local.
 
 Authentication errors use `auth_required` or `auth_invalid`; rate-limit errors use `rate_limited`. All preserve the request ID and expose no token, hash, limiter state, or internal diagnostics.
+
+The public `/health` and `/ready` endpoints expose only service status,
+environment label, and the configured application version. They do not expose
+credentials, filesystem paths, network addresses, environment variables, or
+provider diagnostics.

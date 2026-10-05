@@ -100,6 +100,9 @@ async def enforce_rate_limit(request: Request, operation: str) -> None:
             operation,
             request_id,
         )
+        metrics = getattr(request.app.state, "metrics", None)
+        if metrics is not None:
+            metrics.increment("rate_limit_rejections_total", operation)
         raise APIError(
             RATE_LIMITED,
             "Request rate limit exceeded. Please try again later.",

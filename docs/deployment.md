@@ -82,8 +82,10 @@ build arguments.
 
 ## Health and resources
 
-The API health check calls the lightweight public `/health` endpoint only. It
-does not authenticate, crawl, or call Gemini. The dashboard health check uses
+The API liveness check calls the lightweight public `/health` endpoint. Compose
+uses the separate `/ready` endpoint to confirm local SafeFetcher initialization.
+Neither
+endpoint authenticates, crawls, performs DNS resolution, or calls Gemini. The dashboard health check uses
 Streamlit's local `/_stcore/health` endpoint. Compose waits for API health
 before starting the dashboard and restarts unhealthy services according to the
 container runtime policy.

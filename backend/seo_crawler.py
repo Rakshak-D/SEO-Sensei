@@ -24,19 +24,23 @@ def _get_default_fetcher() -> SafeFetcher:
     return _default_fetcher
 
 
-async def fetch_html(url: str, fetcher: SafeFetcher | None = None) -> FetchResult:
+async def fetch_html(url: str, fetcher: SafeFetcher | None = None, request_id: str | None = None) -> FetchResult:
     """Fetch bounded, policy-approved HTML through the single safe transport."""
 
-    return await (fetcher or _get_default_fetcher()).fetch_url(url)
+    selected_fetcher = fetcher or _get_default_fetcher()
+    if request_id is None:
+        return await selected_fetcher.fetch_url(url)
+    return await selected_fetcher.fetch_url(url, request_id=request_id)
 
 
 async def get_full_seo_analysis_for_url(
     url: str,
     fetcher: SafeFetcher | None = None,
+    request_id: str | None = None,
 ) -> dict:
     """Fetch a page safely and return its deterministic SEO analysis."""
 
-    fetch_result = await fetch_html(url, fetcher=fetcher)
+    fetch_result = await fetch_html(url, fetcher=fetcher, request_id=request_id)
     if not fetch_result.succeeded:
         return {
             "status": "failed",

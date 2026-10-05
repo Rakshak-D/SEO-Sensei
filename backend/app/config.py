@@ -6,8 +6,8 @@ implement URL/network safety policy; that is a later hardening phase.
 
 from __future__ import annotations
 
-import os
 import ipaddress
+import os
 from functools import lru_cache
 from typing import Any
 
@@ -32,6 +32,10 @@ class Settings(BaseModel):
     dashboard_api_access_token: str | None = Field(default=None, min_length=1)
     cors_allow_credentials: bool = False
     trusted_proxy_networks: list[str] = Field(default_factory=list)
+    app_version: str = Field(default="1.0.0", min_length=1, max_length=64)
+    log_level: str = Field(default="INFO", min_length=1, max_length=16)
+    metrics_enabled: bool = True
+    graceful_shutdown_timeout_seconds: int = Field(default=10, ge=1, le=120)
 
     request_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
     max_request_body_size_bytes: int = Field(default=1_000_000, gt=0, le=10_000_000)
@@ -110,6 +114,10 @@ class Settings(BaseModel):
             "dashboard_api_access_token": source.get("DASHBOARD_API_ACCESS_TOKEN") or None,
             "cors_allow_credentials": source.get("CORS_ALLOW_CREDENTIALS", "false"),
             "trusted_proxy_networks": source.get("TRUSTED_PROXY_NETWORKS", ""),
+            "app_version": source.get("APP_VERSION", "1.0.0"),
+            "log_level": source.get("LOG_LEVEL", "INFO"),
+            "metrics_enabled": source.get("METRICS_ENABLED", "true"),
+            "graceful_shutdown_timeout_seconds": source.get("GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS", 10),
             "request_timeout_seconds": source.get("REQUEST_TIMEOUT_SECONDS", 10.0),
             "max_request_body_size_bytes": source.get("MAX_REQUEST_BODY_SIZE_BYTES", 1_000_000),
             "max_crawl_response_size_bytes": source.get("MAX_CRAWL_RESPONSE_SIZE_BYTES", 2_000_000),

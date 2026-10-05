@@ -16,6 +16,7 @@ import httpx
 from httpx._transports.default import AsyncResponseStream, map_httpcore_exceptions
 
 from ..config import Settings
+from ..metrics import Metrics
 from .errors import FetchError, FetchErrorCode
 from .url_policy import resolve_safe_addresses, validate_url
 
@@ -122,8 +123,9 @@ class _PinnedTransport(httpx.AsyncBaseTransport):
 class SafeFetcher:
     """Application-scoped, bounded, redirect-aware safe HTTP(S) fetcher."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, metrics: Metrics | None = None) -> None:
         self.settings = settings
+        self._metrics = metrics
         self._transport = _PinnedTransport(settings)
         timeout = httpx.Timeout(
             timeout=settings.request_timeout_seconds,
@@ -148,14 +150,36 @@ class SafeFetcher:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def fetch_url(self, url: str) -> FetchResult:
+    async def fetch_url(self, url: str, request_id: str | None = None) -> FetchResult:
+        started = time.perf_counter()
+        result: FetchResult | None = None
+        try:
+            result = await self._fetch_url(url, request_id=request_id)
+            return result
+        finally:
+            if self._metrics is not None:
+                self._metrics.increment("fetch_requests_total", "fetch")
+            logger.info(
+                "safe_fetch_complete",
+                extra={
+                    "request_id": request_id or "-",
+                    "endpoint": "safe_fetcher",
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                    "status": result.status_code if result else None,
+                    "bytes_read": result.bytes_read if result else 0,
+                    "redirect_count": result.redirect_count if result else 0,
+                    "error_code": result.error.value if result and result.error else None,
+                },
+            )
+
+    async def _fetch_url(self, url: str, request_id: str | None = None) -> FetchResult:
         """Fetch bounded HTML while validating every connection and redirect."""
 
         started = time.perf_counter()
         try:
             validated = validate_url(url, self.settings)
         except FetchError as exc:
-            return self._failure(url, exc.code, started)
+            return self._failure(url, exc.code, started, request_id=request_id)
 
         redirects: list[str] = []
         current = validated
@@ -385,7 +409,7 @@ class SafeFetcher:
                     await response.aclose()
                     self._client.cookies.clear()
 
-        return self._failure(requested_url, FetchErrorCode.UNEXPECTED_FETCH_ERROR, started)
+            return self._failure(requested_url, FetchErrorCode.UNEXPECTED_FETCH_ERROR, started, request_id=request_id)
 
     async def _read_bounded(self, response: httpx.Response, timeout: float) -> tuple[str, int]:
         try:
@@ -417,6 +441,7 @@ class SafeFetcher:
         status_code: int | None = None,
         content_type: str | None = None,
         content_length: int | None = None,
+        request_id: str | None = None,
     ) -> FetchResult:
         return FetchResult(
             requested_url=requested_url,

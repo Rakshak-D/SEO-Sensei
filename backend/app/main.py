@@ -28,9 +28,11 @@ from .api.errors import (
 from .ai.gemini import AIServiceError, GeminiService
 from .ai.models import AIRecommendationState, AIRecommendationsResult
 from .api.auth import require_auth
+from .api.observability import request_context
 from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
 from .logging_config import configure_logging
+from .metrics import Metrics
 from .schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
 from .schemas.responses import ArticleGenerationResponse, HealthResponse, SEOBoostResponse, URLAnalysisResponse
 from .security.fetcher import SafeFetcher
@@ -40,19 +42,21 @@ from .seo.models import SEOAnalysis
 REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 logger = logging.getLogger("seo_sensei.api")
 settings: Settings = get_settings()
-configure_logging()
-service: GeminiService | None = None
-if settings.gemini_api_key:
-    try:
-        service = GeminiService(settings)
-    except AIServiceError:
-        logger.warning("gemini_service_not_available_at_startup")
+configure_logging(settings.log_level)
+metrics = Metrics(settings.metrics_enabled)
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    application.state.safe_fetcher = SafeFetcher(settings)
+    application.state.metrics = metrics
+    application.state.safe_fetcher = SafeFetcher(settings, metrics=metrics)
     application.state.rate_limiter = InMemoryRateLimiter(settings)
+    application.state.gemini_service = None
+    if settings.gemini_api_key:
+        try:
+            application.state.gemini_service = GeminiService(settings, metrics=metrics)
+        except AIServiceError:
+            logger.warning("gemini_service_not_available_at_startup", extra={"endpoint": "startup"})
     try:
         yield
     finally:
@@ -116,22 +120,45 @@ class RequestContextMiddleware:
 
         start = time.perf_counter()
 
+        completed = False
+
         async def send_with_headers(message: Message) -> None:
+            nonlocal completed
             if message["type"] == "http.response.start":
+                completed = True
                 response_headers = list(message.get("headers", []))
                 response_headers.append((b"x-request-id", request_id.encode("ascii")))
-                if scope.get("path") != "/health":
+                if scope.get("path") not in {"/health", "/ready"}:
                     response_headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": response_headers}
                 logger.info(
-                    "request_complete status=%s duration_ms=%.2f",
-                    message["status"],
-                    (time.perf_counter() - start) * 1000,
-                    extra={"request_id": request_id, "endpoint": scope.get("path", "-")},
+                    "request_complete",
+                    extra={
+                        "request_id": request_id,
+                        "endpoint": scope.get("path", "-"),
+                        "route": scope.get("path", "-"),
+                        "method": scope.get("method", "-"),
+                        "status": message["status"],
+                        "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                    },
                 )
+                record_metric_from_scope(scope, "http_requests_total", "request")
             await send(message)
 
-        await self.app(scope, receive, send_with_headers)
+        try:
+            await self.app(scope, receive, send_with_headers)
+        except BaseException:
+            if not completed:
+                logger.exception(
+                    "request_failed_before_response",
+                    extra={
+                        "request_id": request_id,
+                        "endpoint": scope.get("path", "-"),
+                        "method": scope.get("method", "-"),
+                        "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                    },
+                )
+            raise
 
 
 app.add_middleware(RequestContextMiddleware, max_body_size=settings.max_request_body_size_bytes)
@@ -140,14 +167,19 @@ app.add_exception_handler(RequestValidationError, validation_error_handler)  # t
 app.add_exception_handler(Exception, unhandled_error_handler)
 
 
-def _service_or_error() -> GeminiService:
+def record_metric_from_scope(scope: Scope, name: str, operation: str | None = None) -> None:
+    metrics.increment(name, operation)
+
+
+def _service_or_error(request: Request) -> GeminiService:
+    service = getattr(request.app.state, "gemini_service", None)
     if service is None:
         raise APIError(UPSTREAM_AI_UNAVAILABLE, "AI analysis is not configured.", 503)
     return service
 
 
 def _log_context(request: Request, endpoint: str) -> dict[str, str]:
-    return {"request_id": getattr(request.state, "request_id", "-"), "endpoint": endpoint}
+    return request_context(request, endpoint)
 
 
 @app.get("/", response_model=dict[str, str])
@@ -157,7 +189,19 @@ async def read_root() -> dict[str, str]:
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok" if service is not None else "degraded", environment=settings.environment)
+    return HealthResponse(status="ok", environment=settings.environment, version=settings.app_version)
+
+
+@app.get("/ready", response_model=HealthResponse)
+async def ready(request: Request) -> HealthResponse:
+    """Cheap process readiness check; it performs no external I/O."""
+
+    is_ready = getattr(request.app.state, "safe_fetcher", None) is not None
+    return HealthResponse(
+        status="ok" if is_ready else "not_ready",
+        environment=settings.environment,
+        version=settings.app_version,
+    )
 
 
 @app.post(
@@ -193,14 +237,14 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
         analysis = SEOAnalysis.model_validate(analysis_data)
         ai_recommendations: AIRecommendationsResult | None = None
         if payload.include_ai_recommendations:
-            if service is None:
+            if getattr(request.app.state, "gemini_service", None) is None:
                 ai_recommendations = AIRecommendationsResult(
                     state=AIRecommendationState.CONFIGURATION_ERROR,
                     message="AI recommendations are not configured. Deterministic findings remain available.",
                 )
             else:
                 try:
-                    ai_recommendations = await service.recommendations(
+                    ai_recommendations = await request.app.state.gemini_service.recommendations(
                         analysis,
                         request_id=getattr(request.state, "request_id", None),
                     )
@@ -227,7 +271,7 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
 )
 async def generate_article(payload: ArticleGenerationRequest, request: Request) -> ArticleGenerationResponse:
     try:
-        result = await _service_or_error().generate_article(
+        result = await _service_or_error(request).generate_article(
             payload,
             request_id=getattr(request.state, "request_id", None),
         )
@@ -248,7 +292,7 @@ async def generate_article(payload: ArticleGenerationRequest, request: Request) 
 )
 async def post_boost_seo(payload: SEOBoostRequest, request: Request) -> SEOBoostResponse:
     try:
-        ai_service = _service_or_error()
+        ai_service = _service_or_error(request)
         try:
             from ..seo_crawler import get_full_seo_analysis_for_url
         except ImportError:

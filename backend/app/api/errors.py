@@ -8,8 +8,12 @@ from typing import Any
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+import logging
 
 from ..schemas.responses import ErrorDetail, ErrorResponse
+
+
+logger = logging.getLogger("seo_sensei.errors")
 
 
 @dataclass(frozen=True)
@@ -49,6 +53,16 @@ def error_payload(request: Request, code: str, message: str) -> dict[str, Any]:
 
 
 async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
+    logger.warning(
+        "api_error",
+        extra={
+            "request_id": getattr(request.state, "request_id", "-"),
+            "endpoint": request.url.path,
+            "method": request.method,
+            "status": exc.status_code,
+            "error_code": exc.code,
+        },
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content=error_payload(request, exc.code, exc.message),
@@ -57,6 +71,16 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.warning(
+        "request_validation_failed",
+        extra={
+            "request_id": getattr(request.state, "request_id", "-"),
+            "endpoint": request.url.path,
+            "method": request.method,
+            "status": 422,
+            "error_code": INVALID_REQUEST,
+        },
+    )
     return JSONResponse(
         status_code=422,
         content=error_payload(request, INVALID_REQUEST, "The request payload is invalid."),
@@ -64,6 +88,16 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception(
+        "unhandled_request_error",
+        extra={
+            "request_id": getattr(request.state, "request_id", "-"),
+            "endpoint": request.url.path,
+            "method": request.method,
+            "status": 500,
+            "error_code": INTERNAL_SERVER_ERROR,
+        },
+    )
     return JSONResponse(
         status_code=500,
         content=error_payload(request, INTERNAL_SERVER_ERROR, "An unexpected server error occurred."),

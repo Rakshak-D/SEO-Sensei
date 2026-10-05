@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
+import json
 import sys
-
-
-LOG_FORMAT = "%(asctime)s %(levelname)s request_id=%(request_id)s endpoint=%(endpoint)s %(message)s"
+from datetime import datetime, timezone
 
 
 class RequestContextFilter(logging.Filter):
@@ -20,17 +19,49 @@ class RequestContextFilter(logging.Filter):
         return True
 
 
-def configure_logging() -> None:
-    """Configure concise, parseable application logging once."""
+class StructuredFormatter(logging.Formatter):
+    """Serialize safe log fields as one JSON object per line."""
+
+    _fields = (
+        "request_id",
+        "endpoint",
+        "route",
+        "method",
+        "status",
+        "duration_ms",
+        "bytes_read",
+        "redirect_count",
+        "error_code",
+        "operation",
+    )
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, object] = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        for field in self._fields:
+            value = getattr(record, field, None)
+            if value is not None:
+                payload[field] = value
+        if record.exc_info:
+            payload["exception_type"] = record.exc_info[0].__name__ if record.exc_info[0] else "Exception"
+        return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+
+def configure_logging(level: str = "INFO") -> None:
+    """Configure concise machine-readable application logging once."""
 
     root = logging.getLogger()
     if getattr(root, "_seo_sensei_configured", False):
         return
 
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    handler.setFormatter(StructuredFormatter())
     handler.addFilter(RequestContextFilter())
     root.handlers.clear()
     root.addHandler(handler)
-    root.setLevel(logging.INFO)
+    root.setLevel(getattr(logging, level.upper(), logging.INFO))
     root._seo_sensei_configured = True  # type: ignore[attr-defined]

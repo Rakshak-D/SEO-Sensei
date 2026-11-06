@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f2ec">
+    <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+    <title>Evidence Ledger — SEO Sensei design exploration</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="evidence-ledger" data-direction="ledger">
+    <a class="skip-link" href="#main-content">Skip to audit</a>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">S</span><span>SEO Sensei</span></a>
+        <span class="product-context">Page review</span>
+        <a class="gallery-link" href="../index.html">Compare candidates</a>
+      </div>
+    </header>
+
+    <main id="main-content" class="main-shell">
+      <form class="url-form" data-page-form novalidate>
+        <label for="page-url">Page URL</label>
+        <input id="page-url" type="url" inputmode="url" autocomplete="url" aria-describedby="url-help url-message">
+        <button class="button-primary" type="submit">Open local fixture</button>
+        <button class="button-text" type="button" data-clear-url>Clear</button>
+        <button class="button-text sample-button" type="button" data-fill-sample>Use example</button>
+        <p id="url-help" class="form-help">This demonstration reviews one bundled example. It never fetches the address you enter.</p>
+        <p id="url-message" class="form-message" data-url-message role="status" aria-live="polite">Loading local illustrative data…</p>
+      </form>
+
+      <nav class="view-nav" aria-label="Audit views">
+        <button type="button" data-nav-view="overview" aria-current="page">Overview</button>
+        <button type="button" data-nav-view="findings">All checks <span data-total-checks>23</span></button>
+      </nav>
+
+      <p class="load-error" data-load-error hidden>Local fixture unavailable. No website request was attempted.</p>
+      <p class="fixture-notice" data-fixture-notice></p>
+
+      <section class="view-panel overview-view" data-view-panel="overview" aria-labelledby="page-title">
+        <header class="page-heading">
+          <p class="eyebrow">ILLUSTRATIVE PAGE · OFFLINE FIXTURE</p>
+          <h1 id="page-title">Home solar installation</h1>
+          <p class="page-address" data-page-url></p>
+        </header>
+
+        <section class="lead-observation" aria-labelledby="lead-title">
+          <div class="lead-rule">
+            <span class="eyebrow">RULE RESULT</span>
+            <span class="rule-status rule-status-fail">Fail</span>
+          </div>
+          <div class="lead-copy">
+            <p class="eyebrow">STATIC HTML · INDEXING DIRECTIVE</p>
+            <h2 id="lead-title">A <code>noindex</code> directive is present.</h2>
+            <p>If search visibility is intended, review the publishing setting and confirm the updated page can be fetched. This observation does not reveal Google’s current index.</p>
+          </div>
+          <button class="button-inline" type="button" data-open-detail="robots_directives">Inspect evidence <span aria-hidden="true">→</span></button>
+        </section>
+
+        <div class="analysis-context">
+          <p class="fetch-context"><span class="context-label">Fixture transport · mocked values</span><span data-fetch-context></span></p>
+          <p class="status-summary"><span class="context-label">Rule outcomes · not severity</span><span data-status-summary></span></p>
+          <p class="score-summary"><span class="context-label">Heuristic score</span><strong><span data-score>—</span><small> / 100</small></strong><span>Weighted rule output; not a Google ranking score or index check.</span></p>
+          <p class="ai-summary"><span class="context-label">Optional AI</span><span data-ai-state></span></p>
+          <p class="recheck-control"><button type="button" class="button-text" data-recheck>Simulate recheck state</button><span data-recheck-message role="status" aria-live="polite">No recheck has been performed.</span></p>
+        </div>
+
+        <section class="category-section" aria-labelledby="category-heading">
+          <div class="section-title">
+            <div><p class="eyebrow">STATUS COUNTS BY GROUP</p><h2 id="category-heading">What the checks cover</h2></div>
+            <button type="button" class="button-inline" data-nav-view="findings">Browse all <span data-total-checks>23</span> <span aria-hidden="true">→</span></button>
+          </div>
+          <ul class="category-list" data-categories></ul>
+        </section>
+        <p class="status-caveat">A check status describes the analyzer rule. It is not a severity, business priority, ranking signal, or confirmation of indexing.</p>
+      </section>
+
+      <section class="view-panel findings-view" data-view-panel="findings" aria-labelledby="findings-heading" hidden>
+        <header class="view-heading">
+          <p class="eyebrow">ALL CHECKS · FIXTURE ORDER</p>
+          <h1 id="findings-heading">Findings investigation</h1>
+          <p>Status is the deterministic rule result. This API does not supply a severity or business-priority field.</p>
+        </header>
+        <div class="filter-tools">
+          <div class="search-control">
+            <label for="check-search">Search titles and observed values</label>
+            <input id="check-search" type="search" placeholder="Search all checks">
+          </div>
+          <div class="status-control">
+            <label for="status-filter">Rule status</label>
+            <select id="status-filter">
+              <option value="all">All statuses</option>
+              <option value="fail">Fail</option>
+              <option value="warning">Warning</option>
+              <option value="pass">Pass</option>
+              <option value="not_applicable">Not applicable</option>
+            </select>
+          </div>
+          <p class="filter-count" data-filter-count aria-live="polite"></p>
+        </div>
+        <p id="no-matches" class="empty-state" hidden>No checks match. Clear the search or choose another status.</p>
+        <ol class="check-list" data-check-list aria-label="Analysis checks"></ol>
+        <p class="list-footnote">Evidence text is returned by the analyzer. Except for this fixture-specific robots example, the API does not identify a source node or line.</p>
+      </section>
+
+      <section class="view-panel detail-view" data-view-panel="detail" aria-labelledby="detail-title" hidden>
+        <button type="button" class="back-link" data-back-findings>← Back to findings</button>
+        <header class="detail-heading">
+          <p class="eyebrow"><span data-detail-category></span> · RULE RESULT <span data-detail-status class="rule-status"></span></p>
+          <h1 id="detail-title" data-detail-title tabindex="-1"></h1>
+        </header>
+        <div class="detail-layout">
+          <article class="evidence-reading">
+            <section class="evidence-block">
+              <p class="eyebrow">OBSERVATION RETURNED FOR THIS RULE</p>
+              <blockquote data-detail-observed></blockquote>
+              <p class="source-label" data-source-label></p>
+              <div data-fixture-excerpt-wrap hidden>
+                <pre class="fixture-excerpt" data-fixture-excerpt></pre>
+                <p class="source-disclaimer">This exact line comes from the fictional bundled HTML file. The current API does not return arbitrary DOM excerpts or source locations.</p>
+              </div>
+            </section>
+            <section class="explanation-block">
+              <p class="eyebrow">WHY IT MAY MATTER</p>
+              <p data-detail-explanation></p>
+              <p class="interpretation-note">This explanation is prototype editorial copy based on the fixture. A rule status is not a Google indexing result.</p>
+            </section>
+          </article>
+          <aside class="action-reading" aria-label="Suggested action and verification">
+            <section>
+              <p class="eyebrow">POSSIBLE NEXT STEP · NOT APPLIED</p>
+              <p data-detail-next-step></p>
+            </section>
+            <section>
+              <p class="eyebrow">HOW TO VERIFY</p>
+              <p data-detail-verify></p>
+            </section>
+            <button class="button-inline" type="button" data-back-findings>Return to the filtered list <span aria-hidden="true">→</span></button>
+          </aside>
+        </div>
+      </section>
+      <footer class="page-footer"><span>Fixture-backed design prototype</span><span>No live page or AI service is contacted.</span></footer>
+    </main>
+    <script src="../shared/app.js" defer></script>
+  </body>
+</html>

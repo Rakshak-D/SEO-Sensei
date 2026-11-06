@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#173634">
+    <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+    <title>Trace Studio — SEO Sensei design exploration</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="trace-studio" data-direction="trace">
+    <a class="skip-link" href="#main-content">Skip to audit</a>
+    <aside class="navigation-rail" aria-label="Audit navigation">
+      <a class="trace-brand" href="../index.html"><span class="trace-mark" aria-hidden="true">S</span><span>SEO Sensei</span></a>
+      <p class="rail-label">CURRENT REVIEW</p>
+      <p class="rail-page">Home solar<br>installation</p>
+      <nav class="rail-nav" aria-label="Audit views">
+        <button type="button" data-nav-view="overview" aria-current="page">Overview</button>
+        <button type="button" data-nav-view="findings">All checks <span class="rail-count" data-total-checks>23</span></button>
+      </nav>
+      <div class="rail-bottom">
+        <span class="rail-status-dot" aria-hidden="true"></span>
+        <p>Offline fixture<br><span>No page request sent</span></p>
+      </div>
+    </aside>
+
+    <div class="trace-app">
+      <header class="trace-topbar">
+        <p class="trace-breadcrumb"><span>Page review</span><span aria-hidden="true">/</span><strong data-view-label>Overview</strong></p>
+        <a href="../index.html">Compare candidates</a>
+      </header>
+      <main id="main-content" class="trace-main">
+        <form class="trace-url-form" data-page-form novalidate>
+          <label for="trace-page-url">Review a page</label>
+          <input id="trace-page-url" type="url" inputmode="url" autocomplete="url" aria-describedby="trace-url-help trace-url-message">
+          <button class="trace-button-primary" type="submit">Open fixture</button>
+          <button class="trace-button-quiet" type="button" data-clear-url>Clear</button>
+          <button class="trace-button-quiet sample-button" type="button" data-fill-sample>Use example</button>
+          <p id="trace-url-help">This local prototype only displays its bundled example. It does not fetch entered URLs.</p>
+          <p id="trace-url-message" data-url-message role="status" aria-live="polite">Loading local illustrative data…</p>
+        </form>
+        <p class="load-error" data-load-error hidden>Local fixture unavailable. No website request was attempted.</p>
+        <p class="fixture-notice" data-fixture-notice></p>
+
+        <section class="trace-view" data-view-panel="overview" aria-labelledby="trace-page-title">
+          <header class="trace-page-heading">
+            <p class="eyebrow">ILLUSTRATIVE PAGE · STATIC HTML SUMMARY</p>
+            <h1 id="trace-page-title">Home solar installation</h1>
+            <p class="page-address" data-page-url></p>
+          </header>
+          <div class="trace-overview-grid">
+            <div class="trace-primary-column">
+              <section class="trace-observation" aria-labelledby="trace-observation-title">
+                <div class="observation-heading">
+                  <p class="eyebrow">RULE RESULT · STATIC HTML</p>
+                  <span class="rule-status rule-status-fail">Fail</span>
+                </div>
+                <h2 id="trace-observation-title">A <code>noindex</code> directive appears in the page.</h2>
+                <p>If the page is meant to appear in search, inspect this publishing setting and verify the deployed response. The audit cannot see the current Google index.</p>
+                <button class="trace-action-link" type="button" data-open-detail="robots_directives">Open the evidence view <span aria-hidden="true">↗</span></button>
+              </section>
+              <section class="trace-category-section" aria-labelledby="trace-categories-title">
+                <div class="trace-section-heading"><div><p class="eyebrow">RULE OUTCOMES</p><h2 id="trace-categories-title">Coverage by category</h2></div><button class="trace-action-link" type="button" data-nav-view="findings">View all <span data-total-checks>23</span></button></div>
+                <ul class="trace-category-list" data-categories></ul>
+                <p class="trace-caveat">Status reports the analyzer’s rule result; it is not severity or business priority.</p>
+              </section>
+            </div>
+            <aside class="trace-context" aria-label="Run context">
+              <section class="context-section">
+                <p class="eyebrow">FIXTURE TRANSPORT · MOCKED</p>
+                <p data-fetch-context></p>
+              </section>
+              <section class="context-section score-section">
+                <p class="eyebrow">HEURISTIC SCORE</p>
+                <p class="score-line"><strong data-score>—</strong><span>/ 100</span></p>
+                <p>Weighted rule output, not a Google ranking score or index check.</p>
+              </section>
+              <section class="context-section">
+                <p class="eyebrow">CHECK STATUS</p>
+                <p data-status-summary></p>
+                <p><span data-review-count></span> checks are marked fail or warning; that does not rank business importance.</p>
+              </section>
+              <section class="context-section">
+                <p class="eyebrow">OPTIONAL AI</p>
+                <p data-ai-state></p>
+              </section>
+              <section class="context-section recheck-section">
+                <p class="eyebrow">RECHECK</p>
+                <button class="trace-button-quiet" type="button" data-recheck>Simulate recheck state</button>
+                <p data-recheck-message role="status" aria-live="polite">No recheck has been performed.</p>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="trace-view" data-view-panel="findings" aria-labelledby="trace-findings-title" hidden>
+          <header class="trace-view-heading">
+            <p class="eyebrow">ALL CHECKS · ORIGINAL FIXTURE ORDER</p>
+            <h1 id="trace-findings-title">Findings investigation</h1>
+            <p>The result shown is a rule status. No severity or business-priority field exists in the current API.</p>
+          </header>
+          <div class="trace-filter-tools">
+            <div><label for="check-search">Search findings and observations</label><input id="check-search" type="search" placeholder="Search all checks"></div>
+            <div><label for="status-filter">Rule status</label><select id="status-filter"><option value="all">All statuses</option><option value="fail">Fail</option><option value="warning">Warning</option><option value="pass">Pass</option><option value="not_applicable">Not applicable</option></select></div>
+            <p data-filter-count aria-live="polite"></p>
+          </div>
+          <p id="no-matches" class="empty-state" hidden>No checks match. Clear the search or choose another status.</p>
+          <ol class="trace-check-list" data-check-list aria-label="Analysis checks"></ol>
+          <p class="trace-list-note">The check response includes analyzer evidence text, but not a source-node location. The robots excerpt in its detail view is tied only to the fictional fixture.</p>
+        </section>
+
+        <section class="trace-view detail-view" data-view-panel="detail" aria-labelledby="detail-title" hidden>
+          <div class="detail-toolbar"><button type="button" class="trace-back" data-back-findings>← Findings</button><span>Current page · illustrative fixture</span></div>
+          <div class="trace-detail-grid">
+            <article class="trace-evidence">
+              <p class="eyebrow"><span data-detail-category></span> · RULE RESULT <span data-detail-status class="rule-status"></span></p>
+              <h1 id="detail-title" data-detail-title tabindex="-1"></h1>
+              <section class="observation-panel">
+                <p class="eyebrow">OBSERVED BY THE RULE</p>
+                <blockquote data-detail-observed></blockquote>
+                <p class="source-label" data-source-label></p>
+                <div data-fixture-excerpt-wrap hidden>
+                  <pre class="fixture-excerpt" data-fixture-excerpt></pre>
+                  <p class="source-disclaimer">Fixture-only source excerpt. Current API responses do not include arbitrary DOM excerpts or node locations.</p>
+                </div>
+              </section>
+              <section class="meaning-panel">
+                <p class="eyebrow">INTERPRETATION · PROTOTYPE COPY</p>
+                <p data-detail-explanation></p>
+                <p class="interpretation-note">This rule does not confirm Google’s current index state.</p>
+              </section>
+            </article>
+            <aside class="trace-action-panel" aria-label="Suggested next step and verification">
+              <button type="button" class="trace-back" data-back-findings>Return to filtered findings</button>
+              <section><p class="eyebrow">POSSIBLE NEXT STEP · NOT APPLIED</p><p data-detail-next-step></p></section>
+              <section><p class="eyebrow">VERIFY AFTER A SITE CHANGE</p><p data-detail-verify></p></section>
+              <p class="action-boundary">These are suggestions only. No content is edited, published, or fetched here.</p>
+            </aside>
+          </div>
+        </section>
+        <footer class="trace-footer"><span>Local design prototype</span><span>No API, page, or AI request is made.</span></footer>
+      </main>
+    </div>
+    <script src="../shared/app.js" defer></script>
+  </body>
+</html>

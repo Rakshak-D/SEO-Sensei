@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#eff4ef">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <title>Field Notes — SEO Sensei design exploration</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="field-notes">
+    <a class="skip-link" href="#main-content">Skip to audit</a>
+    <header class="field-topbar">
+      <a class="field-brand" href="../index.html"><span class="brand-stamp" aria-hidden="true">S</span><span><strong>SEO SENSEI</strong><small>Field notes</small></span></a>
+      <span class="fixture-stamp">LOCAL HTML SPECIMEN</span>
+      <a class="compare-link" href="../index.html">Compare directions</a>
+    </header>
+
+    <nav class="process-strip" aria-label="Audit workflow">
+      <button class="process-step is-current" data-nav="overview" type="button" aria-current="page"><b>01</b><span>Page overview</span></button>
+      <span class="process-connector" aria-hidden="true"></span>
+      <button class="process-step" data-nav="findings" type="button"><b>02</b><span>Findings</span></button>
+      <span class="process-connector" aria-hidden="true"></span>
+      <button class="process-step" data-nav="detail" type="button"><b>03</b><span>Plan a recheck</span></button>
+    </nav>
+
+    <main id="main-content" class="field-main">
+      <form class="page-form" data-sample-form>
+        <label for="sample-url">Page to inspect</label>
+        <input id="sample-url" type="url" autocomplete="url" value="https://northstar.example/guides/home-solar/" spellcheck="false">
+        <button class="open-sample" type="submit">Open local sample</button>
+        <button class="clear-sample" data-clear-url type="button">Clear</button>
+        <p id="prototype-message" role="status" aria-live="polite" class="prototype-message"></p>
+      </form>
+
+      <section class="view" data-panel="overview" aria-labelledby="overview-title">
+        <div class="field-title-row">
+          <div><p class="field-kicker">ONE URL · OBSERVED HTML · HUMAN REVIEW</p><h1 id="overview-title">Home solar installation</h1><p class="page-url" data-audit-url></p></div>
+        </div>
+        <p class="fixture-note" data-fixture-notice></p>
+
+        <div class="field-alert">
+          <div class="alert-symbol" aria-hidden="true">!</div>
+          <div><p class="alert-kicker">FIRST THING TO CHECK · FAIL</p><h2>A noindex directive is in the page source.</h2><p>If this guide should be eligible for search, review the CMS or template setting. This inspection cannot confirm Google’s current index.</p></div>
+          <button class="evidence-link" data-open-detail="robots_directives" type="button">See source evidence <span aria-hidden="true">→</span></button>
+        </div>
+
+        <div class="score-sticker" aria-label="SEO Sensei heuristic score, not a Google ranking score"><span>Heuristic</span><strong><i data-score>—</i><small>/100</small></strong><em>not a Google ranking score</em></div>
+
+        <div class="field-board">
+          <section class="board-card category-card" aria-labelledby="categories-title">
+            <div class="card-title-row"><div><p class="field-kicker">THE AUDIT AT A GLANCE</p><h2 id="categories-title">Signals by category</h2></div><span class="check-total" data-check-count></span></div>
+            <div class="category-grid" data-category-breakdown></div>
+            <p class="board-note">Points summarize the current heuristic. They do not measure ranking, traffic, index status, or content quality.</p>
+          </section>
+          <aside class="workflow-card">
+            <p class="field-kicker">A USEFUL ORDER</p>
+            <ol>
+              <li><span>01</span><p><strong>Confirm intent</strong><small>Should this page appear in search?</small></p></li>
+              <li><span>02</span><p><strong>Change the source</strong><small>Review the page template or CMS.</small></p></li>
+              <li><span>03</span><p><strong>Check the deployed result</strong><small>Use Search Console for Google’s view.</small></p></li>
+            </ol>
+            <button class="evidence-link" data-nav="detail" type="button">Open the evidence note <span aria-hidden="true">→</span></button>
+          </aside>
+        </div>
+
+        <section class="observations-card" aria-labelledby="observations-title">
+          <div class="card-title-row"><div><p class="field-kicker">SORTED BY STATUS · NOT BY BUSINESS SEVERITY</p><h2 id="observations-title">What else the page reports</h2></div><button class="all-observations" data-nav="findings" type="button">View all checks <span aria-hidden="true">→</span></button></div>
+          <div class="finding-list compact-list" data-overview-findings></div>
+        </section>
+
+        <details class="ai-drawer"><summary><span>AI recommendations</span><span class="ai-badge">Optional · not connected here</span></summary><p>No AI request was sent. A future recommendation should name its generated source and sit beside, not inside, the observed evidence.</p></details>
+      </section>
+
+      <section class="view" data-panel="findings" aria-labelledby="findings-title" hidden>
+        <div class="list-heading"><p class="field-kicker">THE COMPLETE CHECKLIST</p><h1 id="findings-title">Findings and checks</h1><p>Use text and status filters to find an observation. Status is the analyzer’s label, not a severity rating.</p></div>
+        <div class="filter-bar">
+          <label for="finding-search">Search</label><input id="finding-search" type="search" placeholder="Search title, category, evidence">
+          <label for="finding-status-filter">Status</label><select id="finding-status-filter"><option value="all">All</option><option value="fail">Fail</option><option value="warning">Warning</option><option value="pass">Pass</option><option value="not_applicable">Not applicable</option></select>
+          <span id="result-count" class="result-count"></span>
+        </div>
+        <p id="no-results" class="empty-results" hidden>No checks match. Try another term or clear the filter.</p>
+        <div class="finding-list full-list" data-all-findings></div>
+      </section>
+
+      <section class="view" data-panel="detail" aria-labelledby="detail-title" hidden>
+        <div class="detail-intro"><p class="field-kicker">OBSERVATION NOTE · <span id="detail-category"></span></p><div class="detail-title-line"><h1 id="detail-title"></h1><span id="detail-status" class="status-chip status-fail">Fail</span></div></div>
+        <div class="note-grid">
+          <article class="specimen-card"><div class="specimen-label"><span>OBSERVED</span><span>LOCAL FIXTURE</span></div><blockquote id="detail-observation"></blockquote><pre id="source-excerpt" class="source-excerpt" hidden></pre><p class="source-caption">Source excerpt from the bundled example only; no live page was fetched.</p><h2>What it means</h2><p id="detail-explanation"></p></article>
+          <aside class="next-steps">
+            <section><span class="step-tag">01 · POSSIBLE FIX</span><p id="detail-fix"></p></section>
+            <section><span class="step-tag">02 · RECHECK</span><p id="detail-verify"></p></section>
+            <button class="back-to-list" data-nav="findings" type="button">Return to all observations <span aria-hidden="true">→</span></button>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <footer class="field-footer"><span>Fictional Northstar page · fixture score calculated offline</span><span>No API calls · no AI calls</span></footer>
+    <script src="../shared/app.js" defer></script>
+  </body>
+</html>

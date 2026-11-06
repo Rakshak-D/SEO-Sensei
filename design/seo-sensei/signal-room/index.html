@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b1116">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <title>Signal Room — SEO Sensei design exploration</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="signal-room">
+    <a class="skip-link" href="#main-content">Skip to audit</a>
+    <header class="topbar">
+      <a class="brand" href="../index.html" aria-label="SEO Sensei design directions">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span class="brand-copy"><strong>SEO SENSEI</strong><small>single-page review</small></span>
+      </a>
+      <div class="topbar-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span>Local sample</span>
+        <a href="../index.html">Compare directions</a>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="rail" aria-label="Audit navigation">
+        <p class="rail-label">CURRENT REVIEW</p>
+        <button class="rail-link is-active" data-nav="overview" type="button"><span class="rail-number">01</span>Overview</button>
+        <button class="rail-link" data-nav="findings" type="button"><span class="rail-number">02</span>All checks</button>
+        <button class="rail-link" data-nav="detail" type="button"><span class="rail-number">03</span>Evidence</button>
+        <div class="rail-foot">
+          <span class="rail-rule"></span>
+          <p>Response HTML<br>and transport signals</p>
+          <small>No ranking, index, or field-speed data</small>
+        </div>
+      </aside>
+
+      <main class="main-content" id="main-content">
+        <form class="url-console" data-sample-form>
+          <label for="sample-url">Page URL</label>
+          <div class="url-controls">
+            <input id="sample-url" type="url" autocomplete="url" value="https://northstar.example/guides/home-solar/" spellcheck="false">
+            <button class="button-primary" type="submit">Open sample review</button>
+            <button class="button-quiet" data-clear-url type="button" aria-label="Clear page URL">Clear</button>
+          </div>
+          <p id="prototype-message" class="prototype-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <section class="view" data-panel="overview" aria-labelledby="overview-title">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">PAGE REVIEW <span> / </span> FIXTURE 001</p>
+              <h1 id="overview-title">Home solar installation</h1>
+              <p class="page-url" data-audit-url></p>
+            </div>
+          </div>
+
+          <p class="fixture-note" data-fixture-notice></p>
+          <div class="scope-line"><strong>Not a Google ranking score.</strong> One present <code>noindex</code> directive matters on its own; the composite score does not confirm search eligibility.</div>
+
+          <div class="overview-grid">
+            <div class="main-stack">
+              <section class="panel category-panel" aria-labelledby="categories-title">
+                <div class="panel-head">
+                  <div><p class="eyebrow">SIGNAL DISTRIBUTION</p><h2 id="categories-title">Category breakdown</h2></div>
+                  <span class="quiet-count" data-check-count></span>
+                </div>
+                <div class="category-grid" data-category-breakdown></div>
+              </section>
+
+              <section class="panel queue-panel" aria-labelledby="queue-title">
+                <div class="panel-head">
+                  <div><p class="eyebrow">ORDERED BY CHECK STATUS</p><h2 id="queue-title">Review these observations</h2></div>
+                  <button class="text-button" data-nav="findings" type="button">Browse all checks <span aria-hidden="true">→</span></button>
+                </div>
+                <div class="finding-list compact-list" data-overview-findings></div>
+              </section>
+            </div>
+
+            <aside class="side-stack" aria-label="Selected evidence and analysis limits">
+              <section class="focus-card">
+                <div class="focus-top"><span class="status-chip status-fail">Fail</span><span class="mono-label">ROBOTS_DIRECTIVES</span></div>
+                <p class="focus-kicker">Start with this observation</p>
+                <h2>A noindex directive is present</h2>
+                <p>The local HTML contains <code>noindex, follow</code>. If this page should appear in search, review the publishing setting.</p>
+                <button class="button-outline" data-open-detail="robots_directives" type="button">Inspect evidence</button>
+              </section>
+
+              <div class="score-chip" aria-label="SEO Sensei heuristic score, not a Google ranking score">
+                <span class="score-value" data-score>—</span><span class="score-denom">/100</span>
+                <small>heuristic only</small>
+              </div>
+
+              <section class="panel transport-panel" aria-labelledby="transport-title">
+                <p class="eyebrow">FETCH CONTEXT</p>
+                <h2 id="transport-title">What this run observed</h2>
+                <dl>
+                  <div><dt>Response</dt><dd>200 · HTML</dd></div>
+                  <div><dt>Redirects</dt><dd>0</dd></div>
+                  <div><dt>Fetch duration</dt><dd>0.82 s</dd></div>
+                </dl>
+                <p class="fine-print">Supplied fixture values. Fetch duration is not page speed or Core Web Vitals.</p>
+              </section>
+
+              <details class="ai-panel">
+                <summary><span>Optional AI suggestions</span><span class="ai-state">Not connected</span></summary>
+                <p>No AI request was sent in this prototype. In the product, suggestions stay separate from deterministic observations and require an explicit request.</p>
+              </details>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-panel="findings" aria-labelledby="findings-title" hidden>
+          <div class="page-heading findings-heading">
+            <div><p class="eyebrow">ALL OBSERVATIONS</p><h1 id="findings-title">Findings and checks</h1><p class="page-intro">Filter the same 23 checks by text or status. A status describes this analyzer’s rule, not page severity.</p></div>
+          </div>
+          <div class="filter-bar">
+            <label class="search-label" for="finding-search">Search findings</label>
+            <input id="finding-search" type="search" placeholder="Try “canonical” or “image”">
+            <label class="filter-label" for="finding-status-filter">Status</label>
+            <select id="finding-status-filter">
+              <option value="all">All statuses</option><option value="fail">Fail</option><option value="warning">Warning</option><option value="pass">Pass</option><option value="not_applicable">Not applicable</option>
+            </select>
+            <span id="result-count" class="result-count"></span>
+          </div>
+          <p id="no-results" class="empty-results" hidden>No checks match these filters. Clear the search or choose another status.</p>
+          <div class="finding-list full-list" data-all-findings></div>
+        </section>
+
+        <section class="view" data-panel="detail" aria-labelledby="detail-title" hidden>
+          <div class="page-heading detail-heading">
+            <div><p class="eyebrow">OBSERVATION DETAIL <span> / </span> <span id="detail-category"></span></p><h1 id="detail-title"></h1></div>
+            <span id="detail-status" class="status-chip status-fail">Fail</span>
+          </div>
+          <div class="detail-grid">
+            <div class="panel evidence-panel">
+              <p class="eyebrow">OBSERVED EVIDENCE</p>
+              <blockquote id="detail-observation"></blockquote>
+              <pre id="source-excerpt" class="source-excerpt" hidden></pre>
+              <p class="fine-print">Evidence shown here comes from the local illustrative fixture, not a live website.</p>
+              <h2>Why review it</h2>
+              <p id="detail-explanation"></p>
+            </div>
+            <div class="detail-guidance">
+              <section class="panel guidance-panel"><p class="eyebrow">POSSIBLE NEXT STEP</p><h2>Fix with intent</h2><p id="detail-fix"></p></section>
+              <section class="panel guidance-panel verify-panel"><p class="eyebrow">AFTER THE CHANGE</p><h2>Verify the deployed page</h2><p id="detail-verify"></p></section>
+              <button class="button-outline back-button" data-nav="findings" type="button">Back to checks</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="../shared/app.js" defer></script>
+  </body>
+</html>

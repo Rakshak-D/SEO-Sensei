@@ -28,6 +28,7 @@ from .api.errors import (
 from .ai.gemini import AIServiceError, GeminiService
 from .ai.models import AIRecommendationState, AIRecommendationsResult
 from .api.auth import require_auth
+from .api.browser_auth import BrowserAuthRuntime, router as browser_auth_router
 from .api.observability import request_context
 from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
@@ -49,6 +50,8 @@ metrics = Metrics(settings.metrics_enabled)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     application.state.metrics = metrics
+    if settings.browser_auth_enabled:
+        application.state.browser_auth = BrowserAuthRuntime.from_settings(settings)
     application.state.safe_fetcher = SafeFetcher(settings, metrics=metrics)
     application.state.rate_limiter = InMemoryRateLimiter(settings)
     application.state.gemini_service = None
@@ -73,6 +76,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.settings = settings
+if settings.browser_auth_enabled:
+    app.include_router(browser_auth_router)
 
 app.add_middleware(
     CORSMiddleware,

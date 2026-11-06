@@ -1,6 +1,6 @@
 # SEO-Sensei Fetch Security Model
 
-This document describes the URL-fetching boundary implemented for the SEO crawler. It is intentionally limited to transport safety; it does not claim that the crawler is a general web browser or that the rest of the application is authenticated.
+This document describes the URL-fetching boundary implemented for the SEO crawler and the authentication boundaries around API work. It does not claim that the crawler is a general web browser or that the dashboard is authenticated.
 
 ## Supported URLs
 
@@ -40,13 +40,36 @@ The analysis API accepts a target URL only to obtain bounded HTML for SEO analys
 
 ## API access and resource limits
 
-`/health` and `/` are public lightweight endpoints. URL analysis, AI recommendations, SEO boost, and article generation require `Authorization: Bearer <API_ACCESS_TOKEN>`. Tokens are compared with a constant-time comparison, are never accepted in query parameters, and are never included in logs, responses, or browser-extension source. Production startup fails when `API_ACCESS_TOKEN` is missing; development and tests must supply an explicit local/test token.
+`/health` and `/` are public lightweight endpoints. The existing URL analysis, AI recommendation, SEO boost, and article-generation operations require `Authorization: Bearer <API_ACCESS_TOKEN>`. Tokens are compared with a constant-time comparison, are never accepted in query parameters, and are never included in logs, responses, or browser-extension source. Production startup fails when `API_ACCESS_TOKEN` is missing; development and tests must supply an explicit local/test token.
 
 Protected operations use an in-process limiter keyed by a non-reversible token fingerprint and the direct peer IP address. Default limits are configured separately for analysis, AI work, article generation, and boost operations with per-minute and per-hour windows. Rejections return `429`, `Retry-After`, and the standard request-ID error contract. Expired entries are cleaned up and the key store is bounded. The limiter is intentionally single-instance; multiple API instances require a shared limiter in a future phase.
 
 Forwarded client-IP headers are trusted only through the explicit proxy policy documented below. Direct or untrusted peers use the direct socket address. CORS origins are configuration-driven, wildcard origins are rejected, and the `Authorization` header is explicitly allowed for configured origins. Authenticated API responses are marked `Cache-Control: no-store`.
 
 The Chrome extension contains no bundled deployment credential. It can be configured by an operator with a locally stored token for a self-hosted/private deployment, but it is not a multi-user identity system and should not distribute one shared token to an untrusted public audience. The extension requests access only for its configured API origin.
+
+## Restricted browser-session foundation
+
+Browser authentication is **disabled by default**. With `BROWSER_AUTH_ENABLED=false`, the `/api/browser/v1/session` routes are not mounted and the existing bearer routes retain their prior behavior. Enabling it requires all of the following: `BROWSER_AUTH_ENABLED=true`, an absolute `BROWSER_AUTH_ACCOUNTS_FILE` path outside the repository, and one canonical HTTPS `BROWSER_APP_ORIGIN`. The browser origin is an exact configured value; wildcards, paths, default ports written explicitly, non-HTTPS schemes, and malformed authorities are rejected. Secure cookies are used in every environment. Local development therefore needs local HTTPS with a trusted certificate; no HTTP cookie fallback exists.
+
+The account source is operator-managed JSON with version `1` and at most 64 records. Each record contains a normalized ASCII `username` and an Argon2id `password_hash`; plaintext passwords are never stored. The source is loaded and validated during startup, and changing it requires restarting the API process. Keep the file outside the Git worktree. On POSIX systems, use a private parent directory (for example mode `0700`), make the file readable by the API service identity, and use mode `0600` (the loader also accepts owner-read-only `0400`); the application rejects group/world access, executable or special permission bits, and files without owner-read access. On Windows, grant read access to the API service identity and write access only to the operator using a restricted NTFS ACL. The provisioning utility does not attempt to rewrite Windows ACLs.
+
+`tools/provision_browser_user.py` accepts the account identifier as an argument and reads the password twice using a non-echoing prompt. It adds accounts atomically and refuses to replace an existing username. Example:
+
+```bash
+python tools/provision_browser_user.py site-editor \
+  --accounts-file /etc/seo-sensei/browser-users.json
+```
+
+The utility requires an existing, protected parent directory. It sets POSIX account-file permissions to `0600`; operators must create the parent directory with restrictive permissions. Never commit the resulting account file or copy real verifiers into fixtures.
+
+Password verifiers use the pinned `argon2-cffi` implementation with Argon2id `m=19456 KiB`, `t=2`, `p=1`, matching the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). The loader accepts only bounded Argon2id parameters, capped at 32 MiB per verifier. The API permits at most two simultaneous verifier operations; hashes created by the utility use about 19 MiB each (about 38 MiB of KDF working memory at maximum concurrency), while the loader's upper bound permits about 64 MiB, in addition to normal process memory. Do not increase concurrency or accepted verifier bounds without measuring the deployed container memory limit.
+
+Sessions are opaque 32-byte random values in the `__Host-seo_sensei_session` Secure, HttpOnly, SameSite=Lax, Path=/ cookie. The process-local session map stores only the SHA-256 digest of that value, a username, timestamps, and the synchronizer CSRF token. Idle expiry defaults to 30 minutes, absolute expiry to 8 hours, and capacity to 64 sessions. Expiry is enforced by the API; capacity exhaustion rejects a new login and does not evict an active session. Restarting the single API process invalidates sessions. Multiple workers or instances are unsupported.
+
+Login and logout require the exact configured `Origin`. Logout also requires the session's synchronizer token in `X-CSRF-Token`. Missing, `null`, or mismatched origins and missing or incorrect CSRF tokens are rejected. This follows the [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) and [CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) guidance; SameSite and CORS are not treated as authorization. Login attempts are bounded to five per minute per trusted client IP, five per normalized account identifier, and 30 process-wide, with at most 4,096 IP/account limiter keys and at most two simultaneous Argon2 operations. The session-bootstrap GET does not refresh the idle deadline; future protected state-changing browser operations must explicitly refresh activity after successful session, Origin, and CSRF validation.
+
+This phase adds only the browser login/session/logout lifecycle. It does not add a browser URL-analysis route or grant browser sessions access to the existing bearer-protected operations. The browser router remains disabled until a later reviewed integration stage. Streamlit's existing exposure risk remains unresolved.
 
 ## Reverse proxy headers
 

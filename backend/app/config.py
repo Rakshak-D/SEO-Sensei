@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 from functools import lru_cache
 from typing import Any
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ConfigurationError(RuntimeError):
@@ -31,6 +32,12 @@ class Settings(BaseModel):
     api_access_token: str | None = Field(default=None, min_length=1)
     api_base_url: str | None = Field(default=None, max_length=500)
     dashboard_api_access_token: str | None = Field(default=None, min_length=1)
+    browser_auth_enabled: bool = False
+    browser_auth_accounts_file: str | None = Field(default=None, max_length=1_024)
+    browser_app_origin: str | None = Field(default=None, max_length=512)
+    browser_session_idle_timeout_seconds: int = Field(default=1_800, ge=60, le=3_600)
+    browser_session_absolute_lifetime_seconds: int = Field(default=28_800, ge=300, le=86_400)
+    browser_session_capacity: int = Field(default=64, ge=1, le=64)
     cors_allow_credentials: bool = False
     trusted_proxy_networks: list[str] = Field(default_factory=list)
     app_version: str = Field(default="1.0.0", min_length=1, max_length=64)
@@ -99,6 +106,74 @@ class Settings(BaseModel):
     def normalize_environment(cls, value: str) -> str:
         return value.strip().lower()
 
+    @model_validator(mode="after")
+    def validate_browser_auth(self) -> "Settings":
+        if not self.browser_auth_enabled:
+            return self
+
+        if not self.browser_auth_accounts_file:
+            raise ValueError("Browser authentication requires an account source.")
+        if not os.path.isabs(self.browser_auth_accounts_file):
+            raise ValueError("Browser authentication account source must be an absolute path.")
+        if not self.browser_app_origin:
+            raise ValueError("Browser authentication requires an allowed application origin.")
+
+        origin = self.browser_app_origin
+        from urllib.parse import urlsplit
+
+        try:
+            parsed = urlsplit(origin)
+            hostname = parsed.hostname
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError("Browser application origin is invalid.") from exc
+
+        if (
+            not hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+            or parsed.scheme != "https"
+            or "*" in origin
+            or hostname.endswith(".")
+        ):
+            raise ValueError("Browser application origin must be one exact origin without a path.")
+
+        try:
+            hostname.encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise ValueError("Browser application origin must use an ASCII hostname or punycode.") from exc
+
+        host = hostname.lower()
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            address = None
+
+        if address is None and not re.fullmatch(
+            r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*",
+            host,
+        ):
+            raise ValueError("Browser application origin hostname is invalid.")
+
+        default_port = 443
+        if port == 0:
+            raise ValueError("Browser application origin port is invalid.")
+        if port == default_port:
+            raise ValueError("Browser application origin must omit its default port.")
+
+        authority_host = f"[{host}]" if address is not None and address.version == 6 else host
+        authority = f"{authority_host}:{port}" if port is not None else authority_host
+        canonical_origin = f"{parsed.scheme}://{authority}"
+        if origin != canonical_origin:
+            raise ValueError("Browser application origin must be in canonical form.")
+
+        if self.browser_session_absolute_lifetime_seconds < self.browser_session_idle_timeout_seconds:
+            raise ValueError("Browser session absolute lifetime must be at least its idle timeout.")
+        return self
+
     @classmethod
     def from_environment(cls, environ: dict[str, str] | None = None) -> "Settings":
         """Load settings without ever printing secret values."""
@@ -106,6 +181,7 @@ class Settings(BaseModel):
         load_dotenv()
         source = os.environ if environ is None else environ
 
+        browser_auth_enabled = source.get("BROWSER_AUTH_ENABLED", "false")
         values: dict[str, Any] = {
             "environment": source.get("APP_ENV", "development"),
             "gemini_api_key": source.get("GEMINI_API_KEY") or None,
@@ -114,6 +190,7 @@ class Settings(BaseModel):
             "api_access_token": source.get("API_ACCESS_TOKEN") or None,
             "api_base_url": source.get("API_BASE_URL") or None,
             "dashboard_api_access_token": source.get("DASHBOARD_API_ACCESS_TOKEN") or None,
+            "browser_auth_enabled": browser_auth_enabled,
             "cors_allow_credentials": source.get("CORS_ALLOW_CREDENTIALS", "false"),
             "trusted_proxy_networks": source.get("TRUSTED_PROXY_NETWORKS", ""),
             "app_version": source.get("APP_VERSION", "1.0.0"),
@@ -148,6 +225,24 @@ class Settings(BaseModel):
             "boost_rate_limit_per_hour": source.get("BOOST_RATE_LIMIT_PER_HOUR", 30),
             "rate_limit_max_keys": source.get("RATE_LIMIT_MAX_KEYS", 10_000),
         }
+
+        auth_is_enabled = (
+            browser_auth_enabled
+            if isinstance(browser_auth_enabled, bool)
+            else str(browser_auth_enabled).strip().lower() in {"1", "true", "yes", "on"}
+        )
+        if auth_is_enabled:
+            values.update(
+                {
+                    "browser_auth_accounts_file": source.get("BROWSER_AUTH_ACCOUNTS_FILE") or None,
+                    "browser_app_origin": source.get("BROWSER_APP_ORIGIN") or None,
+                    "browser_session_idle_timeout_seconds": source.get("BROWSER_SESSION_IDLE_TIMEOUT_SECONDS", 1_800),
+                    "browser_session_absolute_lifetime_seconds": source.get(
+                        "BROWSER_SESSION_ABSOLUTE_LIFETIME_SECONDS", 28_800
+                    ),
+                    "browser_session_capacity": source.get("BROWSER_SESSION_CAPACITY", 64),
+                }
+            )
 
         try:
             settings = cls.model_validate(values)

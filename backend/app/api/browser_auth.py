@@ -16,6 +16,7 @@ from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatc
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..api.errors import APIError, AUTH_INVALID, AUTH_REQUIRED, INVALID_REQUEST, RATE_LIMITED
 from ..api.proxy import client_ip as trusted_client_ip, request_scheme as trusted_request_scheme
@@ -174,7 +175,18 @@ class BrowserAuthRuntime:
         return cls(settings, accounts)
 
 
-def _origin_is_allowed(request: Request) -> bool:
+@dataclass(frozen=True, slots=True)
+class BrowserSessionPrincipal:
+    """Verified in-process browser identity for one request."""
+
+    runtime: BrowserAuthRuntime
+    session_id: str
+    session: BrowserSession
+
+
+def browser_origin_is_allowed(request: Request) -> bool:
+    """Return whether exactly one Origin header matches the configured app."""
+
     configured = request.app.state.settings.browser_app_origin
     origins = request.headers.getlist("origin")
     if not configured or len(origins) != 1:
@@ -184,16 +196,39 @@ def _origin_is_allowed(request: Request) -> bool:
     return secrets.compare_digest(supplied, expected)
 
 
-def _require_secure_transport(request: Request) -> None:
+def require_browser_secure_transport(request: Request) -> None:
     settings: Settings = request.app.state.settings
     scheme = trusted_request_scheme(request, tuple(settings.trusted_proxy_networks))
     if scheme != "https":
         raise APIError(ORIGIN_REJECTED, "HTTPS is required for browser sessions.", 403)
 
 
-def _require_origin(request: Request) -> None:
-    if not _origin_is_allowed(request):
+def require_browser_origin(request: Request) -> None:
+    if not browser_origin_is_allowed(request):
         raise APIError(ORIGIN_REJECTED, "The request origin is not allowed.", 403)
+
+
+def require_browser_session(request: Request) -> BrowserSessionPrincipal:
+    """Verify the opaque session cookie without refreshing idle activity."""
+
+    runtime: BrowserAuthRuntime = request.app.state.browser_auth
+    session_id = _session_cookie_value(request)
+    session = runtime.sessions.get(session_id, touch=False)
+    if session is None or session_id is None:
+        raise APIError(AUTH_REQUIRED, "A valid browser session is required.", 401)
+    return BrowserSessionPrincipal(runtime, session_id, session)
+
+
+def require_browser_csrf(request: Request, session: BrowserSession) -> None:
+    """Verify the session-bound synchronizer token on a state-changing request."""
+
+    tokens = request.headers.getlist(CSRF_HEADER_NAME.lower())
+    valid = len(tokens) == 1 and secrets.compare_digest(
+        tokens[0].encode("utf-8", errors="surrogatepass"),
+        session.csrf_token.encode("ascii"),
+    )
+    if not valid:
+        raise APIError(CSRF_REJECTED, "The request could not be verified.", 403)
 
 
 async def _read_bounded_login_payload(request: Request) -> LoginPayload:
@@ -255,28 +290,39 @@ def _session_cookie_value(request: Request) -> str | None:
     return value if value and len(value) <= 64 else None
 
 
-def _require_session(request: Request, session_id: str | None) -> tuple[BrowserAuthRuntime, BrowserSession]:
-    runtime: BrowserAuthRuntime = request.app.state.browser_auth
-    session = runtime.sessions.get(session_id, touch=False)
-    if session is None:
-        raise APIError(AUTH_REQUIRED, "A valid browser session is required.", 401)
-    return runtime, session
+class BrowserNamespaceOriginMiddleware:
+    """Keep legacy CORS allowlists from exposing browser-session responses."""
 
+    def __init__(self, app: ASGIApp, allowed_origin: str) -> None:
+        self.app = app
+        self.allowed_origin = allowed_origin.encode("ascii")
 
-def _require_csrf(request: Request, session: BrowserSession) -> None:
-    tokens = request.headers.getlist(CSRF_HEADER_NAME.lower())
-    valid = len(tokens) == 1 and secrets.compare_digest(
-        tokens[0].encode("utf-8", errors="surrogatepass"),
-        session.csrf_token.encode("ascii"),
-    )
-    if not valid:
-        raise APIError(CSRF_REJECTED, "The request could not be verified.", 403)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope.get("path", "")
+        if scope.get("type") == "http" and (path == "/api/browser/v1" or path.startswith("/api/browser/v1/")):
+            origins = [value for key, value in scope.get("headers", []) if key.lower() == b"origin"]
+            if origins and (len(origins) != 1 or not secrets.compare_digest(origins[0], self.allowed_origin)):
+                state = scope.get("state", {})
+                request_id = state.get("request_id", "unknown")
+                response = JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": {
+                            "code": ORIGIN_REJECTED,
+                            "message": "The request origin is not allowed.",
+                            "request_id": request_id,
+                        }
+                    },
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
 
 
 @router.post("/login")
 async def login(request: Request) -> JSONResponse:
-    _require_secure_transport(request)
-    _require_origin(request)
+    require_browser_secure_transport(request)
+    require_browser_origin(request)
     payload = await _read_bounded_login_payload(request)
     username = _normalized_login_identifier(payload.username)
     client_address = trusted_client_ip(request, tuple(request.app.state.settings.trusted_proxy_networks))
@@ -323,8 +369,8 @@ async def login(request: Request) -> JSONResponse:
 
 @router.get("")
 async def session(request: Request) -> dict[str, object]:
-    _require_secure_transport(request)
-    _, current = _require_session(request, _session_cookie_value(request))
+    require_browser_secure_transport(request)
+    current = require_browser_session(request).session
     return {
         "authenticated": True,
         "user": {"username": current.username},
@@ -334,12 +380,11 @@ async def session(request: Request) -> dict[str, object]:
 
 @router.post("/logout")
 async def logout(request: Request) -> JSONResponse:
-    _require_secure_transport(request)
-    _require_origin(request)
-    session_id = _session_cookie_value(request)
-    runtime, current = _require_session(request, session_id)
-    _require_csrf(request, current)
-    if not runtime.sessions.revoke(session_id):
+    require_browser_secure_transport(request)
+    require_browser_origin(request)
+    principal = require_browser_session(request)
+    require_browser_csrf(request, principal.session)
+    if not principal.runtime.sessions.revoke(principal.session_id):
         raise APIError(AUTH_REQUIRED, "A valid browser session is required.", 401)
 
     response = JSONResponse({"authenticated": False}, headers={"Cache-Control": "no-store"})

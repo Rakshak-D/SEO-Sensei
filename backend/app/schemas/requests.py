@@ -19,6 +19,16 @@ class URLAnalysisRequest(BaseModel):
     include_ai_recommendations: bool = False
 
 
+class BrowserURLAnalysisRequest(BaseModel):
+    """Strict URL-only request for the separately authenticated browser API."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2_048)] = Field(
+        json_schema_extra={"format": "uri"}
+    )
+
+
 class ArticleGenerationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

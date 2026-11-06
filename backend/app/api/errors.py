@@ -25,8 +25,11 @@ class APIError(Exception):
 
 
 INVALID_REQUEST = "invalid_request"
+REQUEST_TOO_LARGE = "request_too_large"
+UNSUPPORTED_MEDIA_TYPE = "unsupported_media_type"
 INVALID_URL = "invalid_url"
 UNSUPPORTED_URL = "unsupported_url"
+DESTINATION_BLOCKED = "destination_blocked"
 RESOURCE_UNAVAILABLE = "resource_unavailable"
 UPSTREAM_AI_UNAVAILABLE = "upstream_ai_unavailable"
 RATE_LIMITED = "rate_limited"
@@ -36,8 +39,11 @@ INTERNAL_SERVER_ERROR = "internal_server_error"
 
 ERROR_STATUS_CODES = {
     INVALID_REQUEST: 422,
+    REQUEST_TOO_LARGE: 413,
+    UNSUPPORTED_MEDIA_TYPE: 415,
     INVALID_URL: 422,
     UNSUPPORTED_URL: 422,
+    DESTINATION_BLOCKED: 422,
     RESOURCE_UNAVAILABLE: 502,
     UPSTREAM_AI_UNAVAILABLE: 503,
     RATE_LIMITED: 429,

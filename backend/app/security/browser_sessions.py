@@ -102,6 +102,34 @@ class BrowserSessionStore:
                 self._sessions[key] = record
             return record
 
+    def refresh_if_live(self, session_id: str, expected: BrowserSession) -> BrowserSession | None:
+        """Refresh idle time only for the same, still-live session record.
+
+        A revoked or expired session is never recreated. The identity check
+        allows a concurrent same-session activity update but rejects a session
+        that has been replaced between authorization and admission.
+        """
+
+        key = self._key(session_id)
+        if key is None:
+            return None
+        now = self._clock()
+        with self._lock:
+            self._purge_expired(now)
+            current = self._sessions.get(key)
+            if current is None:
+                return None
+            if (
+                current.username != expected.username
+                or current.created_at != expected.created_at
+                or current.absolute_expires_at != expected.absolute_expires_at
+                or current.csrf_token != expected.csrf_token
+            ):
+                return None
+            refreshed = replace(current, last_activity_at=now)
+            self._sessions[key] = refreshed
+            return refreshed
+
     def revoke(self, session_id: str | None) -> bool:
         """Revoke a session by cookie value without retaining that value."""
 

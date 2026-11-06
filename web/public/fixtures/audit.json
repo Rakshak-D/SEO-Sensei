@@ -1,0 +1,566 @@
+{
+  "fixture_notice": "Illustrative local fixture. The .example URL was never requested from a network. The deterministic engine ran over this HTML; fetch metadata (200, 0 redirects, 0.82 seconds) is supplied mock input, not a live measurement.",
+  "fixture_html": "fixtures/northstar-solar.html",
+  "analysis": {
+    "requested_url": "https://northstar.example/guides/home-solar/",
+    "final_url": "https://northstar.example/guides/home-solar/",
+    "fetch": {
+      "requested_url": "https://northstar.example/guides/home-solar/",
+      "final_url": "https://northstar.example/guides/home-solar/",
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 2671,
+      "bytes_read": 2671,
+      "redirect_count": 0,
+      "elapsed_time": 0.82,
+      "x_robots_tag": null
+    },
+    "deterministic_score": {
+      "version": "1.0",
+      "overall_score": 92,
+      "points_earned": 91.5,
+      "max_points": 100.0,
+      "categories": [
+        {
+          "category": "technical_indexability",
+          "weight": 30.0,
+          "points_earned": 25.0,
+          "max_points": 30.0,
+          "raw_points": 25.0,
+          "raw_max_points": 30.0,
+          "check_ids": [
+            "retrieval_success",
+            "http_status",
+            "https",
+            "content_type",
+            "redirects",
+            "fetch_duration",
+            "robots_directives"
+          ]
+        },
+        {
+          "category": "metadata",
+          "weight": 20.0,
+          "points_earned": 20.0,
+          "max_points": 20.0,
+          "raw_points": 20.0,
+          "raw_max_points": 20.0,
+          "check_ids": [
+            "title",
+            "meta_description",
+            "canonical"
+          ]
+        },
+        {
+          "category": "headings_content_structure",
+          "weight": 15.0,
+          "points_earned": 14.0,
+          "max_points": 15.0,
+          "raw_points": 14.0,
+          "raw_max_points": 15.0,
+          "check_ids": [
+            "h1_structure",
+            "heading_hierarchy",
+            "visible_text"
+          ]
+        },
+        {
+          "category": "links",
+          "weight": 10.0,
+          "points_earned": 10.0,
+          "max_points": 10.0,
+          "raw_points": 8.0,
+          "raw_max_points": 8.0,
+          "check_ids": [
+            "internal_links",
+            "anchor_text",
+            "link_relationships"
+          ]
+        },
+        {
+          "category": "images",
+          "weight": 10.0,
+          "points_earned": 10.0,
+          "max_points": 10.0,
+          "raw_points": 10.0,
+          "raw_max_points": 10.0,
+          "check_ids": [
+            "image_alt"
+          ]
+        },
+        {
+          "category": "structured_data",
+          "weight": 5.0,
+          "points_earned": 5.0,
+          "max_points": 5.0,
+          "raw_points": 5.0,
+          "raw_max_points": 5.0,
+          "check_ids": [
+            "json_ld"
+          ]
+        },
+        {
+          "category": "social_metadata",
+          "weight": 5.0,
+          "points_earned": 2.5,
+          "max_points": 5.0,
+          "raw_points": 2.5,
+          "raw_max_points": 5.0,
+          "check_ids": [
+            "open_graph",
+            "twitter_metadata"
+          ]
+        },
+        {
+          "category": "html_signals",
+          "weight": 5.0,
+          "points_earned": 5.0,
+          "max_points": 5.0,
+          "raw_points": 5.0,
+          "raw_max_points": 5.0,
+          "check_ids": [
+            "html_lang",
+            "viewport",
+            "charset"
+          ]
+        }
+      ]
+    },
+    "checks": [
+      {
+        "id": "retrieval_success",
+        "category": "technical_indexability",
+        "title": "HTML retrieval succeeded",
+        "status": "pass",
+        "points": 5.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Received 2671 decoded bytes with status 200.",
+          "value": null
+        },
+        "recommendation": "Ensure the page returns bounded HTML successfully."
+      },
+      {
+        "id": "http_status",
+        "category": "technical_indexability",
+        "title": "HTTP status is successful",
+        "status": "pass",
+        "points": 5.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Observed HTTP status 200.",
+          "value": null
+        },
+        "recommendation": "Return a successful HTTP response for the canonical page."
+      },
+      {
+        "id": "https",
+        "category": "technical_indexability",
+        "title": "HTTPS is used",
+        "status": "pass",
+        "points": 5.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Final URL scheme is https.",
+          "value": null
+        },
+        "recommendation": "Prefer HTTPS for transport privacy and browser security."
+      },
+      {
+        "id": "content_type",
+        "category": "technical_indexability",
+        "title": "HTML content type is supported",
+        "status": "pass",
+        "points": 4.0,
+        "max_points": 4.0,
+        "evidence": {
+          "observed": "Content type is text/html.",
+          "value": null
+        },
+        "recommendation": "Serve the document with text/html or application/xhtml+xml."
+      },
+      {
+        "id": "redirects",
+        "category": "technical_indexability",
+        "title": "Redirect chain is short",
+        "status": "pass",
+        "points": 3.0,
+        "max_points": 3.0,
+        "evidence": {
+          "observed": "Observed 0 redirect(s); final URL is https://northstar.example/guides/home-solar/.",
+          "value": null
+        },
+        "recommendation": "Keep the redirect path short and point directly to the final URL."
+      },
+      {
+        "id": "fetch_duration",
+        "category": "technical_indexability",
+        "title": "Bounded fetch duration observed",
+        "status": "pass",
+        "points": 3.0,
+        "max_points": 3.0,
+        "evidence": {
+          "observed": "The bounded fetch took 0.820 seconds.",
+          "value": null
+        },
+        "recommendation": "This is an observed fetch duration, not a page-speed or Core Web Vitals measurement."
+      },
+      {
+        "id": "robots_directives",
+        "category": "technical_indexability",
+        "title": "Robots directives are reported",
+        "status": "fail",
+        "points": 0.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Detected directives: noindex, follow.",
+          "value": null
+        },
+        "recommendation": "Review robots directives against the intended indexing and crawling behavior."
+      },
+      {
+        "id": "title",
+        "category": "metadata",
+        "title": "Title is present and reasonably bounded",
+        "status": "pass",
+        "points": 8.0,
+        "max_points": 8.0,
+        "evidence": {
+          "observed": "Title length is 51 characters.",
+          "value": 51
+        },
+        "recommendation": "Add one clear title; very short or long titles may be less useful in search presentation."
+      },
+      {
+        "id": "meta_description",
+        "category": "metadata",
+        "title": "Meta description is present and reasonably bounded",
+        "status": "pass",
+        "points": 8.0,
+        "max_points": 8.0,
+        "evidence": {
+          "observed": "Description length is 94 characters.",
+          "value": 94
+        },
+        "recommendation": "Add a concise, useful description; length thresholds are heuristics, not SERP guarantees."
+      },
+      {
+        "id": "canonical",
+        "category": "metadata",
+        "title": "Canonical URL is structurally understandable",
+        "status": "pass",
+        "points": 4.0,
+        "max_points": 4.0,
+        "evidence": {
+          "observed": "Canonical relationship: valid_same_host.",
+          "value": null
+        },
+        "recommendation": "Use one parseable canonical URL and verify its intended host relationship."
+      },
+      {
+        "id": "h1_structure",
+        "category": "headings_content_structure",
+        "title": "Primary heading structure is detectable",
+        "status": "pass",
+        "points": 6.0,
+        "max_points": 6.0,
+        "evidence": {
+          "observed": "Found 1 H1 element(s); empty headings: 0.",
+          "value": null
+        },
+        "recommendation": "Use a clear primary heading and avoid empty heading elements."
+      },
+      {
+        "id": "heading_hierarchy",
+        "category": "headings_content_structure",
+        "title": "Heading hierarchy has no obvious jumps",
+        "status": "pass",
+        "points": 4.0,
+        "max_points": 4.0,
+        "evidence": {
+          "observed": "Hierarchy jumps: none.",
+          "value": null
+        },
+        "recommendation": "Organize headings in a logical sequence without skipping levels."
+      },
+      {
+        "id": "visible_text",
+        "category": "headings_content_structure",
+        "title": "Visible text is present",
+        "status": "warning",
+        "points": 4.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Approximate visible word count: 232.",
+          "value": 232
+        },
+        "recommendation": "Review whether the page communicates its purpose clearly; word count alone does not establish content quality."
+      },
+      {
+        "id": "internal_links",
+        "category": "links",
+        "title": "Internal links are detectable",
+        "status": "pass",
+        "points": 6.0,
+        "max_points": 6.0,
+        "evidence": {
+          "observed": "Found 2 internal and 0 external link(s).",
+          "value": null
+        },
+        "recommendation": "Add useful internal links where they help users navigate related content."
+      },
+      {
+        "id": "anchor_text",
+        "category": "links",
+        "title": "Anchors have useful text",
+        "status": "pass",
+        "points": 2.0,
+        "max_points": 2.0,
+        "evidence": {
+          "observed": "Empty or placeholder anchors: 0.",
+          "value": null
+        },
+        "recommendation": "Give links descriptive text and avoid empty or placeholder-only anchors."
+      },
+      {
+        "id": "link_relationships",
+        "category": "links",
+        "title": "Link relationship attributes are reported",
+        "status": "not_applicable",
+        "points": 0.0,
+        "max_points": 0.0,
+        "evidence": {
+          "observed": "nofollow=0, sponsored=0, ugc=0.",
+          "value": null
+        },
+        "recommendation": "Review relationship attributes according to the purpose and sponsorship of each link."
+      },
+      {
+        "id": "image_alt",
+        "category": "images",
+        "title": "Images have usable alt coverage",
+        "status": "pass",
+        "points": 10.0,
+        "max_points": 10.0,
+        "evidence": {
+          "observed": "1/1 images have non-empty alt text (100.00%).",
+          "value": null
+        },
+        "recommendation": "Add concise alt text to informative images; use empty alt only for genuinely decorative images."
+      },
+      {
+        "id": "json_ld",
+        "category": "structured_data",
+        "title": "JSON-LD blocks are parseable",
+        "status": "pass",
+        "points": 5.0,
+        "max_points": 5.0,
+        "evidence": {
+          "observed": "Blocks: 1; valid: 1; malformed: 0; types: Article.",
+          "value": null
+        },
+        "recommendation": "Fix malformed JSON-LD and validate intended schemas separately; this check does not certify rich-result eligibility."
+      },
+      {
+        "id": "open_graph",
+        "category": "social_metadata",
+        "title": "Open Graph metadata is reported",
+        "status": "warning",
+        "points": 1.5,
+        "max_points": 3.0,
+        "evidence": {
+          "observed": "Open Graph fields present: 2/4.",
+          "value": null
+        },
+        "recommendation": "Add consistent Open Graph metadata for social sharing; it is not a core search-ranking score."
+      },
+      {
+        "id": "twitter_metadata",
+        "category": "social_metadata",
+        "title": "Twitter metadata is reported",
+        "status": "warning",
+        "points": 1.0,
+        "max_points": 2.0,
+        "evidence": {
+          "observed": "Twitter fields present: 0/4.",
+          "value": null
+        },
+        "recommendation": "Add suitable Twitter card metadata for social previews; it is not a ranking guarantee."
+      },
+      {
+        "id": "html_lang",
+        "category": "html_signals",
+        "title": "HTML language is declared",
+        "status": "pass",
+        "points": 2.0,
+        "max_points": 2.0,
+        "evidence": {
+          "observed": "HTML lang: en.",
+          "value": null
+        },
+        "recommendation": "Declare the primary document language when known."
+      },
+      {
+        "id": "viewport",
+        "category": "html_signals",
+        "title": "Viewport metadata is declared",
+        "status": "pass",
+        "points": 2.0,
+        "max_points": 2.0,
+        "evidence": {
+          "observed": "Viewport: width=device-width, initial-scale=1.",
+          "value": null
+        },
+        "recommendation": "Add a valid viewport declaration for responsive browser rendering."
+      },
+      {
+        "id": "charset",
+        "category": "html_signals",
+        "title": "Character encoding is declared",
+        "status": "pass",
+        "points": 1.0,
+        "max_points": 1.0,
+        "evidence": {
+          "observed": "Charset: utf-8.",
+          "value": null
+        },
+        "recommendation": "Declare the document character encoding explicitly."
+      }
+    ],
+    "metadata": {
+      "title": "Home Solar Installation: Planning Guide | Northstar",
+      "title_length": 51,
+      "title_count": 1,
+      "description": "A practical guide to roof checks, permits, installer quotes and planning a home solar project.",
+      "description_length": 94,
+      "canonical": "https://northstar.example/guides/home-solar/",
+      "canonical_resolved": "https://northstar.example/guides/home-solar/",
+      "canonical_relationship": "valid_same_host",
+      "robots_directives": [
+        "noindex",
+        "follow"
+      ],
+      "language": "en",
+      "viewport": "width=device-width, initial-scale=1",
+      "charset": "utf-8",
+      "mixed_content_reference_count": 0
+    },
+    "headings": {
+      "h1": [
+        "Plan a home solar installation"
+      ],
+      "h2": [
+        "Check your roof and utility bill",
+        "Compare installer proposals"
+      ],
+      "h3": [],
+      "empty_heading_count": 0,
+      "hierarchy_jumps": []
+    },
+    "images": {
+      "total": 1,
+      "with_alt": 1,
+      "missing_alt": 0,
+      "empty_alt": 0,
+      "alt_coverage_percent": 100.0
+    },
+    "links": {
+      "total": 2,
+      "internal": 2,
+      "external": 0,
+      "empty_anchors": 0,
+      "nofollow": 0,
+      "sponsored": 0,
+      "ugc": 0
+    },
+    "structured_data": {
+      "block_count": 1,
+      "valid_blocks": 1,
+      "malformed_blocks": 0,
+      "types": [
+        "Article"
+      ]
+    },
+    "hreflang": {
+      "links": [],
+      "malformed_count": 0
+    },
+    "social_metadata": {
+      "og_title": "Home Solar Installation Guide",
+      "og_description": null,
+      "og_image": "https://northstar.example/images/solar-roof.webp",
+      "og_url": null,
+      "twitter_card": null,
+      "twitter_title": null,
+      "twitter_description": null,
+      "twitter_image": null
+    },
+    "lexical_signals": {
+      "visible_word_count": 232,
+      "frequent_terms": [
+        {
+          "term": "roof",
+          "count": 6
+        },
+        {
+          "term": "utility",
+          "count": 4
+        },
+        {
+          "term": "home",
+          "count": 3
+        },
+        {
+          "term": "installer",
+          "count": 3
+        },
+        {
+          "term": "local",
+          "count": 3
+        },
+        {
+          "term": "system",
+          "count": 3
+        },
+        {
+          "term": "before",
+          "count": 2
+        },
+        {
+          "term": "bill",
+          "count": 2
+        },
+        {
+          "term": "check",
+          "count": 2
+        },
+        {
+          "term": "compare",
+          "count": 2
+        }
+      ]
+    }
+  },
+  "review_notes": {
+    "robots_directives": {
+      "why_it_matters": "The fixture contains a noindex directive. If the page is intended to appear in search, this is a publishing setting to review. This single fetch does not reveal Google's current index state.",
+      "fix": "If indexing is intended, remove the directive in the page template or CMS, then confirm it is absent from the deployed response.",
+      "verify": "Use URL Inspection in the verified Search Console property to check Google's indexed version and crawl details."
+    },
+    "visible_text": {
+      "why_it_matters": "The analyzer counts 232 visible words and emits a caution. Word count does not establish usefulness, quality, or ranking potential.",
+      "fix": "Review whether the page answers the visitor's questions; do not add text merely to reach a count.",
+      "verify": "A human editor should confirm the page is complete for its purpose."
+    },
+    "open_graph": {
+      "why_it_matters": "Two of four Open Graph fields are present. These fields help describe link previews; this is not a Google ranking finding.",
+      "fix": "Add the missing fields only if the site uses social link previews.",
+      "verify": "Preview the deployed page in the relevant platform's sharing debugger."
+    },
+    "twitter_metadata": {
+      "why_it_matters": "No card fields were detected. This check describes social preview metadata, not Google search rank.",
+      "fix": "Add card fields only if this channel is in scope.",
+      "verify": "Check the published URL with the relevant platform's preview tool."
+    }
+  }
+}

@@ -103,3 +103,26 @@ does not call Gemini, and does not access live websites.
 Dependency vulnerability scanning is intentionally not a blocking local check;
 the project should add a pinned scanner or platform Dependabot policy when the
 deployment workflow is introduced.
+
+## React frontend demonstration
+
+The Evidence Ledger frontend in web/ uses Node.js 24.x and npm. The existing
+Chrome extension remains independent in frontend/.
+
+~~~bash
+cd web
+npm ci
+npm run dev
+npm run typecheck
+npm run lint
+npm test
+npx playwright install chromium  # one-time browser download
+npm run test:e2e
+npm run build
+~~~
+
+This application uses the fictional Northstar Solar fixture bundled under
+web/public/fixtures/. It has no FastAPI connection and no browser authentication
+integration. The static build is a local demonstration and is not authorized
+for public deployment. The fixture equality check fails if the copied files
+drift from design/seo-sensei/fixtures/.

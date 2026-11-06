@@ -79,3 +79,32 @@ jobs:
         run: docker build --file Dockerfile.api --tag seo-sensei-api:ci .
       - name: Build dashboard image
         run: docker build --file Dockerfile.dashboard --tag seo-sensei-dashboard:ci .
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit and fixture checks
+        run: npm test
+      - name: Build production assets
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser and accessibility checks
+        run: npm run test:e2e

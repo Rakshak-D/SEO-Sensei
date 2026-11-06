@@ -85,9 +85,13 @@ The existing `SEOCheck` contract has `id`, `category`, `title`, `status`, `point
 
 All screenshots were captured from the local prototype in Microsoft Edge Chromium at device scale factor 1. Primary responsive screenshots use CSS viewports 1440×900 and 390×844; a 320×844 findings capture checks narrow-screen reflow. The design renders only local HTML, CSS, JS, and fixture JSON; the isolated browser recorded no nonlocal HTTP requests and no console errors after adding a data-URL favicon. `documentElement.scrollWidth` equalled 390 and 320 at both mobile widths; desktop page width was 1425 inside a 1440 viewport due to the browser scrollbar.
 
-The real Edge browser's Zoom control was set to 200%. That review exposed a findings-heading wrap defect. The final CSS correction and final 320px capture are verified, but a post-correction capture at the visible browser's 200% zoom could not be completed because the Edge window signalled user input and was left untouched. A 200% post-fix visual check remains required. Device-scale-factor changes were not used as a substitute for browser zoom.
+The prior real Edge 200% Zoom review exposed a findings-heading wrap defect, which was corrected before the Phase 1C commit. This follow-up did not complete a fresh post-fix 200% check. The isolated controlled-server/browser launch command was rejected by command policy as blocked; no alternate launch or network-interception method was used. No user-owned browser windows were opened or changed. Device-scale-factor changes were not used as a substitute for browser zoom.
 
-Tab traversal in the isolated Edge page reached the submit and sample controls with visible focus; route transitions focus the new heading and returning from detail focuses the selected result. Automated interaction assertions passed for entry/invalid URL, sample overview, AI-unavailable and recheck simulation states, Needs review ordering/counts, no-match search, filter/scope preservation, all 23 checks and N/A, detail/next/return, filtered-state restoration, and Back/Forward. The browser's reduced-motion media rule was enabled and verified. A native keyboard Enter activation could not be verified through the isolated CDP event simulation; it is not claimed as a pass. No screen-reader session or automated WCAG audit was run. These checks are not a WCAG conformance claim. The 320px and text-resize targets follow the intent of [WCAG Reflow](https://www.w3.org/WAI/WCAG21/Understanding/reflow) and [Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html), but conformance needs dedicated validation.
+Earlier isolated browser checks used synthetic CDP Tab input to confirm focus visibility and route focus movement; native Enter activation was not verified. This follow-up did not run keyboard or reduced-motion checks. No screen-reader session or automated WCAG audit was run. These checks are not a WCAG conformance claim. The 320px and text-resize targets follow the intent of [WCAG Reflow](https://www.w3.org/WAI/WCAG21/Understanding/reflow) and [Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html), but conformance needs dedicated validation.
+
+### Fixture-load failure correction
+
+Source inspection confirmed that a failed local fetch sets `loaded = { error: true }`, which is truthy and previously bypassed the loading-only guard before report views read `analysis()`. `render()` now requires `loaded.fixture` before rendering report routes; failure renders the entry recovery message while leaving the requested query route intact for retry. The URL submit and bundled-sample controls remain disabled until a valid fixture is loaded. Retry success returns to the requested overview/findings/detail route and moves focus to its heading. The correction passed JavaScript syntax validation, but direct-route failure and retry could not be exercised in a browser because the controlled local server launch was blocked by command policy.
 
 ### Screenshot index
 
@@ -105,6 +109,14 @@ Tab traversal in the isolated Edge page reached the submit and sample controls w
 | Narrow All checks, 320×844 | [narrow-320-all-checks.png](../design/seo-sensei/phase-1c/screenshots/narrow-320-all-checks.png) |
 
 The 320px views keep page identity, Change page, section navigation, finding title, and text status within the viewport. The 23-row All checks layout showed no title/evidence clipping or horizontal overflow, including the fixture's longest title and observed text. The main content scrolls vertically; no fixed bar consumes zoomed viewport space.
+
+The screenshots above document valid-fixture views and predate this follow-up's failure-path guard; their successful-fixture appearance is unchanged. No fixture-load-error screenshot was captured in this follow-up.
+
+### Targeted follow-up verification — 2026-11-06
+
+At base commit `596548a99cc5898a7ec1df7c85531c7725ac9415`, source inspection confirmed the missing-fixture path described above. The correction now gates report rendering on `loaded.fixture`, preserves the requested query route for retry, announces/focuses the local-fixture status, and disables submit/sample selection until the fixture is valid.
+
+`node --check design/seo-sensei/phase-1c/app.js`, fixture-count/score validation, local-path existence checks, the fixed-string network-call scan, and `git diff --check` passed after the correction. The only `fetch()` targets remain the two bundled fixture files. The attempted isolated controlled-server launch was rejected by command policy as blocked; that denial was not bypassed. Therefore direct overview/findings/detail failure-route reproduction and retry, post-fix real-browser 200% inspection, keyboard activation/focus/history, reduced-motion, console inspection after the correction, and failure-state screenshots remain unverified in this follow-up.
 
 ## React + TypeScript + Vite implementation mapping
 

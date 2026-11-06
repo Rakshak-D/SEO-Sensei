@@ -82,6 +82,7 @@
     let target = null;
     if (focusAfterRender === "heading") target = app.querySelector("h1[tabindex='-1']");
     if (focusAfterRender === "entry") target = app.querySelector("#page-url");
+    if (focusAfterRender === "fixture-status") target = app.querySelector("#form-message");
     if (focusAfterRender === "returned") target = app.querySelector(`[data-open-check="${CSS.escape(returnedCheck || "")}"]`);
     if (target) target.focus({ preventScroll: true });
     else if (focusAfterRender === "returned") app.querySelector("h1[tabindex='-1']")?.focus({ preventScroll: true });
@@ -112,6 +113,7 @@
   }
 
   function renderEntry() {
+    globalSource.textContent = loaded?.error ? "Fixture unavailable" : (loaded?.fixture ? "Local example" : "Loading local example");
     const section = node("section", "entry-shell");
     section.setAttribute("aria-labelledby", "entry-title");
     section.append(node("p", "entry-kicker", "A page inspection, from evidence to verification"));
@@ -138,21 +140,23 @@
     field.append(label, input);
     const submit = node("button", "button-primary", "Open this report");
     submit.type = "submit";
+    submit.disabled = !loaded?.fixture;
     form.append(field, submit);
     const help = node("p", "entry-help", "Only the fictional Northstar Solar fixture is available here. No URL entered in this form is requested.");
     help.id = "entry-help";
     form.append(help);
-    const message = node("p", "form-message", loaded?.error ? "The bundled sample could not be opened. No website request was attempted." : (loaded ? "No report is open. Use the bundled example to continue." : "Loading the local example files…"));
+    const message = node("p", "form-message", loaded?.error ? "The bundled fixture could not be loaded from local files. Restore it and try again; no website was requested." : (loaded?.fixture ? "No report is open. Use the bundled example to continue." : "Loading the local example files…"));
     message.id = "form-message";
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
+    message.tabIndex = -1;
     if (!loaded && !loaded?.error) message.dataset.kind = "loading";
     form.append(message);
     section.append(form);
 
     const actions = node("div", "entry-actions");
     const sample = button("Use the Northstar example", "fill-sample", "button-secondary");
-    sample.disabled = !loaded;
+    sample.disabled = !loaded?.fixture;
     actions.append(sample);
     const clear = button("Clear address", "clear-address", "button-link");
     actions.append(clear);
@@ -524,7 +528,8 @@
   }
 
   function render() {
-    if (!loaded) {
+    if (!loaded?.fixture) {
+      globalSource.textContent = loaded?.error ? "Fixture unavailable" : "Loading local example";
       renderEntry();
       focusTarget();
       return;
@@ -600,7 +605,7 @@
       const message = app.querySelector("#form-message");
       if (message) { message.textContent = "Address cleared. You can restore the local example."; message.dataset.kind = ""; }
     } else if (action === "retry-fixture") {
-      loadFixtures();
+      loadFixtures({ fromRetry: true });
     } else if (action === "change-page") {
       transition({ view: "entry", mode: "review", q: "", status: "all", check: "" }, { focus: "entry" });
     } else if (action === "overview" || action === "findings") {
@@ -660,8 +665,9 @@
     returnedCheck = null;
   });
 
-  function loadFixtures() {
+  function loadFixtures({ fromRetry = false } = {}) {
     loaded = null;
+    focusAfterRender = fromRetry ? "fixture-status" : null;
     globalSource.textContent = "Loading local example";
     render();
     Promise.all([
@@ -676,9 +682,11 @@
     ]).then(([fixture, html]) => {
       if (!Array.isArray(fixture.analysis?.checks) || fixture.analysis.checks.length !== 23) throw new Error("Expected the existing 23-check sample");
       loaded = { fixture, html };
+      if (fromRetry) focusAfterRender = readRoute().view === "entry" ? "entry" : "heading";
       render();
     }).catch(() => {
       loaded = { error: true };
+      focusAfterRender = "fixture-status";
       render();
     });
   }

@@ -51,6 +51,48 @@ The dashboard uses `API_BASE_URL` and `DASHBOARD_API_ACCESS_TOKEN` for
 server-to-server API calls. Load `frontend/` as an unpacked Manifest V3
 extension, then configure its API origin and token through the options page.
 
+## Isolated browser-auth testing
+
+Browser authentication is disabled by default and should remain disabled in
+shared or deployed environments until its later integration review. This
+milestone provides login, session bootstrap, and logout only; it does not make
+URL analysis or any other bearer route available to browser sessions. Keep
+`API_ACCESS_TOKEN` server-side and do not place it in a browser bundle.
+
+For an isolated test, create a protected account directory outside the
+repository, provision an individual account, and run the API with an HTTPS
+origin matching the browser's `Origin` header:
+
+```bash
+install -d -m 700 /etc/seo-sensei
+python tools/provision_browser_user.py site-editor \
+  --accounts-file /etc/seo-sensei/browser-users.json
+export BROWSER_AUTH_ENABLED=true
+export BROWSER_AUTH_ACCOUNTS_FILE=/etc/seo-sensei/browser-users.json
+export BROWSER_APP_ORIGIN=https://localhost:5173
+python -m uvicorn backend.app.main:app --port 8000
+```
+
+Use a locally trusted HTTPS certificate for the browser application origin.
+The session cookie always has the `Secure` attribute; HTTP is not permitted as
+a development fallback. In Windows, configure the account directory/file ACL
+so only the operator can write it and the API service identity can read it.
+The provisioning utility sets POSIX file mode `0600`, but Windows operators
+must configure NTFS ACLs themselves. The API requires an absolute account-file
+path outside the repository and validates the file at startup.
+
+The Uvicorn command above is an internal HTTP backend example, not a complete
+HTTPS browser setup. A local TLS-terminating proxy must overwrite
+`X-Forwarded-Proto` and be named by its exact address in
+`TRUSTED_PROXY_NETWORKS`; alternatively, serve the API itself over HTTPS and
+use that same origin for the browser app. Do not trust broad networks or
+forwarded headers from direct clients.
+
+The current Caddy/Compose configuration does not route or enable this browser
+authentication flow. Do not infer a working browser-to-API deployment from a
+successful local API startup; same-origin routing, protected browser work
+endpoints, and end-to-end access control belong to later reviewed stages.
+
 ## CI expectations
 
 GitHub Actions runs the test suite, coverage collection, compile check, Ruff,

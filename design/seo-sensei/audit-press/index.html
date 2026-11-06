@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f7f3">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <title>Audit Press — SEO Sensei design exploration</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="audit-press">
+    <a class="skip-link" href="#main-content">Skip to audit</a>
+    <header class="masthead">
+      <a class="wordmark" href="../index.html" aria-label="SEO Sensei design directions">SEO <span>Sensei</span></a>
+      <span class="masthead-edition">PAGE REVIEW · FIELD NOTE 001</span>
+      <a class="compare-link" href="../index.html">Compare directions</a>
+    </header>
+    <nav class="section-nav" aria-label="Review sections">
+      <button class="section-link is-active" data-nav="overview" type="button">Overview</button>
+      <button class="section-link" data-nav="findings" type="button">Findings <span>23</span></button>
+      <button class="section-link" data-nav="detail" type="button">Evidence</button>
+      <span class="nav-note">Illustrative sample · offline</span>
+    </nav>
+
+    <main id="main-content" class="press-main">
+      <form class="url-entry" data-sample-form>
+        <label for="sample-url">Page to review</label>
+        <input id="sample-url" type="url" autocomplete="url" value="https://northstar.example/guides/home-solar/" spellcheck="false">
+        <button type="submit" class="button-primary">Open sample</button>
+        <button type="button" class="button-quiet" data-clear-url>Clear</button>
+        <p id="prototype-message" role="status" aria-live="polite" class="prototype-message"></p>
+      </form>
+
+      <section class="view" data-panel="overview" aria-labelledby="overview-title">
+        <p class="report-kicker">THE PAGE AUDIT <span>—</span> LOCAL FIXTURE</p>
+        <div class="lead-grid">
+          <div class="lead-copy">
+            <h1 id="overview-title">Home solar installation</h1>
+            <p class="lead-deck">The page is easy to identify from its title and headings. One indexing directive deserves a closer look before anyone treats the rest of the checklist as a green light.</p>
+            <p class="page-url" data-audit-url></p>
+          </div>
+        </div>
+        <p class="fixture-note" data-fixture-notice></p>
+
+        <div class="editorial-alert">
+          <span class="alert-index">01</span>
+          <div><p class="alert-label">FAIL · REVIEW THE PUBLISHING INTENT</p><h2>A <code>noindex</code> directive appears in the HTML.</h2><p>If this guide is intended to appear in search, check the page template and verify the deployed response. This audit cannot see the current Google index.</p></div>
+          <button class="text-button" data-open-detail="robots_directives" type="button">Read evidence <span aria-hidden="true">↗</span></button>
+        </div>
+
+        <aside class="lead-fact" aria-label="Heuristic score disclaimer">
+          <span class="fact-label">SEO Sensei heuristic</span>
+          <strong><span data-score>—</span><small> / 100</small></strong>
+          <p>Not a Google ranking score or a check of Google’s index.</p>
+        </aside>
+
+        <div class="press-columns">
+          <section class="press-section category-section" aria-labelledby="categories-title">
+            <div class="section-heading"><span class="section-index">A</span><div><p class="section-caption">THE WHOLE PAGE, IN PARTS</p><h2 id="categories-title">Category breakdown</h2></div></div>
+            <div class="category-grid" data-category-breakdown></div>
+          </section>
+          <section class="press-section findings-section" aria-labelledby="queue-title">
+            <div class="section-heading"><span class="section-index">B</span><div><p class="section-caption">CHECKS THAT ASK FOR ATTENTION</p><h2 id="queue-title">The review list</h2></div></div>
+            <div class="finding-list compact-list" data-overview-findings></div>
+            <button class="all-checks-link" data-nav="findings" type="button">Read all 23 checks <span aria-hidden="true">→</span></button>
+          </section>
+        </div>
+
+        <div class="bottom-notes">
+          <section class="method-note"><p class="section-caption">A NOTE ON THE NUMBER</p><p>The score is a weighted heuristic over fetched HTML and transport facts. Here it remains 92 even though the <code>noindex</code> check fails. Read the observation before the score.</p></section>
+          <details class="ai-note"><summary>Optional AI suggestions <span>not connected in this prototype</span></summary><p>No provider was called. Any future AI copy should be separated from observed facts and require an explicit request.</p></details>
+        </div>
+      </section>
+
+      <section class="view" data-panel="findings" aria-labelledby="findings-title" hidden>
+        <header class="view-header"><p class="report-kicker">THE FULL CHECKLIST</p><h1 id="findings-title">Findings and checks</h1><p>A status describes the analyzer’s rule, not the importance of a page to your business.</p></header>
+        <div class="filter-bar">
+          <label for="finding-search">Search by finding or evidence</label>
+          <input id="finding-search" type="search" placeholder="Try “canonical” or “image”">
+          <label for="finding-status-filter">Status</label>
+          <select id="finding-status-filter"><option value="all">All statuses</option><option value="fail">Fail</option><option value="warning">Warning</option><option value="pass">Pass</option><option value="not_applicable">Not applicable</option></select>
+          <span id="result-count" class="result-count"></span>
+        </div>
+        <p id="no-results" class="empty-results" hidden>No checks match. Clear the search or choose another status.</p>
+        <div class="finding-list full-list" data-all-findings></div>
+      </section>
+
+      <section class="view" data-panel="detail" aria-labelledby="detail-title" hidden>
+        <div class="detail-head"><p class="report-kicker">EVIDENCE NOTE <span>—</span> <span id="detail-category"></span></p><div class="detail-title-row"><h1 id="detail-title"></h1><span id="detail-status" class="status-chip status-fail">Fail</span></div></div>
+        <div class="detail-columns">
+          <article class="source-article">
+            <p class="section-caption">WHAT THE ANALYZER OBSERVED</p>
+            <blockquote id="detail-observation"></blockquote>
+            <pre id="source-excerpt" class="source-excerpt" hidden></pre>
+            <p class="source-caption">Excerpt from the local sample page. No live page was fetched.</p>
+            <h2>What this can tell you</h2>
+            <p id="detail-explanation"></p>
+          </article>
+          <aside class="margin-notes" aria-label="Suggested next steps">
+            <section><p class="section-caption">A POSSIBLE FIX</p><p id="detail-fix"></p></section>
+            <section><p class="section-caption">HOW TO VERIFY</p><p id="detail-verify"></p></section>
+            <button class="all-checks-link" data-nav="findings" type="button">Return to all checks <span aria-hidden="true">→</span></button>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <footer class="press-footer"><span>SEO Sensei · design exploration</span><span>HTML observations are not search outcomes.</span></footer>
+    <script src="../shared/app.js" defer></script>
+  </body>
+</html>

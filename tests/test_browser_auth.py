@@ -554,7 +554,10 @@ def test_account_loader_requires_owner_read_permission(account_file: Path) -> No
     original_mode = account_file.stat().st_mode & 0o777
     account_file.chmod(original_mode & ~0o400)
     try:
-        with pytest.raises(ConfigurationError, match="permissions"):
+        # Some POSIX users cannot open the file at all after this chmod; the
+        # loader must fail closed whether the OS or the explicit mode check
+        # reports the unreadable source first.
+        with pytest.raises(ConfigurationError):
             load_accounts(str(account_file))
     finally:
         account_file.chmod(original_mode)

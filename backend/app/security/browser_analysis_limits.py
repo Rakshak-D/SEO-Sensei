@@ -196,12 +196,13 @@ class BrowserAnalysisLimits:
     def _window_retry(events: deque[_Event], now: float, limits: tuple[int, int]) -> int:
         minute_limit, hour_limit = limits
         minute_events = [event for event in events if event.timestamp > now - WINDOW_MINUTE_SECONDS]
+        retry_values: list[int] = []
         if len(minute_events) >= minute_limit:
-            return max(1, math.ceil(minute_events[0].timestamp + WINDOW_MINUTE_SECONDS - now))
+            retry_values.append(max(1, math.ceil(minute_events[0].timestamp + WINDOW_MINUTE_SECONDS - now)))
         hour_events = [event for event in events if event.timestamp > now - WINDOW_HOUR_SECONDS]
         if len(hour_events) >= hour_limit:
-            return max(1, math.ceil(hour_events[0].timestamp + WINDOW_HOUR_SECONDS - now))
-        return 0
+            retry_values.append(max(1, math.ceil(hour_events[0].timestamp + WINDOW_HOUR_SECONDS - now)))
+        return max(retry_values, default=0)
 
     def _purge(self, now: float) -> None:
         cutoff = now - WINDOW_HOUR_SECONDS

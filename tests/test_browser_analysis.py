@@ -560,6 +560,153 @@ def test_analysis_limits_enforce_user_ip_global_windows_and_retry_after() -> Non
     assert global_limiter.admit("another-user", "192.0.2.20")
 
 
+def test_retry_after_when_only_minute_quota_is_exhausted_and_rejected_request_is_not_counted() -> None:
+    now = [0.0]
+    limits = BrowserAnalysisLimits(
+        user_per_minute=1,
+        user_per_hour=2,
+        ip_per_minute=10,
+        ip_per_hour=20,
+        global_per_minute=10,
+        global_per_hour=20,
+        clock=lambda: now[0],
+    )
+    limits.admit(USERNAME, "192.0.2.1").release()
+
+    now[0] = 1.0
+    with pytest.raises(BrowserAnalysisLimitExceeded) as rejected:
+        limits.admit(USERNAME, "192.0.2.1")
+    assert rejected.value.retry_after == 59
+
+    # The t=1 rejection did not consume another event: the t=0 event expires
+    # from the minute window exactly at t=60, while the hourly quota has room.
+    now[0] = 60.0
+    limits.admit(USERNAME, "192.0.2.1").release()
+
+
+def test_retry_after_when_only_hour_quota_is_exhausted() -> None:
+    now = [0.0]
+    limits = BrowserAnalysisLimits(
+        user_per_minute=10,
+        user_per_hour=1,
+        ip_per_minute=10,
+        ip_per_hour=20,
+        global_per_minute=10,
+        global_per_hour=20,
+        clock=lambda: now[0],
+    )
+    limits.admit(USERNAME, "192.0.2.1").release()
+
+    now[0] = 61.0
+    with pytest.raises(BrowserAnalysisLimitExceeded) as rejected:
+        limits.admit(USERNAME, "192.0.2.1")
+    assert rejected.value.retry_after == 3_539
+
+
+def test_both_windows_use_the_longer_retry_and_admit_at_exact_hour_boundary() -> None:
+    now = [0.0]
+    limits = BrowserAnalysisLimits(
+        user_per_minute=1,
+        user_per_hour=1,
+        ip_per_minute=10,
+        ip_per_hour=20,
+        global_per_minute=10,
+        global_per_hour=20,
+        clock=lambda: now[0],
+    )
+    limits.admit(USERNAME, "192.0.2.1").release()
+
+    now[0] = 1.0
+    with pytest.raises(BrowserAnalysisLimitExceeded) as rejected:
+        limits.admit(USERNAME, "192.0.2.1")
+    assert rejected.value.retry_after == 3_599
+
+    now[0] = 3_600.0
+    limits.admit(USERNAME, "192.0.2.1").release()
+
+
+@pytest.mark.parametrize(
+    ("overrides", "first_identity", "second_identity"),
+    [
+        (
+            {"user_per_minute": 1, "user_per_hour": 10},
+            ("alice", "192.0.2.1"),
+            ("alice", "192.0.2.2"),
+        ),
+        (
+            {"ip_per_minute": 1, "ip_per_hour": 10},
+            ("alice", "192.0.2.1"),
+            ("bob", "192.0.2.1"),
+        ),
+        (
+            {"global_per_minute": 1, "global_per_hour": 10},
+            ("alice", "192.0.2.1"),
+            ("bob", "192.0.2.2"),
+        ),
+    ],
+)
+def test_retry_after_is_reported_for_user_ip_and_global_quota_identities(
+    overrides: dict[str, int], first_identity: tuple[str, str], second_identity: tuple[str, str]
+) -> None:
+    now = [0.0]
+    limits = BrowserAnalysisLimits(**overrides, clock=lambda: now[0])
+    limits.admit(*first_identity).release()
+
+    now[0] = 1.0
+    with pytest.raises(BrowserAnalysisLimitExceeded) as rejected:
+        limits.admit(*second_identity)
+    assert rejected.value.retry_after == 59
+
+
+def test_retry_after_uses_maximum_across_user_ip_and_global_windows() -> None:
+    now = [0.0]
+    limits = BrowserAnalysisLimits(
+        user_per_minute=10,
+        user_per_hour=1,
+        ip_per_minute=1,
+        ip_per_hour=10,
+        global_per_minute=1,
+        global_per_hour=10,
+        clock=lambda: now[0],
+    )
+    limits.admit("alice", "192.0.2.1").release()
+
+    # At t=100 the minute window is clear globally, so another user and IP
+    # can consume a new event. That event then exhausts the IP and global
+    # minute windows while Alice's earlier event still exhausts her hour.
+    now[0] = 100.0
+    limits.admit("bob", "192.0.2.2").release()
+    now[0] = 101.0
+    with pytest.raises(BrowserAnalysisLimitExceeded) as rejected:
+        limits.admit("alice", "192.0.2.2")
+    assert rejected.value.retry_after == 3_499
+
+
+def test_analysis_api_returns_computed_retry_after_and_recovers_at_hour_boundary(analysis_harness) -> None:
+    client, _, fetcher, headers, *_ = analysis_harness
+    now = [0.0]
+    client.app.state.browser_analysis_limits = BrowserAnalysisLimits(
+        user_per_minute=1,
+        user_per_hour=1,
+        clock=lambda: now[0],
+    )
+
+    first = _post(client, headers, {"url": SAMPLE_URL})
+    assert first.status_code == 200
+
+    now[0] = 1.0
+    rejected = _post(client, headers, {"url": SAMPLE_URL})
+    assert rejected.status_code == 429
+    assert rejected.json()["error"]["code"] == "rate_limited"
+    assert rejected.headers["retry-after"] == "3599"
+    assert len(fetcher.calls) == 1
+
+    now[0] = 3_600.0
+    recovered = _post(client, headers, {"url": SAMPLE_URL})
+    assert recovered.status_code == 200
+    assert len(fetcher.calls) == 2
+
+
 def test_hourly_budget_and_bounded_identity_storage() -> None:
     now = [0.0]
     limits = BrowserAnalysisLimits(

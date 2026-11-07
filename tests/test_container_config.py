@@ -104,6 +104,8 @@ def test_local_https_harness_is_loopback_only_and_uses_a_fake_fetcher() -> None:
     assert "PHASE2D_TEST_PASSWORD" in compose
     assert "ports:" not in compose.split("  caddy:", 1)[0]
     assert "172.31.0.2/32" in compose
+    assert "ipv4_address: 172.31.0.3" in compose.split("  caddy:", 1)[0]
+    assert "ipv4_address: 172.31.0.2" in compose.split("  caddy:", 1)[1]
     assert "tls internal" in caddy
     assert "ControlledSafeFetcher" in text("tests/integration/phase2d_server.py")
     assert "\ntests\n" in f"\n{dockerignore}"

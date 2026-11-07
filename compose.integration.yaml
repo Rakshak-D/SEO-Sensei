@@ -25,7 +25,8 @@ services:
     expose:
       - "8000"
     networks:
-      - integration_net
+      integration_net:
+        ipv4_address: 172.31.0.3
     read_only: true
     tmpfs:
       - /tmp

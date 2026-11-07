@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { StatusTag } from "../../components/StatusTag";
-import { categoryLabels, type LocalFixture, type SeoCheck } from "./schema";
+import type { AnalysisReport } from "./report";
+import { categoryLabels, type SeoCheck } from "./schema";
 import { filteredChecks } from "./findingSelection";
 import { findingsParent, routeSearch, type AppRoute } from "../../app/route";
 
 type Props = {
-  fixture: LocalFixture;
-  html: string;
+  report: AnalysisReport;
   route: AppRoute;
   finding: SeoCheck;
   onBack: () => void;
@@ -19,18 +19,19 @@ function sourceExcerpt(html: string) {
   return index < 0 ? null : { line: index + 1, text: lines[index]!.trim() };
 }
 
-export function FindingDetail({ fixture, html, route, finding, onBack, onSelect }: Props) {
-  const note = fixture.review_notes[finding.id];
-  const excerpt = finding.id === "robots_directives" ? sourceExcerpt(html) : null;
-  const nearby = useMemo(() => filteredChecks(fixture.analysis.checks, route), [fixture.analysis.checks, route]);
+export function FindingDetail({ report, route, finding, onBack, onSelect }: Props) {
+  const demo = report.source === "demo" ? report : null;
+  const note = demo?.fixture.review_notes[finding.id];
+  const excerpt = demo && finding.id === "robots_directives" ? sourceExcerpt(demo.html) : null;
+  const nearby = useMemo(() => filteredChecks(report.analysis.checks, route), [report.analysis.checks, route]);
   const selectedIndex = nearby.findIndex((check) => check.id === finding.id);
   const previous = selectedIndex > 0 ? nearby[selectedIndex - 1] : undefined;
   const next = selectedIndex >= 0 && selectedIndex < nearby.length - 1 ? nearby[selectedIndex + 1] : undefined;
   const interpretation = note?.why_it_matters
-    ?? "This rule records a page observation from the local fixture. Review it in the context of the page’s purpose.";
+    ?? `The deterministic analyzer classified the “${finding.id}” rule as ${finding.status}. This records a page signal; consider its purpose and context before acting.`;
   const suggestedAction = note?.fix ?? finding.recommendation;
   const verification = note?.verify
-    ?? "After making any change, re-fetch the page and compare the returned analyzer evidence. This prototype cannot perform that check.";
+    ?? "After any change on the website, run a new analysis and inspect the returned evidence. This application does not apply changes to the page.";
 
   return (
     <article className="view detail-view" aria-labelledby="detail-title">
@@ -56,7 +57,9 @@ export function FindingDetail({ fixture, html, route, finding, onBack, onSelect 
                 <p className="provenance-caveat">This exact excerpt is from the bundled fictional HTML file. The production API returns typed evidence text, but no arbitrary source excerpt or DOM location.</p>
               </div>
             ) : (
-              <p className="provenance-caveat">Source: analyzer evidence text from checks[].evidence.observed. The API does not identify a source node or line for this rule.</p>
+              <p className="provenance-caveat">{demo
+                ? "Source: analyzer evidence text from the fictional fixture. No source location is shown for this check."
+                : "Source: analyzer-returned checks[].evidence.observed. The API does not return an HTML excerpt or DOM location."}</p>
             )}
           </section>
 
@@ -64,7 +67,7 @@ export function FindingDetail({ fixture, html, route, finding, onBack, onSelect 
             <h2 className="step-title" id="interpretation-title"><span>02</span> Interpretation</h2>
             <p>{interpretation}</p>
             {finding.id === "robots_directives" && (
-              <p className="context-note">A crawler needs to fetch a page to read its robots directive. This single fixture does not show whether Google has processed the instruction or what its current index state is.</p>
+              <p className="context-note">A crawler must fetch a page to read its robots directive. This observation does not establish whether Google has processed the instruction or the page’s current index state.</p>
             )}
           </section>
         </div>
@@ -93,3 +96,5 @@ export function FindingDetail({ fixture, html, route, finding, onBack, onSelect 
     </article>
   );
 }
+
+\n

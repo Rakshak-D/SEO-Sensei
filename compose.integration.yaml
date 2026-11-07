@@ -1,0 +1,74 @@
+# Disposable, loopback-only HTTPS harness. The API test runner injects a fake
+# SafeFetcher; the production SafeFetcher and SSRF rules are not relaxed.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python", "/app/tests/integration/phase2d_server.py"]
+    user: "10001:10001"
+    environment:
+      APP_ENV: test
+      API_ACCESS_TOKEN: phase2d-integration-only-token
+      GEMINI_API_KEY: ""
+      ALLOWED_CORS_ORIGINS: chrome-extension://abcdefghijklmnopabcdefghijklmnop
+      CORS_ALLOW_CREDENTIALS: "true"
+      BROWSER_AUTH_ENABLED: "true"
+      BROWSER_AUTH_ACCOUNTS_FILE: /tmp/seo-sensei-phase2d-users.json
+      BROWSER_APP_ORIGIN: https://seo-sensei.localhost:8443
+      TRUSTED_PROXY_NETWORKS: 172.31.0.2/32
+      PHASE2D_TEST_USERNAME: phase2d-reviewer
+      PHASE2D_TEST_PASSWORD: ${PHASE2D_TEST_PASSWORD:?Set a random disposable test password}
+      PORT: "8000"
+    volumes:
+      - ./tests/integration:/app/tests/integration:ro
+    expose:
+      - "8000"
+    networks:
+      - integration_net
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    environment:
+      APP_DOMAIN: seo-sensei.localhost:8443
+      API_DOMAIN: seo-sensei-api.localhost:8443
+      ACME_EMAIL: integration@example.invalid
+    ports:
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./Caddyfile.integration:/etc/caddy/Caddyfile:ro
+      - integration_caddy_data:/data
+      - integration_caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      integration_net:
+        ipv4_address: 172.31.0.2
+
+networks:
+  integration_net:
+    name: seo_sensei_phase2d_integration
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+
+volumes:
+  integration_caddy_data:
+  integration_caddy_config:

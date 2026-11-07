@@ -3,6 +3,7 @@ import type { CheckStatus } from "../features/analysis/schema";
 export type ViewName = "entry" | "overview" | "findings" | "detail";
 export type FindingsMode = "review" | "all";
 export type StatusFilter = "all" | CheckStatus;
+export type ReportSource = "demo" | "live";
 
 export type AppRoute = {
   view: ViewName;
@@ -10,6 +11,7 @@ export type AppRoute = {
   q: string;
   status: StatusFilter;
   check: string;
+  source: ReportSource;
 };
 
 const knownViews = new Set<ViewName>(["entry", "overview", "findings", "detail"]);
@@ -25,6 +27,7 @@ export function routeFromSearch(search: string): AppRoute {
     q: (params.get("q") ?? "").slice(0, 120),
     status: rawStatus && knownStatuses.has(rawStatus) ? rawStatus : "all",
     check: (params.get("check") ?? "").slice(0, 80),
+    source: params.get("source") === "demo" ? "demo" : "live",
   };
 }
 
@@ -32,10 +35,12 @@ export function routeSearch(route: AppRoute): string {
   const params = new URLSearchParams();
   params.set("view", route.view);
   if (route.view === "findings" || route.view === "detail") {
+    params.set("source", route.source);
     params.set("mode", route.mode);
     if (route.q) params.set("q", route.q);
     if (route.status !== "all") params.set("status", route.status);
   }
+  if (route.view === "overview") params.set("source", route.source);
   if (route.view === "detail" && route.check) params.set("check", route.check);
   return "?" + params.toString();
 }

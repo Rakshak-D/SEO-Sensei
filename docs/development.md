@@ -51,74 +51,13 @@ The dashboard uses `API_BASE_URL` and `DASHBOARD_API_ACCESS_TOKEN` for
 server-to-server API calls. Load `frontend/` as an unpacked Manifest V3
 extension, then configure its API origin and token through the options page.
 
-## Isolated browser-auth testing
+## React frontend and local demonstration
 
-Browser authentication is disabled by default and should remain disabled in
-shared or deployed environments until its later integration review. When
-explicitly enabled for an isolated single-process demonstration, the browser
-session can use `POST /api/browser/v1/analyse-url` for deterministic analysis.
-That route accepts only a URL, requires HTTPS, exact Origin and CSRF checks,
-and uses bounded process-local request and concurrency budgets. It does not
-call Gemini. It does not grant browser sessions access to the legacy bearer
-routes. Keep `API_ACCESS_TOKEN` server-side and do not place it in a browser
-bundle.
-
-For an isolated test, create a protected account directory outside the
-repository, provision an individual account, and run the API with an HTTPS
-origin matching the browser's `Origin` header:
+The Evidence Ledger application under `web/` uses Node.js 24.x, npm, React,
+TypeScript, and Vite. `frontend/` remains the separate Manifest V3 Chrome
+extension. Install and run the fixture-backed local UI with:
 
 ```bash
-install -d -m 700 /etc/seo-sensei
-python tools/provision_browser_user.py site-editor \
-  --accounts-file /etc/seo-sensei/browser-users.json
-export BROWSER_AUTH_ENABLED=true
-export BROWSER_AUTH_ACCOUNTS_FILE=/etc/seo-sensei/browser-users.json
-export BROWSER_APP_ORIGIN=https://localhost:5173
-python -m uvicorn backend.app.main:app --port 8000
-```
-
-Use a locally trusted HTTPS certificate for the browser application origin.
-The session cookie always has the `Secure` attribute; HTTP is not permitted as
-a development fallback. In Windows, configure the account directory/file ACL
-so only the operator can write it and the API service identity can read it.
-The provisioning utility sets POSIX file mode `0600`, but Windows operators
-must configure NTFS ACLs themselves. The API requires an absolute account-file
-path outside the repository and validates the file at startup.
-
-The Uvicorn command above is an internal HTTP backend example, not a complete
-HTTPS browser setup. A local TLS-terminating proxy must overwrite
-`X-Forwarded-Proto` and be named by its exact address in
-`TRUSTED_PROXY_NETWORKS`; alternatively, serve the API itself over HTTPS and
-use that same origin for the browser app. Do not trust broad networks or
-forwarded headers from direct clients.
-
-The current Caddy/Compose configuration does not route or enable this browser
-authentication flow. Do not infer a working browser-to-API deployment from a
-successful local API startup; same-origin routing, real HTTPS proxy behavior,
-and authenticated browser-to-FastAPI end-to-end operation belong to a later
-reviewed stage. The new analysis route alone enforces its 4 KiB body cap on
-actual streamed bytes; the legacy routes still need application-level streamed
-body enforcement before public exposure. Browser sessions, analysis budgets,
-and active-work limits are process-local and do not support multiple workers
-or instances.
-
-## CI expectations
-
-GitHub Actions runs the test suite, coverage collection, compile check, Ruff,
-Mypy, extension syntax/manifest validation, and repository security checks on
-pushes to `main` and pull requests targeting `main`. CI uses fake credentials,
-does not call Gemini, and does not access live websites.
-
-Dependency vulnerability scanning is intentionally not a blocking local check;
-the project should add a pinned scanner or platform Dependabot policy when the
-deployment workflow is introduced.
-
-## React frontend demonstration
-
-The Evidence Ledger frontend in web/ uses Node.js 24.x and npm. The existing
-Chrome extension remains independent in frontend/.
-
-~~~bash
 cd web
 npm ci
 npm run dev
@@ -128,10 +67,97 @@ npm test
 npx playwright install chromium  # one-time browser download
 npm run test:e2e
 npm run build
-~~~
+```
 
-This application uses the fictional Northstar Solar fixture bundled under
-web/public/fixtures/. It has no FastAPI connection and no browser authentication
-integration. The static build is a local demonstration and is not authorized
-for public deployment. The fixture equality check fails if the copied files
-drift from design/seo-sensei/fixtures/.
+The Vite server does not proxy to FastAPI. Without the protected Caddy
+integration, the UI reports live authentication unavailable and offers the
+explicit Northstar Solar fictional example. A failed live API call never falls
+back to that fixture. The fixture equality check compares `web/public/fixtures/`
+with `design/seo-sensei/fixtures/`.
+
+## Authenticated HTTPS integration test
+
+The local integration stack uses the built React assets, Caddy, and the real
+FastAPI application. A test-only transport returns controlled HTML directly to
+the existing analyzer; it performs no DNS lookup, website request, or Gemini
+call, and does not relax production URL policy. A disposable Argon2id account
+is generated in the API container's temporary filesystem from a random test
+password. The test API runs as the image's non-root service user. No account
+file or credential is written into the repository or image.
+
+On Windows, install the web dependencies once, then run this task-owned harness:
+
+```powershell
+cd web
+npm ci
+npx playwright install chromium
+cd ..
+pwsh -File tests/integration/run_phase2d_local.ps1
+```
+
+The script checks that loopback port `8443` is free, starts a uniquely named
+Compose project bound only to `127.0.0.1`, obtains Caddy's temporary local CA,
+adds that certificate to the current user's Windows trust store for the test,
+and removes that exact certificate and project after the run. Playwright uses
+its own Chromium context; an existing browser profile is never opened. TLS
+verification remains enabled.
+
+On Linux, the equivalent commands are:
+
+```bash
+export PHASE2D_TEST_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+docker compose --project-name seo-sensei-phase2d -f compose.integration.yaml config --quiet
+docker compose --project-name seo-sensei-phase2d -f compose.integration.yaml up --build -d
+docker compose --project-name seo-sensei-phase2d -f compose.integration.yaml exec -T caddy \
+  cat /data/caddy/pki/authorities/local/root.crt > /tmp/seo-sensei-phase2d-root.crt
+sudo install -m 0644 /tmp/seo-sensei-phase2d-root.crt /usr/local/share/ca-certificates/seo-sensei-phase2d.crt
+sudo update-ca-certificates
+cd web
+npm ci
+npx playwright install --with-deps chromium
+export NODE_EXTRA_CA_CERTS=/tmp/seo-sensei-phase2d-root.crt
+npm run test:e2e:integration
+cd ..
+docker compose --project-name seo-sensei-phase2d -f compose.integration.yaml down --volumes --remove-orphans
+sudo rm /usr/local/share/ca-certificates/seo-sensei-phase2d.crt
+sudo update-ca-certificates
+rm /tmp/seo-sensei-phase2d-root.crt
+```
+
+The system and Node trust configuration is needed so the browser and test
+request client validate Caddy's local CA normally. Do not use
+`ignoreHTTPSErrors`, `--ignore-certificate-errors`, an insecure session cookie,
+or an HTTP origin as substitutes. The test Compose file publishes only the
+loopback HTTPS port and does not publish the API or dashboard ports.
+
+The base Compose configuration keeps `BROWSER_AUTH_ENABLED=false` and does not
+mount account data. For an explicitly managed restricted deployment, prepare an
+account file outside the repository that is readable by the API's UID `10001`
+and has only owner read permissions (`0400`) or owner read/write (`0600`). On a
+Linux host the parent directory should be private and the file owned by UID
+`10001`. Then opt in using the separate overlay:
+
+```bash
+export BROWSER_AUTH_HOST_FILE=/etc/seo-sensei/browser-users.json
+docker compose -f compose.yaml -f compose.browser-auth.yaml up -d --build
+```
+
+The overlay mounts the account file read-only and is the only Compose path that
+enables browser authentication. Windows Docker Desktop bind mounts may not
+preserve Unix owner/mode checks; do not relax the validator. Use a private
+Linux/WSL file with suitable UID/mode or run the isolated integration harness.
+The browser session, analysis budgets, and active-work limits remain
+process-local and support one API process only. Public multi-user deployment is
+not approved.
+
+## CI expectations
+
+GitHub Actions runs Python 3.11 and 3.12 quality checks, extension validation,
+security checks, Caddy/Compose configuration, container builds, frontend tests,
+and a separate browser-to-Caddy-to-FastAPI HTTPS test with controlled HTML.
+Those tests do not crawl public websites or call Gemini. The integration job
+temporarily trusts its generated Caddy CA and removes its containers and CA
+afterward.
+
+The frontend development dependency tree has a previously reported moderate
+npm advisory; it remains a separately reviewed dependency-maintenance item.

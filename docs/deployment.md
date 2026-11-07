@@ -1,22 +1,29 @@
 # Production ingress and container deployment
 
-SEO-Sensei uses Caddy as the only public ingress and keeps the application
-containers private:
+SEO-Sensei uses Caddy as the only ingress and keeps API and dashboard
+containers private. **Phase 2D adds the React interface and protected browser
+analysis path, but does not approve an internet-accessible deployment.**
 
 ```mermaid
 flowchart LR
-    Browser[Browser or extension] --> Caddy[Caddy :80/:443]
-    Caddy --> Dashboard[dashboard container :8501]
+    Browser[Browser] --> Caddy[Caddy :80/:443]
+    Browser -->|same-origin /api/browser/v1| Caddy
+    Caddy --> Web[React static assets]
     Caddy --> API[api container :8000]
-    Dashboard -->|private Docker DNS: api:8000| API
+    Extension[Chrome extension] -->|API_DOMAIN bearer contract| Caddy
+    Dashboard[Private Streamlit container] --> API
     API --> Fetcher[SafeFetcher]
     API --> Gemini[Optional Gemini service]
 ```
 
 The API and dashboard remain separate processes and images. The extension is a
-browser-loaded artifact and is not part of either image. Caddy routes
-`APP_DOMAIN` to the dashboard and `API_DOMAIN` to the API; separate hostnames
-avoid path-prefix rewriting and simplify Streamlit websocket traffic and CORS.
+browser-loaded artifact and is not part of either image. Caddy serves the Vite
+build at `APP_DOMAIN` and forwards `/api/browser/v1` without stripping its
+prefix to FastAPI. The app route is usable only when browser authentication is
+explicitly enabled with operator-managed accounts. `API_DOMAIN` preserves the
+extension's existing bearer routes and denies the browser-session namespace.
+Streamlit remains available as an internal rollback service and has no Caddy
+route.
 
 ## Images and startup
 
@@ -46,28 +53,34 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d
 curl http://127.0.0.1:8000/health
 ```
 
-Open the dashboard at `http://127.0.0.1:8501`. In the Compose network, the
-dashboard reaches the API at `http://api:8000`; `127.0.0.1` inside the dashboard
-container would refer to the dashboard container itself. The development
-overlay publishes the API only on host loopback for local extension/API
-testing.
+The development overlay keeps Streamlit at `http://127.0.0.1:8501` and the API
+on host loopback for local testing; it disables Caddy and does not provide the
+browser app's HTTPS integration. The authenticated browser flow requires the
+separate trusted-local-CA harness documented in `development.md`. Inside the
+Compose network, the dashboard reaches the API at `http://api:8000`;
+`127.0.0.1` inside the dashboard container would refer to the dashboard itself.
 
 The production `compose.yaml` publishes only Caddy on ports 80 and 443. API and
 dashboard ports are exposed only to the Compose network. `compose.dev.yaml`
-adds loopback-only API and dashboard ports and disables Caddy for convenient
-local HTTP development. Do not use that overlay as a public deployment.
+adds loopback-only API and dashboard ports and disables Caddy for local HTTP
+development. Do not use that overlay as a public deployment. The dashboard
+container has no public ingress in the production Compose topology.
 
 When `APP_DOMAIN` and `API_DOMAIN` resolve to the host, Caddy automatically
-obtains certificates through ACME and redirects HTTP to HTTPS. The dashboard
-is available at `https://app.example.com` and the extension should be pointed
-at `https://api.example.com` (replace both examples with the configured values).
+obtains certificates through ACME and redirects HTTP to HTTPS. `APP_DOMAIN`
+serves the static React application; `API_DOMAIN` remains the extension API
+origin. Browser authentication is disabled by default, and public deployment
+or multi-user use is not approved. Enabling browser analysis requires the
+separately reviewed account-file overlay and explicit restricted-user setup;
+do not infer deployment approval from these instructions.
 
 ## Configuration and secrets
 
-Required for protected production API operation:
+Required for legacy protected API operation:
 
 - `API_ACCESS_TOKEN`
-- `ALLOWED_CORS_ORIGINS` appropriate to browser clients
+- `ALLOWED_CORS_ORIGINS` with the exact extension origin (the React app uses
+  same-origin requests and does not require CORS)
 - `APP_DOMAIN`, `API_DOMAIN`, and `ACME_EMAIL` for Caddy-managed HTTPS
 - `TRUSTED_PROXY_NETWORKS`, containing only the configured Caddy peer/network
 
@@ -77,6 +90,10 @@ state. `DASHBOARD_API_ACCESS_TOKEN` must match the API token and remains only in
 the dashboard container environment; it is never rendered to browser state.
 
 The complete application/resource/rate-limit settings remain in `.env.example`.
+Browser accounts are separate: the normal Compose stack sets
+`BROWSER_AUTH_ENABLED=false` and mounts no account file. The explicit
+`compose.browser-auth.yaml` overlay requires a protected external account file
+and is limited to one API process.
 Never commit `.env`, put secrets in a Dockerfile, or pass credentials in image
 build arguments.
 
@@ -84,11 +101,11 @@ build arguments.
 
 The API liveness check calls the lightweight public `/health` endpoint. Compose
 uses the separate `/ready` endpoint to confirm local SafeFetcher initialization.
-Neither
-endpoint authenticates, crawls, performs DNS resolution, or calls Gemini. The dashboard health check uses
-Streamlit's local `/_stcore/health` endpoint. Compose waits for API health
-before starting the dashboard and restarts unhealthy services according to the
-container runtime policy.
+Neither endpoint authenticates, crawls, performs DNS resolution, or calls
+Gemini. The dashboard health check uses Streamlit's local `/_stcore/health`
+endpoint. Compose waits for API health before starting the dashboard and Caddy;
+Caddy no longer waits for or proxies the dashboard. Services restart according
+to the container runtime policy.
 
 The application is stateless: it has no database, SQLite file, generated file,
 or required persistent volume. SafeFetcher response limits, connection pools,
@@ -108,30 +125,40 @@ persistent application state.
 
 ## Proxy trust, CORS, and limits
 
-Caddy preserves the method, body, status, and websocket upgrade traffic while
-reverse-proxying. FastAPI remains responsible for bearer authentication and
-authorization. The API trusts forwarded client identity only from the static
-Caddy address configured in `TRUSTED_PROXY_NETWORKS`; arbitrary client headers
-are ignored. Caddy removes Authorization and Cookie fields from its access-log
-format and the application never accepts query-string authentication.
+Caddy preserves method, body, and status while reverse-proxying. FastAPI remains
+responsible for browser-session or legacy bearer authorization; the two
+contracts are not interchangeable. The API trusts forwarded client identity
+only from the static Caddy address configured in `TRUSTED_PROXY_NETWORKS`;
+arbitrary client headers are ignored. Caddy disables app-domain access logs and
+removes Authorization, Cookie, and CSRF headers plus selected query values from
+API-domain logs. The application never accepts query-string authentication.
 
-Set `ALLOWED_CORS_ORIGINS` to the exact browser origins that need API access,
-such as the deployed dashboard origin and the extension origin. Do not use `*`.
-The proxy applies a 1 MB API request-body ceiling, matching the application's
-1,000,000-byte body limit as defense in depth. SafeFetcher, Gemini, and API
-timeouts remain application-controlled; Caddy does not impose a shorter
+Set `ALLOWED_CORS_ORIGINS` to the exact extension origin that needs legacy API
+access. Do not use `*`; CORS is not authentication. The app-domain browser
+namespace has exact Origin, session, and CSRF checks in FastAPI, plus an 8 KiB
+Caddy body ceiling and a stricter actual streamed-body limit for URL requests.
+The legacy API host retains its 1 MB proxy and application request-body limits.
+SafeFetcher, Gemini, and API timeouts remain application-controlled; Caddy
+does not impose a shorter
 request timeout on normal API operations.
 
 ## What this phase does not provide
 
 This phase provides a Caddy-based ingress configuration but is not a complete
 cloud deployment. It does not provide DNS automation, cloud infrastructure, a
-registry, automatic deployment, persistent users, or distributed rate limiting.
+registry, automatic deployment, persistent users, distributed rate limiting,
+public multi-user authorization, or approval to deploy the new browser UI.
 Real DNS records and ports 80/443 must reach the host before public ACME HTTPS
 can succeed. TLS terminates at Caddy; internal API traffic remains HTTP on the
 private Docker network.
 
-## Optional paid AWS single-host deployment
+## Historical paid AWS single-host deployment notes
+
+These steps describe pre-existing infrastructure mechanics, not authorization
+to deploy the Phase 2D browser interface. Public deployment remains
+unapproved. Browser authentication is disabled in the default Compose setup;
+the one-process restricted-user overlay is not a public multi-user access
+model.
 
 The preferred free target is documented in
 [`free-deployment.md`](free-deployment.md). If AWS is selected instead, one
@@ -139,14 +166,14 @@ Ubuntu LTS x86_64 EC2 instance
 running the existing production `compose.yaml`:
 
 ```text
-Internet → security group → EC2 → Docker Compose → Caddy → API/dashboard
+Internet → security group → EC2 → Docker Compose → Caddy → React/API
 ```
 
 ### Recommended instance and operating system
 
 Start with a `t3.small` (2 vCPU, 2 GiB RAM) using a current Ubuntu LTS 64-bit
-AMI. The application has one API process, one Streamlit process, Caddy, bounded
-SafeFetcher pools, and bounded Gemini concurrency; this is a sensible small
+AMI. The topology has one API process, one internal Streamlit process, Caddy,
+bounded SafeFetcher pools, and bounded Gemini concurrency; this is a sensible small
 portfolio deployment size. Move to a larger instance only after observing real
 memory/CPU usage. No AWS price is assumed by this recommendation.
 
@@ -193,13 +220,16 @@ docker compose version
 ### Environment and DNS
 
 Edit `/etc/seo-sensei/seo-sensei.env` without printing it. Set
-`APP_ENV=production` and `CONTAINER_APP_ENV=production`, real random values for
+If a separate deployment is authorized, set `APP_ENV=production` and
+`CONTAINER_APP_ENV=production`, random values for
 `API_ACCESS_TOKEN` and `DASHBOARD_API_ACCESS_TOKEN`, and the optional
-`GEMINI_API_KEY`. Set `APP_DOMAIN` and `API_DOMAIN` to the public hostnames,
+`GEMINI_API_KEY`. Set `APP_DOMAIN` and `API_DOMAIN` to the reviewed hostnames,
 `ACME_EMAIL` to the certificate contact, and keep
 `TRUSTED_PROXY_NETWORKS=172.30.0.2/32` unless the Compose network is
-deliberately changed. Set `ALLOWED_CORS_ORIGINS` to the exact dashboard and
-extension origins that need API access; never use `*`.
+deliberately changed. Set `ALLOWED_CORS_ORIGINS` to the exact extension origin;
+never use `*`. The standard Compose configuration keeps
+`BROWSER_AUTH_ENABLED=false`. Browser enablement requires a separately reviewed
+external account file and remains limited to one API process.
 
 Create DNS A records pointing both hostnames to the EC2 public address:
 
@@ -214,9 +244,9 @@ actions and are not stored in Git.
 ### Deploy and verify
 
 The repository provides `scripts/deploy.sh`. It validates the environment file
-without sourcing or printing it, validates Compose, pulls Caddy, builds the API
-and dashboard production images, starts the stack, waits for API/dashboard/Caddy
-health, and prints service status:
+without sourcing or printing it, validates Compose, builds the API, dashboard,
+and combined static-web/Caddy images, starts the stack, waits for service
+health, and prints status:
 
 ```bash
 cd /opt/seo-sensei
@@ -245,19 +275,23 @@ curl https://api.example.com/health
 curl https://api.example.com/ready
 ```
 
-The API health endpoints are public and lightweight. Analysis remains bearer
-authenticated; an unauthenticated analysis request should return 401. Use a
-controlled test target for an authenticated analysis smoke test rather than
-making a production deployment crawl an arbitrary site solely for validation.
+The API health endpoints are public and lightweight. Legacy work routes remain
+bearer-authenticated; browser work routes use the separate cookie-session,
+Origin, and CSRF contract only when explicitly enabled. Without that opt-in,
+browser authentication and analysis routes are not mounted. Use a controlled
+test target for an authenticated analysis smoke test rather than making a
+deployment crawl an arbitrary site solely for validation.
 
-The dashboard is available at `https://app.example.com`. Configure the
-extension with `https://api.example.com` and its operator-managed token.
+`APP_DOMAIN` serves the React static application. With default settings,
+sign-in and live analysis are unavailable and only the clearly labelled local
+example works. `API_DOMAIN` remains the extension's legacy API origin.
+Streamlit has no public Caddy route. Do not use these instructions for a public
+demonstration without a separate access-control and deployment review.
 
 ### TLS, persistence, and recovery
 
-Caddy terminates TLS, redirects HTTP to HTTPS, supports Streamlit websocket
-traffic, and obtains certificates automatically once DNS and ports 80/443 are
-correct. The named `caddy_data` and `caddy_config` volumes persist certificate
+Caddy terminates TLS, redirects HTTP to HTTPS, and obtains certificates
+automatically once DNS and ports 80/443 are correct. The named `caddy_data` and `caddy_config` volumes persist certificate
 and Caddy state across container recreation. Back up those two Docker volumes
 as infrastructure state if recovery of existing ACME state matters; the API and
 dashboard have no application data that requires backup.
@@ -271,8 +305,10 @@ container logs identify the failing service without exposing secrets.
 ### Implemented, operator actions, and future work
 
 Implemented in this repository: production Compose, private API/dashboard
-services, Caddy HTTPS topology, health/readiness probes, non-root containers,
-restart policies, persistent Caddy volumes, and the deployment helper.
+services, Caddy HTTPS topology for the React assets and protected browser
+namespace, legacy extension routing, health/readiness probes, non-root
+containers, restart policies, persistent Caddy volumes, and the deployment
+helper. Public deployment and multi-user browser access are not approved.
 
 Operator actions: create the EC2 instance and security group, install Docker,
 configure SSH, create DNS records, generate secrets, set the environment file

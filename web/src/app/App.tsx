@@ -3,15 +3,32 @@ import { AnalysisOverview } from "../features/analysis/AnalysisOverview";
 import { FindingDetail } from "../features/analysis/FindingDetail";
 import { Findings } from "../features/analysis/Findings";
 import { loadLocalFixture, type FixtureBundle } from "../features/analysis/loadFixture";
+import { demoReport, type AnalysisReport } from "../features/analysis/report";
 import { PageEntry } from "../features/analysis/PageEntry";
 import { sampleUrl, type SeoCheck } from "../features/analysis/schema";
+import { SignIn } from "../features/auth/SignIn";
+import {
+  analyzeUrl,
+  BrowserApiError,
+  getBrowserSession,
+  login,
+  logout,
+  messageForApiError,
+  type BrowserSession,
+} from "../features/auth/api";
 import { findingsParent, routeFromSearch, routeSearch, type AppRoute, type ViewName } from "./route";
 
-type LoadState =
+type AuthState =
+  | { status: "checking"; session: null; message: string }
+  | { status: "authenticated"; session: BrowserSession; message: string }
+  | { status: "anonymous"; session: null; message: string }
+  | { status: "unavailable"; session: null; message: string };
+type DemoState =
+  | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; bundle: FixtureBundle }
   | { state: "error"; message: string };
-type FocusRequest = "heading" | "url" | "finding" | "error" | "search";
+type FocusRequest = "heading" | "url" | "finding" | "error" | "search" | "username";
 
 function Wordmark({ onOpenEntry }: { onOpenEntry: () => void }) {
   return (
@@ -22,24 +39,41 @@ function Wordmark({ onOpenEntry }: { onOpenEntry: () => void }) {
   );
 }
 
-function Masthead({ source, onOpenEntry }: { source: string; onOpenEntry: () => void }) {
+function Masthead({ source, username, onOpenEntry, onLogout }: {
+  source: string;
+  username?: string;
+  onOpenEntry: () => void;
+  onLogout: () => void;
+}) {
   return (
-    <header className="masthead">
+    <header className={username ? "masthead masthead-authenticated" : "masthead"}>
       <Wordmark onOpenEntry={onOpenEntry} />
       <span className="masthead-purpose">Page review</span>
       <span className="masthead-source">{source}</span>
+      {username && <span className="masthead-user">{username}</span>}
+      {username && <button className="masthead-action" type="button" onClick={onLogout}>Sign out</button>}
     </header>
   );
 }
 
-function ReportContext({ onChangePage }: { onChangePage: () => void }) {
+function reportIdentity(report: AnalysisReport) {
+  let url: URL | null = null;
+  try { url = new URL(report.analysis.final_url); } catch { /* already runtime-validated as text */ }
+  return {
+    brand: url?.hostname ?? "Analyzed page",
+    path: url?.pathname && url.pathname !== "/" ? url.pathname : "/",
+  };
+}
+
+function ReportContext({ report, onChangePage }: { report: AnalysisReport; onChangePage: () => void }) {
+  const identity = reportIdentity(report);
   return (
-      <div className="report-context">
-        <span className="context-brand">Northstar Solar</span>
-        <span className="context-separator" aria-hidden="true">/</span>
-        <code className="context-path">/guides/home-solar/</code>
-        <button className="context-change" type="button" onClick={onChangePage}>Change page</button>
-      </div>
+    <div className="report-context">
+      <span className="context-brand">{identity.brand}</span>
+      <span className="context-separator" aria-hidden="true">/</span>
+      <code className="context-path">{identity.path}</code>
+      <button className="context-change" type="button" onClick={onChangePage}>Change page</button>
+    </div>
   );
 }
 
@@ -83,12 +117,24 @@ function FixtureRecovery({ route, message, onRetry, onChangePage }: {
   );
 }
 
-function FixtureFooter() {
+function LostLiveReport({ onChangePage }: { onChangePage: () => void }) {
   return (
-    <footer className="site-footer">
-      <span>Evidence first. Interpretation labelled.</span>
-      <span>This local example makes no website or AI request.</span>
-    </footer>
+    <section className="view state-view" aria-labelledby="lost-report-title">
+      <p className="eyebrow">Live report not stored</p>
+      <h1 id="lost-report-title" tabIndex={-1}>Run the analysis again to reopen this page.</h1>
+      <p className="entry-intro">Live results are held in memory only. This address does not identify a saved report, so the previous result is unavailable after reload.</p>
+      <button className="button-primary lost-report-action" type="button" onClick={onChangePage}>Return to URL entry</button>
+    </section>
+  );
+}
+
+function LoadingState({ title, message }: { title: string; message: string }) {
+  return (
+    <section className="entry-shell" aria-labelledby="loading-title">
+      <p className="eyebrow">Secure analysis</p>
+      <h1 id="loading-title" tabIndex={-1}>{title}</h1>
+      <p className="form-message" role="status" aria-live="polite">{message}</p>
+    </section>
   );
 }
 
@@ -98,17 +144,22 @@ function readRoute() {
 
 export function App() {
   const [route, setRoute] = useState<AppRoute>(readRoute);
-  const [load, setLoad] = useState<LoadState>({ state: "loading" });
-  const [entryValue, setEntryValue] = useState(sampleUrl);
+  const [auth, setAuth] = useState<AuthState>({ status: "checking", session: null, message: "Checking the secure sign-in service." });
+  const [demo, setDemo] = useState<DemoState>({ state: "idle" });
+  const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [entryValue, setEntryValue] = useState("");
   const [entryError, setEntryError] = useState("");
-  const [recheckMessage, setRecheckMessage] = useState("No recheck has been performed.");
-  const [rechecking, setRechecking] = useState(false);
+  const [analysisMessage, setAnalysisMessage] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [globalMessage, setGlobalMessage] = useState("");
   const focusRequest = useRef<FocusRequest | null>(null);
   const focusFindingId = useRef("");
-  const retryRoute = useRef<AppRoute | null>(null);
   const cameFromFindings = useRef(false);
   const currentRoute = useRef(route);
-  const recheckTimer = useRef<number | null>(null);
+  const demoLoadActive = useRef(false);
+  const reportRef = useRef(report);
+
+  useEffect(() => { reportRef.current = report; }, [report]);
 
   const navigate = useCallback((next: AppRoute, options: { replace?: boolean; focus?: FocusRequest } = {}) => {
     if (options.focus) focusRequest.current = options.focus;
@@ -119,24 +170,52 @@ export function App() {
     setRoute(next);
   }, []);
 
-  const loadFixture = useCallback(async (retry = false) => {
-    if (retry) retryRoute.current = currentRoute.current;
-    setLoad({ state: "loading" });
+  const refreshSession = useCallback(async (focus = false, announce = true) => {
+    if (announce) setAuth({ status: "checking", session: null, message: "Checking the secure sign-in service." });
+    try {
+      const session = await getBrowserSession();
+      setAuth({ status: "authenticated", session, message: "" });
+      if (focus) focusRequest.current = "url";
+      return session;
+    } catch (error) {
+      if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
+        setAuth({ status: "anonymous", session: null, message: "No active browser session was found. Sign in to continue." });
+        setReport(null);
+      } else {
+        setAuth({ status: "unavailable", session: null, message: messageForApiError(error) });
+      }
+      return null;
+    }
+  }, []);
+
+  const loadDemo = useCallback(async () => {
+    if (demoLoadActive.current) return;
+    demoLoadActive.current = true;
+    setDemo({ state: "loading" });
     try {
       const bundle = await loadLocalFixture();
-      setLoad({ state: "ready", bundle });
-      if (retry) focusRequest.current = retryRoute.current?.view === "entry" ? "url" : "heading";
+      setDemo({ state: "ready", bundle });
+      focusRequest.current = "heading";
     } catch (error) {
-      const message = error instanceof Error ? error.message : "The bundled local example could not be loaded.";
-      setLoad({ state: "error", message });
+      setDemo({ state: "error", message: error instanceof Error ? error.message : "The bundled local example could not be loaded." });
       focusRequest.current = "error";
+    } finally {
+      demoLoadActive.current = false;
     }
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void loadFixture(); }, 0);
+    const timer = window.setTimeout(() => { void refreshSession(false, false); }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadFixture]);
+  }, [refreshSession]);
+
+  useEffect(() => {
+    if (route.view !== "entry" && route.source === "demo" && demo.state === "idle") {
+      const timer = window.setTimeout(() => { void loadDemo(); }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [route.view, route.source, demo.state, loadDemo]);
 
   useEffect(() => {
     function handlePopState() {
@@ -146,7 +225,7 @@ export function App() {
       if (previous.view === "detail" && next.view === "findings") {
         focusRequest.current = "finding";
         focusFindingId.current = previous.check;
-      } else if (previous.view !== next.view) {
+      } else if (previous.view !== next.view || previous.source !== next.source) {
         focusRequest.current = "heading";
       }
       setRoute(next);
@@ -160,66 +239,148 @@ export function App() {
     if (!request) return;
     let target: HTMLElement | null = null;
     if (request === "url") target = document.getElementById("page-url");
+    if (request === "username") target = document.getElementById("login-username");
     if (request === "finding") {
       target = Array.from(document.querySelectorAll<HTMLElement>("[data-finding-id]"))
         .find((element) => element.dataset.findingId === focusFindingId.current) ?? null;
     }
     if (request === "search") target = document.getElementById("finding-search");
-    if (request === "heading") target = document.querySelector("main h1[tabindex='-1']");
-    if (request === "error") target = document.querySelector("main h1[tabindex='-1']");
+    if (request === "heading" || request === "error") target = document.querySelector("main h1[tabindex='-1']");
     target?.focus();
     focusRequest.current = null;
-  }, [route, load]);
-
-  useEffect(() => () => {
-    if (recheckTimer.current) window.clearTimeout(recheckTimer.current);
-  }, []);
+  }, [route, auth.status, demo, report]);
 
   const openEntry = () => {
     cameFromFindings.current = false;
     setEntryError("");
-    navigate({ ...route, view: "entry", check: "", q: "", status: "all" }, { focus: "url" });
+    setAnalysisMessage("");
+    const currentReport = route.source === "demo" && demo.state === "ready" ? demoReport(demo.bundle) : report;
+    if (currentReport) setEntryValue(currentReport.analysis.requested_url);
+    navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { focus: "url" });
   };
 
-  const onSubmitUrl = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const value = entryValue.trim();
+  const openDemo = () => {
+    cameFromFindings.current = false;
+    setEntryError("");
+    setAnalysisMessage("");
+    setEntryValue(sampleUrl);
+    setReport(null);
+    navigate({ ...route, source: "demo", view: "overview", mode: "review", q: "", status: "all", check: "" }, { focus: "heading" });
+  };
+
+  const clearForSignIn = (message: string) => {
+    setAuth({ status: "anonymous", session: null, message });
+    setReport(null);
+    setDemo({ state: "idle" });
+    setGlobalMessage("");
+    setEntryError("");
+    currentRoute.current = { ...currentRoute.current, view: "entry", source: "live", check: "", q: "", status: "all" };
+    window.history.replaceState({}, "", routeSearch(currentRoute.current));
+    setRoute(currentRoute.current);
+    focusRequest.current = "username";
+  };
+
+  const signIn = async (username: string, password: string) => {
+    try {
+      await login(username, password);
+      const session = await getBrowserSession();
+      setAuth({ status: "authenticated", session, message: "" });
+      setGlobalMessage("");
+      navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { replace: true, focus: "url" });
+    } catch (error) {
+      if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
+        clearForSignIn(messageForApiError(error));
+        return;
+      }
+      throw new Error(messageForApiError(error), { cause: error });
+    }
+  };
+
+  const signOut = async () => {
+    if (auth.status !== "authenticated") return;
+    try {
+      await logout(auth.session.csrf_token);
+      clearForSignIn("");
+    } catch (error) {
+      if (error instanceof BrowserApiError && error.status === 401) {
+        clearForSignIn(messageForApiError(error));
+      } else {
+        setGlobalMessage(messageForApiError(error));
+      }
+    }
+  };
+
+  const runAnalysis = async (rawValue: string) => {
+    const value = rawValue.trim();
     if (!value) {
-      setEntryError("Enter the Northstar sample address, or choose Open local sample.");
+      setEntryError("Enter the page address to analyze.");
       return;
     }
     let parsed: URL;
     try {
       parsed = new URL(value);
     } catch {
-      setEntryError("Enter a complete web address, such as https://example.com/page/.");
+      setEntryError("Enter a complete page address, such as https://site.example/page/.");
       return;
     }
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      setEntryError("Only an HTTP or HTTPS address can be checked. No request was made.");
+    if (!(parsed.protocol === "https:" || parsed.protocol === "http:") || !parsed.hostname || parsed.username || parsed.password) {
+      setEntryError("Enter an HTTP or HTTPS page address without embedded credentials.");
       return;
     }
-    const expected = new URL(sampleUrl);
-    const normalizedPath = parsed.pathname.replace(/\/+$/, "");
-    if (parsed.origin === expected.origin && normalizedPath === expected.pathname.replace(/\/+$/, "") && !parsed.search && !parsed.hash && !parsed.username && !parsed.password) {
-      setEntryError("");
-      navigate({ ...route, view: "overview", mode: "review", q: "", status: "all", check: "" }, { focus: "heading" });
+    if (auth.status !== "authenticated") {
+      setEntryError("Sign in before requesting a live analysis.");
       return;
     }
-    setEntryError("Live URL analysis is not available in this frontend-only demonstration. This address was not requested.");
+
+    setEntryError("");
+    setAnalysisMessage("");
+    setAnalyzing(true);
+    try {
+      const analysis = await analyzeUrl(value, auth.session.csrf_token);
+      const liveReport: AnalysisReport = { source: "live", analysis };
+      setReport(liveReport);
+      setAnalysisMessage("");
+      navigate({ ...route, source: "live", view: "overview", check: "", mode: "review", status: "all", q: "" }, { focus: "heading" });
+    } catch (error) {
+      if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
+        clearForSignIn(messageForApiError(error));
+        return;
+      }
+      if (error instanceof BrowserApiError && error.code === "csrf_rejected") {
+        try {
+          const refreshed = await getBrowserSession();
+          setAuth({ status: "authenticated", session: refreshed, message: "" });
+          const explanation = "The server refreshed the session check. Submit the analysis again; no automatic repeat was made.";
+          if (reportRef.current) setAnalysisMessage(explanation);
+          else setEntryError(explanation);
+          return;
+        } catch (refreshError) {
+          clearForSignIn(messageForApiError(refreshError));
+          return;
+        }
+      }
+      const message = messageForApiError(error);
+      if (reportRef.current && route.view !== "entry") setAnalysisMessage(message);
+      else setEntryError(message);
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
-  const openSample = () => {
-    if (load.state !== "ready") return;
-    setEntryValue(sampleUrl);
-    setEntryError("");
-    navigate({ ...route, view: "overview", mode: "review", q: "", status: "all", check: "" }, { focus: "heading" });
+  const onSubmitUrl = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void runAnalysis(entryValue);
+  };
+
+  const reanalyze = () => {
+    if (!report || report.source !== "live" || analyzing) return;
+    setEntryValue(report.analysis.requested_url);
+    void runAnalysis(report.analysis.requested_url);
   };
 
   const openFinding = (check: SeoCheck, fromFindings = true) => {
     cameFromFindings.current = fromFindings;
-    const next = { ...route, view: "detail" as const, check: check.id };
-    navigate(next, { focus: "heading" });
+    navigate({ ...route, view: "detail", check: check.id }, { focus: "heading" });
   };
 
   const returnToFindings = () => {
@@ -234,50 +395,50 @@ export function App() {
 
   const changeView = (next: AppRoute, replace = false) => navigate(next, { replace, focus: "heading" });
 
-  const source = load.state === "loading" ? "Loading local example" : load.state === "error"
-    ? "Example unavailable" : route.view === "entry" ? "Local example" : "Fixture report";
+  let activeReport: AnalysisReport | null = report;
+  if (route.source === "demo" && demo.state === "ready") activeReport = demoReport(demo.bundle);
+  else if (route.source === "demo") activeReport = null;
+  else if (report?.source !== "live") activeReport = null;
 
   let view: ReactNode;
-  if (load.state === "loading") {
-    view = (
-      <section className="entry-shell" aria-labelledby="loading-title">
-        <p className="eyebrow">Local demonstration</p>
-        <h1 id="loading-title" tabIndex={-1}>Opening the Northstar example.</h1>
-        <p className="form-message" role="status">Loading the bundled fixture files. No website request is made.</p>
-      </section>
-    );
-  } else if (load.state === "error") {
-    view = <FixtureRecovery route={route} message={load.message} onRetry={() => void loadFixture(true)} onChangePage={openEntry} />;
-  } else if (route.view === "entry") {
-    view = <PageEntry value={entryValue} setValue={setEntryValue} error={entryError}
-      onSubmit={onSubmitUrl} onOpenSample={openSample} />;
-  } else {
-    const fixture = load.bundle.fixture;
-    const analysis = fixture.analysis;
-    const finding = analysis.checks.find((check) => check.id === route.check);
+  if (route.view === "entry") {
+    if (auth.status === "checking") {
+      view = <LoadingState title="Checking the sign-in service." message={auth.message} />;
+    } else if (auth.status !== "authenticated") {
+      view = <SignIn available={auth.status === "anonymous"} message={auth.message} onSignIn={signIn}
+        onRetry={() => void refreshSession(true)} onOpenDemo={openDemo} />;
+    } else {
+      view = <PageEntry value={entryValue} setValue={setEntryValue} error={entryError} isAnalyzing={analyzing}
+        onSubmit={onSubmitUrl} onOpenDemo={openDemo} />;
+    }
+  } else if (route.source === "demo" && demo.state === "loading") {
+    view = <LoadingState title="Opening the Northstar example." message="Loading the local fixture files. No website request is made." />;
+  } else if (route.source === "demo" && demo.state === "error") {
+    view = <FixtureRecovery route={route} message={demo.message} onRetry={() => void loadDemo()} onChangePage={openEntry} />;
+  } else if (!activeReport && route.source === "live" && auth.status === "checking") {
+    view = <LoadingState title="Restoring the secure session." message="The live report is not stored; checking access before returning to URL entry." />;
+  } else if (!activeReport && route.source === "live" && auth.status !== "authenticated") {
+    view = <SignIn available={auth.status === "anonymous"} message={auth.message || "This live report is not stored. Sign in and run the analysis again."}
+      onSignIn={signIn} onRetry={() => void refreshSession(true)} onOpenDemo={openDemo} />;
+  } else if (!activeReport && route.source === "live") {
+    view = <LostLiveReport onChangePage={openEntry} />;
+  } else if (activeReport) {
+    const finding = activeReport.analysis.checks.find((check) => check.id === route.check);
     const viewName: ViewName = route.view;
     const pageView = viewName === "overview" ? (
-      <AnalysisOverview fixture={fixture} recheckMessage={recheckMessage} rechecking={rechecking}
-        onRecheck={() => {
-          if (recheckTimer.current) window.clearTimeout(recheckTimer.current);
-          setRechecking(true);
-          setRecheckMessage("Showing a local recheck simulation. No request is running.");
-          recheckTimer.current = window.setTimeout(() => {
-            setRechecking(false);
-            setRecheckMessage("No recheck was performed. The illustrative fixture remains unchanged.");
-          }, 700);
-        }}
-        onFindings={() => changeView(findingsParent(route))} onFinding={() => openFinding(analysis.checks.find((item) => item.id === "robots_directives")!, false)} />
+      <AnalysisOverview report={activeReport} reanalysisMessage={analysisMessage} isReanalyzing={analyzing}
+        onReanalyze={reanalyze} onFindings={() => changeView(findingsParent(route))}
+        onFinding={(id) => { const check = activeReport.analysis.checks.find((item) => item.id === id); if (check) openFinding(check, false); }} />
     ) : viewName === "findings" ? (
-      <Findings fixture={fixture} route={route} onRouteChange={navigate} onOpenFinding={openFinding} />
+      <Findings report={activeReport} route={route} onRouteChange={navigate} onOpenFinding={openFinding} />
     ) : viewName === "detail" && finding ? (
-      <FindingDetail fixture={fixture} html={load.bundle.html} route={route} finding={finding}
-        onBack={returnToFindings} onSelect={(check) => navigate({ ...route, check: check.id }, { replace: true, focus: "heading" })} />
+      <FindingDetail report={activeReport} route={route} finding={finding} onBack={returnToFindings}
+        onSelect={(check) => navigate({ ...route, check: check.id }, { replace: true, focus: "heading" })} />
     ) : viewName === "detail" ? (
       <section className="view state-view" aria-labelledby="missing-finding-title">
         <p className="eyebrow">Finding unavailable</p>
-        <h1 id="missing-finding-title" tabIndex={-1}>This finding is not in the local example.</h1>
-        <p className="entry-intro">The route does not identify one of the fixture’s 23 checks.</p>
+        <h1 id="missing-finding-title" tabIndex={-1}>This finding is not in the current report.</h1>
+        <p className="entry-intro">The route does not identify a check in this in-memory response.</p>
         <button className="button-link" type="button" onClick={() => changeView(findingsParent(route))}>Return to findings</button>
       </section>
     ) : (
@@ -289,19 +450,36 @@ export function App() {
     );
     view = (
       <>
-        <ReportContext onChangePage={openEntry} />
-        <ReportNavigation route={route} navigate={navigate} checkCount={analysis.checks.length} />
+        <ReportContext report={activeReport} onChangePage={openEntry} />
+        <ReportNavigation route={route} navigate={navigate} checkCount={activeReport.analysis.checks.length} />
         {pageView}
       </>
     );
+  } else {
+    view = <LoadingState title="Opening the selected report." message="The report is being restored." />;
   }
+
+  const isDemoRoute = route.source === "demo" && route.view !== "entry";
+  const headerSource = auth.status === "checking" ? "Checking session"
+    : isDemoRoute ? demo.state === "error" ? "Example unavailable" : "Fictional example"
+      : route.view === "entry" ? auth.status === "authenticated" ? "Protected analysis" : "Sign in"
+        : route.source === "live" ? "Live analysis" : "Report unavailable";
 
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to review</a>
-      <Masthead source={source} onOpenEntry={openEntry} />
-      <main id="main-content" className="page-shell" tabIndex={-1}>{view}</main>
-      <FixtureFooter />
+      <Masthead source={headerSource} username={auth.status === "authenticated" ? auth.session.user.username : undefined}
+        onOpenEntry={openEntry} onLogout={() => void signOut()} />
+      <main id="main-content" className="page-shell" tabIndex={-1}>
+        {globalMessage && <p className="report-error" role="alert">{globalMessage}</p>}
+        {view}
+      </main>
+      <footer className="site-footer">
+        <span>Evidence first. Interpretation labelled.</span>
+        <span>{isDemoRoute ? "This local example makes no website or AI request." : "Live reports are in-memory only; deterministic analysis does not use AI."}</span>
+      </footer>
     </>
   );
 }
+
+\n

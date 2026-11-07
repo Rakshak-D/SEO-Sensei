@@ -1,6 +1,8 @@
 services:
   caddy:
-    image: caddy:2.10.2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.web
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN must be configured}
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN must be configured}
@@ -12,14 +14,11 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       app_net:
         ipv4_address: 172.30.0.2
     depends_on:
       api:
-        condition: service_healthy
-      dashboard:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -39,6 +38,9 @@ services:
       APP_ENV: ${CONTAINER_APP_ENV:-production}
       PORT: ${API_CONTAINER_PORT:-8000}
       GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS: ${GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS:-10}
+      BROWSER_AUTH_ENABLED: ${BROWSER_AUTH_ENABLED:-false}
+      BROWSER_APP_ORIGIN: https://${APP_DOMAIN}
+      TRUSTED_PROXY_NETWORKS: 172.30.0.2/32
     expose:
       - "8000"
     networks:

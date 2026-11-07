@@ -22,3 +22,16 @@ AUDIT.md
 *.log
 .streamlit
 node_modules
+design
+web/node_modules
+web/dist
+web/playwright-report
+web/test-results
+web/review
+web/e2e
+web/src/**/*.test.*
+web/src/test
+**/*.pem
+**/*.key
+**/*browser-users*.json
+**/*accounts*.json

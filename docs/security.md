@@ -77,7 +77,17 @@ Admitted browser analysis is limited to 6 requests/minute and 30/hour per config
 
 The browser namespace rejects requests carrying an Origin other than the configured browser origin before the global CORS middleware can expose a response. This prevents the legacy extension CORS allowlist from exposing browser-session bootstrap data; CORS is not authentication. The browser-analysis route exposes only deterministic `SEOAnalysis` fields, not AI recommendations, business severity, ranking/index status, DOM locations, saved reports, or external performance measurements. `blocked_destination` is returned only for fetcher categories that explicitly identify blocked destinations or unsafe redirects; other fetch failures use a generic unavailable response.
 
-This does not complete application-wide body-size enforcement, Caddy/TLS integration, per-user budgets across workers, or restriction of Streamlit's existing exposure. Public multi-user use remains unapproved.
+## Same-origin browser ingress
+
+The production Caddyfile serves the built React assets on `APP_DOMAIN`. It forwards `/api/browser/v1` and nested paths to FastAPI without stripping the prefix and applies an 8 KiB proxy body ceiling; FastAPI still enforces the stricter 4 KiB actual streamed-body limit for URL analysis. Unknown `/api/*` paths on the app host return 404 rather than the SPA fallback. Static HTML and browser API responses use `Cache-Control: no-store`; fingerprinted Vite assets may be cached as immutable.
+
+`API_DOMAIN` continues to proxy the legacy bearer API for the separately configured extension, but Caddy rejects `/api/browser/v1*` before it reaches FastAPI. FastAPI's session authorization and browser-origin middleware remain independent of this ingress rule. The browser namespace has no API-domain CORS path. App-domain access logging is disabled to avoid recording user-supplied route/search state. API-domain logs remove Authorization, Cookie, CSRF, and selected credential-like query values.
+
+The normal Compose configuration sets `BROWSER_AUTH_ENABLED=false` and mounts no account source. `compose.browser-auth.yaml` is an explicit opt-in overlay that mounts an external account file read-only. It must meet the API's existing owner/mode checks; do not relax those checks for Windows bind-mount behavior. The API is exposed only on the Compose network. The dashboard remains an internal service without a Caddy route; the development Compose overlay binds its optional port to host loopback.
+
+`compose.integration.yaml` binds only `127.0.0.1:8443`, uses Caddy's internal CA, and supplies a disposable runtime account plus a test-only controlled SafeFetcher. This validates browser → HTTPS Caddy → FastAPI session and analysis → deterministic engine → React result rendering without contacting an external host, DNS resolver, or Gemini. The API test container runs with UID `10001`; its account verifier is generated in a temporary filesystem. This harness does not prove public deployment safety or test a public website fetch.
+
+Application-wide actual streamed-body enforcement remains incomplete on legacy routes. Session, login, analysis budgets and active-work limits remain process-local and do not support multiple workers or instances. Public multi-user use remains unapproved.
 
 ## Reverse proxy headers
 

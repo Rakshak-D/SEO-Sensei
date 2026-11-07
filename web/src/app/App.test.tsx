@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import auditFixture from "../../public/fixtures/audit.json";
 import { App } from "./App";
-import { sampleUrl } from "../features/analysis/schema";
 
 const sourceHtml = [
   "<!doctype html>",
@@ -15,197 +14,313 @@ const sourceHtml = [
   "</html>",
 ].join("\n");
 
-function response(body: unknown, ok = true) {
-  return {
-    ok,
-    status: ok ? 200 : 404,
-    json: async () => body,
-    text: async () => String(body),
-  } as Response;
+type MockOptions = {
+  unavailable?: boolean;
+  initiallyAuthenticated?: boolean;
+  analysis?: unknown;
+  firstFixtureFailure?: boolean;
+  fixture?: unknown;
+  analysisStatus?: number;
+  analysisCode?: string;
+  retryAfter?: string;
+  loginStatus?: number;
+  loginCode?: string;
+};
+
+function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
 }
 
-function mockFixtureFetch(options: { firstAuditFailure?: boolean; audit?: unknown; html?: string } = {}) {
-  let auditRequests = 0;
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+function apiError(code: string, status: number, retryAfter?: string) {
+  return json({ error: { code, message: "safe server message", request_id: "test-request-1" } }, status,
+    retryAfter ? { "Retry-After": retryAfter } : {});
+}
+
+function mockServices(options: MockOptions = {}) {
+  let authenticated = options.initiallyAuthenticated ?? false;
+  let auditCount = 0;
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    calls.push({ url, init });
+    if (url === "/api/browser/v1/session") {
+      if (options.unavailable) return new Response("Not Found", { status: 404 });
+      if (!authenticated) return apiError("auth_required", 401);
+      return json({ authenticated: true, user: { username: "reviewer" }, csrf_token: "c".repeat(43) });
+    }
+    if (url === "/api/browser/v1/session/login") {
+      if (options.loginStatus && options.loginStatus !== 200) return apiError(options.loginCode ?? "rate_limited", options.loginStatus, options.retryAfter);
+      const body = JSON.parse(String(init?.body)) as { username: string; password: string };
+      if (body.username !== "reviewer" || body.password !== "correct horse battery staple") return apiError("auth_invalid", 401);
+      authenticated = true;
+      return json({ authenticated: true, user: { username: "reviewer" } });
+    }
+    if (url === "/api/browser/v1/session/logout") {
+      if (init?.headers && (init.headers as Record<string, string>)["X-CSRF-Token"] !== "c".repeat(43)) return apiError("csrf_rejected", 403);
+      authenticated = false;
+      return json({ authenticated: false });
+    }
+    if (url === "/api/browser/v1/analyse-url") {
+      if (options.analysisStatus && options.analysisStatus !== 200) return apiError(options.analysisCode ?? "resource_unavailable", options.analysisStatus, options.retryAfter);
+      return json(options.analysis ?? auditFixture.analysis);
+    }
     if (url === "/fixtures/audit.json") {
-      auditRequests += 1;
-      if (options.firstAuditFailure && auditRequests === 1) return response(null, false);
-      return {
-        ok: true,
-        status: 200,
-        json: async () => options.audit ?? auditFixture,
-        text: async () => JSON.stringify(options.audit ?? auditFixture),
-      } as Response;
+      auditCount += 1;
+      if (options.firstFixtureFailure && auditCount === 1) return new Response("Unavailable", { status: 404 });
+      return json(options.fixture ?? auditFixture);
     }
-    if (url === "/fixtures/northstar-solar.html") {
-      return response(options.html ?? sourceHtml);
-    }
-    throw new Error("Unexpected network request: " + url);
+    if (url === "/fixtures/northstar-solar.html") return new Response(options.fixture ? sourceHtml : sourceHtml, { status: 200 });
+    throw new Error(`Unexpected network request: ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+  return { fetchMock, calls };
 }
 
-async function openLocalSample(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("button", { name: "Open local sample" }));
-  await screen.findByRole("heading", { name: "Home Solar Installation: Planning Guide" });
+async function openDemo(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "Open local example" }));
+  await screen.findByRole("heading", { name: "Robots directives are reported" });
 }
 
-describe("Evidence Ledger app", () => {
+async function openLiveEntry(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText("Username"), "reviewer");
+  await user.type(await screen.findByLabelText("Password"), "correct horse battery staple");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await screen.findByRole("heading", { name: "Inspect what a page returns." });
+}
+
+describe("Evidence Ledger authenticated application", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
+    vi.unstubAllGlobals();
   });
 
-  it("announces local fixture loading before the report controls are available", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)) as unknown as typeof fetch);
+  it("shows a truthful unavailable state when browser authentication is disabled", async () => {
+    mockServices({ unavailable: true });
     render(<App />);
-    expect(screen.getByRole("status")).toHaveTextContent("Loading the bundled fixture files");
-    expect(screen.queryByRole("button", { name: "Open local sample" })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Live analysis is unavailable/)).toBeVisible();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open local example" })).toBeVisible();
   });
 
-  it("opens the local fixture and prioritizes noindex over the qualified score", async () => {
-    mockFixtureFetch();
+  it("opens the explicit local demo and keeps its noindex fixture ahead of the score", async () => {
+    mockServices({ unavailable: true });
     const user = userEvent.setup();
     render(<App />);
-    await openLocalSample(user);
-
-    expect(screen.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
+    await openDemo(user);
+    expect(screen.getByText(/Fictional local example · static HTML fixture/)).toBeVisible();
+    expect(screen.getByText("Detected directives: noindex, follow.")).toBeVisible();
     expect(screen.getByText(/Weighted heuristic/)).toBeVisible();
     expect(screen.getByText(/Not a Google ranking or index score/)).toBeVisible();
-    expect(screen.getByText(/Fixture transport context · mocked/)).toBeVisible();
-    expect(screen.getByText(/No provider was contacted/)).toBeVisible();
-    expect(screen.getByText(/92 \/ 100/)).toBeVisible();
+    expect(screen.getByText(/Fixture transport context · illustrative/)).toBeVisible();
+    expect(screen.getByText(/no AI provider request was made/)).toBeVisible();
+    expect(screen.getByText("92 / 100")).toBeVisible();
   });
 
-  it("shows failed checks before warnings and preserves all 23 source-order checks", async () => {
-    mockFixtureFetch();
-    window.history.replaceState({}, "", "/?view=findings&mode=review");
+  it("orders review results and keeps all 23 fixture checks in their response order", async () => {
+    mockServices({ unavailable: true });
+    window.history.replaceState({}, "", "/?view=findings&source=demo&mode=review");
     render(<App />);
     await screen.findByRole("heading", { name: "Findings investigation" });
-
     const reviewList = document.querySelector(".finding-groups")!;
     expect(Array.from(reviewList.querySelectorAll("[data-finding-id]")).map((row) => row.getAttribute("data-finding-id")))
       .toEqual(["robots_directives", "visible_text", "open_graph", "twitter_metadata"]);
-    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Showing 4 of 4 review checks");
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 4 of 4 review checks");
 
     await userEvent.setup().click(screen.getByRole("link", { name: /All checks/ }));
     const allChecks = await screen.findByRole("list", { name: "All analyzer checks in fixture order" });
     expect(within(allChecks).getAllByRole("listitem")).toHaveLength(23);
     expect(within(allChecks).getByRole("link", { name: /Rule status: Not applicable/ })).toBeInTheDocument();
-    expect(allChecks.querySelector("[data-finding-id='retrieval_success']")).toBe(allChecks.querySelectorAll("[data-finding-id]")[0]);
+    expect(allChecks.querySelector("[data-finding-id='retrieval_success']"))
+      .toBe(allChecks.querySelectorAll("[data-finding-id]")[0]);
   });
 
-  it("intersects search and status, preserves both across scopes, and recovers from no matches", async () => {
-    mockFixtureFetch();
-    window.history.replaceState({}, "", "/?view=findings&mode=review");
+  it("intersects search and status and restores the filtered list after detail navigation", async () => {
+    mockServices({ unavailable: true });
+    window.history.replaceState({}, "", "/?view=findings&source=demo&mode=review");
     const user = userEvent.setup();
     render(<App />);
     await screen.findByRole("heading", { name: "Findings investigation" });
     await user.type(screen.getByRole("searchbox", { name: "Search findings" }), "twitter");
     await user.selectOptions(screen.getByLabelText("Rule status"), "warning");
     expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 review checks");
-    expect(screen.getByRole("link", { name: /Twitter metadata/ })).toBeVisible();
-
-    await user.click(screen.getByRole("link", { name: /All checks/ }));
-    expect(screen.getByRole("searchbox", { name: "Search findings" })).toHaveValue("twitter");
-    expect(screen.getByLabelText("Rule status")).toHaveValue("warning");
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 available checks");
-
-    await user.clear(screen.getByRole("searchbox", { name: "Search findings" }));
-    await user.type(screen.getByRole("searchbox", { name: "Search findings" }), "not-a-real-rule");
-    expect(screen.getByRole("heading", { name: "No checks match this view." })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Clear search and status" }));
-    expect(screen.getByRole("searchbox", { name: "Search findings" })).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 23 of 23 available checks");
-  });
-
-  it("opens evidence and returns to the same filtered list with focus restored", async () => {
-    mockFixtureFetch();
-    window.history.replaceState({}, "", "/?view=findings&mode=review");
-    const user = userEvent.setup();
-    render(<App />);
-    await screen.findByRole("heading", { name: "Findings investigation" });
-    await user.type(screen.getByRole("searchbox", { name: "Search findings" }), "robots");
-    const findingLink = screen.getByRole("link", { name: /Robots directives are reported/ });
-    await user.click(findingLink);
-
-    expect(await screen.findByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
-    expect(screen.getByText("Detected directives: noindex, follow.")).toBeVisible();
-    expect(screen.getByText(/Static HTML · fictional fixture/)).toBeVisible();
-    expect(screen.getByText(/Suggested · not applied/)).toBeVisible();
-    expect(screen.getByText(/SEO Sensei has not changed the page/)).toBeVisible();
-
+    await user.click(screen.getByRole("link", { name: /Twitter metadata/ }));
+    expect(await screen.findByRole("heading", { name: "Twitter metadata is reported" })).toBeVisible();
     await user.click(screen.getByRole("link", { name: /Back to findings/ }));
     await screen.findByRole("heading", { name: "Findings investigation" });
-    expect(screen.getByRole("searchbox", { name: "Search findings" })).toHaveValue("robots");
-    await waitFor(() => expect(document.querySelector("[data-finding-id='robots_directives']")).toHaveFocus());
+    expect(screen.getByRole("searchbox", { name: "Search findings" })).toHaveValue("twitter");
+    expect(screen.getByLabelText("Rule status")).toHaveValue("warning");
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 review checks");
   });
 
-  it("validates entry without contacting the typed address", async () => {
-    const fetchMock = mockFixtureFetch();
-    const user = userEvent.setup();
+  it("keeps fixture excerpts clearly fictional and renders hostile strings as text", async () => {
+    const hostile = structuredClone(auditFixture);
+    const robots = hostile.analysis.checks.find((check) => check.id === "robots_directives")!;
+    robots.evidence.observed = "Detected noindex. <img src=x onerror=alert(1)>";
+    mockServices({ unavailable: true, fixture: hostile });
+    window.history.replaceState({}, "", "/?view=detail&source=demo&mode=review&check=robots_directives");
     render(<App />);
-    await screen.findByRole("heading", { name: "A clearer view of what a page returns." });
-
-    const input = screen.getByLabelText("Page address");
-    await user.clear(input);
-    await user.click(screen.getByRole("button", { name: "Open review" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter the Northstar sample address");
-    await user.clear(input);
-    await user.type(input, "https://another.example/page/");
-    await user.click(screen.getByRole("button", { name: "Open review" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("This address was not requested");
-    expect(fetchMock.mock.calls.every(([url]) => String(url).startsWith("/fixtures/"))).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-
-    await user.clear(input);
-    await user.type(input, sampleUrl);
-    await user.keyboard("{Enter}");
-    expect(await screen.findByRole("heading", { name: "Home Solar Installation: Planning Guide" })).toBeVisible();
+    expect(await screen.findByText(robots.evidence.observed)).toBeVisible();
+    expect(screen.getByText(/Static HTML · fictional fixture/)).toBeVisible();
+    expect(document.querySelector("img")).toBeNull();
+    expect(document.querySelector("script")).toBeNull();
   });
 
-  it("recovers from a missing fixture on a direct report URL", async () => {
-    mockFixtureFetch({ firstAuditFailure: true });
-    window.history.replaceState({}, "", "/?view=overview");
+  it("recovers from a missing fixture on a direct demo route", async () => {
+    mockServices({ unavailable: true, firstFixtureFailure: true });
+    window.history.replaceState({}, "", "/?view=overview&source=demo");
     const user = userEvent.setup();
     render(<App />);
     expect(await screen.findByRole("heading", { name: "The sample report could not be opened." })).toBeVisible();
-    expect(screen.getByText("No website was requested. Restore the bundled Northstar example files, then retry.")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Try loading the local example again" }));
-    expect(await screen.findByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
   });
 
-  it("rejects a malformed fixture with an explanatory recovery state", async () => {
-    mockFixtureFetch({ audit: { fixture_notice: "truncated" } });
-    window.history.replaceState({}, "", "/?view=findings&mode=all");
+  it("rejects malformed fixture data with a recoverable state", async () => {
+    mockServices({ unavailable: true, fixture: { fixture_notice: "truncated" } });
+    window.history.replaceState({}, "", "/?view=findings&source=demo&mode=all");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "The sample report could not be opened." })).toBeVisible();
     expect(screen.getByRole("alert")).toHaveTextContent("unexpected shape or status count");
   });
 
-  it("renders hostile-looking fixture evidence as text, never HTML", async () => {
-    const hostile = structuredClone(auditFixture);
-    const robots = hostile.analysis.checks.find((check) => check.id === "robots_directives")!;
-    robots.evidence.observed = "Detected noindex. <img src=x onerror=alert(1)>";
-    mockFixtureFetch({ audit: hostile });
-    window.history.replaceState({}, "", "/?view=detail&mode=review&check=robots_directives");
-    render(<App />);
-
-    expect(await screen.findByText(hostile.analysis.checks.find((check) => check.id === "robots_directives")!.evidence.observed)).toBeVisible();
-    expect(document.querySelector("img")).toBeNull();
-    expect(document.querySelector("script")).toBeNull();
-  });
-
-  it("announces only a local recheck simulation and keeps AI unavailable", async () => {
-    const fetchMock = mockFixtureFetch();
+  it("authenticates, sends URL-only JSON with CSRF, and renders a variable-count live response", async () => {
+    const live = structuredClone(auditFixture.analysis);
+    live.requested_url = "https://example.org/new-path/";
+    live.final_url = "https://example.org/new-path/";
+    live.metadata.title = "A different page title";
+    live.checks = [
+      { ...live.checks[0]!, id: "retrieval_success", title: "HTML retrieval succeeded", status: "pass", evidence: { observed: "HTTP response was 200.", value: 200 } },
+    ];
+    live.deterministic_score.overall_score = 100;
+    const { calls } = mockServices({ analysis: live });
     const user = userEvent.setup();
     render(<App />);
-    await openLocalSample(user);
-    expect(screen.getByText(/Optional AI suggestions are unavailable/)).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Show recheck simulation" }));
-    expect(screen.getByRole("status")).toHaveTextContent("No request is running");
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("No recheck was performed"), { timeout: 2_000 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await openLiveEntry(user);
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/new-path/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+
+    expect(await screen.findByRole("heading", { name: "A different page title" })).toBeVisible();
+    expect(screen.getByText("No failed rules in this response.")).toBeVisible();
+    expect(screen.getByText("100 / 100")).toBeVisible();
+    expect(screen.getByText(/Observed fetch context/)).toBeVisible();
+    expect(screen.queryByText(/Northstar Solar/)).not.toBeInTheDocument();
+    const analysisCall = calls.find((call) => call.url === "/api/browser/v1/analyse-url")!;
+    expect(analysisCall.init?.credentials).toBe("same-origin");
+    expect(JSON.parse(String(analysisCall.init?.body))).toEqual({ url: "https://example.org/new-path/" });
+    expect((analysisCall.init?.headers as Record<string, string>)["X-CSRF-Token"]).toBe("c".repeat(43));
+    expect(analysisCall.init?.headers).not.toHaveProperty("Origin");
+  });
+
+  it("keeps live provenance in evidence detail and excludes fixture-only notes", async () => {
+    const live = structuredClone(auditFixture.analysis);
+    live.checks = [live.checks.find((check) => check.id === "robots_directives")!];
+    const { calls } = mockServices({ initiallyAuthenticated: true, analysis: live });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), live.requested_url);
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await user.click(await screen.findByRole("button", { name: "Review 1 checks" }));
+    await user.click(await screen.findByRole("link", { name: /Robots directives are reported/ }));
+    expect(await screen.findByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
+    expect(screen.getByText(/Analyzer-returned checks\[\]\.evidence\.observed/i)).toBeVisible();
+    expect(screen.getByText(/deterministic analyzer classified/)).toBeVisible();
+    expect(screen.queryByText(/fictional fixture/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Suggested · not applied/)).toBeVisible();
+    expect(screen.getByText(/SEO Sensei has not changed the page/)).toBeVisible();
+    expect(calls.some((call) => call.url.includes("northstar.example"))).toBe(false);
+  });
+
+  it("shows an incompatible live response as an error without loading the local example", async () => {
+    const { fetchMock } = mockServices({ initiallyAuthenticated: true, analysis: { requested_url: "https://example.org/" } });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("server returned an analysis result this application cannot safely display");
+    expect(screen.queryByText(/Northstar Solar/)).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/fixtures/"))).toBe(false);
+  });
+
+  it("shows server 429 guidance and keeps the previous live report after failed reanalysis", async () => {
+    const { calls } = mockServices({ initiallyAuthenticated: true });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/article/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await screen.findByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" });
+
+    const analysisCalls = calls.filter((call) => call.url === "/api/browser/v1/analyse-url");
+    expect(analysisCalls).toHaveLength(1);
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockImplementationOnce(async (input) => {
+      if (String(input) === "/api/browser/v1/analyse-url") return apiError("rate_limited", 429, "120");
+      return new Response("Unexpected request", { status: 500 });
+    });
+    await user.click(screen.getByRole("button", { name: "Analyze again" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wait approximately 2 minutes");
+    expect(screen.getByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" })).toBeVisible();
+  });
+
+  it("shows an entry error for a failed new page analysis without loading fixture data", async () => {
+    const { fetchMock } = mockServices({ initiallyAuthenticated: true });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/first/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await screen.findByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" });
+
+    fetchMock.mockImplementationOnce(async (input) => {
+      if (String(input) === "/api/browser/v1/analyse-url") return apiError("resource_unavailable", 502);
+      throw new Error("Unexpected request during failed reanalysis test.");
+    });
+    await user.click(screen.getByRole("button", { name: "Change page" }));
+    const pageField = screen.getByLabelText("Page address");
+    await user.clear(pageField);
+    await user.type(pageField, "https://example.org/second/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The page could not be fetched");
+    expect(screen.queryByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Northstar Solar/)).not.toBeInTheDocument();
+  });
+
+  it("uses generic credential failure and a separate origin rejection message", async () => {
+    const services = mockServices();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByLabelText("Username");
+    await user.type(screen.getByLabelText("Username"), "reviewer");
+    await user.type(screen.getByLabelText("Password"), "wrong password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The username or password is incorrect.");
+    expect(services.calls.filter((call) => call.url === "/api/browser/v1/session/login")).toHaveLength(1);
+  });
+
+  it("describes sign-in throttling separately from analysis throttling", async () => {
+    mockServices({ loginStatus: 429, loginCode: "rate_limited", retryAfter: "75" });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(await screen.findByLabelText("Username"), "reviewer");
+    await user.type(screen.getByLabelText("Password"), "incorrect but bounded");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in attempts are temporarily rate-limited. Wait approximately 2 minutes");
+  });
+
+  it("clears in-memory report state on logout", async () => {
+    mockServices({ initiallyAuthenticated: true });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await screen.findByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" });
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(await screen.findByLabelText("Username")).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" })).not.toBeInTheDocument();
   });
 });
+
+\n

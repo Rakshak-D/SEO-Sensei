@@ -74,6 +74,26 @@ export const seoAnalysisSchema = z.object({
 });
 export type SeoAnalysis = z.infer<typeof seoAnalysisSchema>;
 
+// Live API responses use the same analyzer fields, but metadata is not a
+// presentation prerequisite. Keep this parser independent of the fixture
+// wrapper and its Northstar-specific invariants.
+export const liveSeoAnalysisSchema = seoAnalysisSchema.extend({
+  metadata: z.object({ title: z.string().max(500).optional() }).optional(),
+}).superRefine((analysis, context) => {
+  const ids = new Set<string>();
+  analysis.checks.forEach((check, index) => {
+    if (ids.has(check.id)) {
+      context.addIssue({
+        code: "custom",
+        message: "Finding identifiers must be unique.",
+        path: ["checks", index, "id"],
+      });
+    }
+    ids.add(check.id);
+  });
+});
+export type LiveSeoAnalysis = z.infer<typeof liveSeoAnalysisSchema>;
+
 const reviewNoteSchema = z.object({
   why_it_matters: z.string().max(2_000).optional(),
   fix: z.string().max(2_000).optional(),

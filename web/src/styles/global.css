@@ -48,6 +48,18 @@ a:hover { color: var(--accent-hover); }
   font-size: 14px;
 }
 .masthead-source { margin-left: auto; color: var(--muted); font-size: 13px; }
+.masthead-user { color: var(--ink-soft); font-size: 13px; font-weight: 650; }
+.masthead-action {
+  min-height: 40px;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+.masthead-action:hover { background: var(--surface-muted); color: var(--accent-hover); }
 .page-shell { min-height: calc(100vh - 112px); padding: var(--space-5) 0 var(--space-10); }
 .site-footer {
   display: flex;
@@ -110,6 +122,10 @@ a:hover { color: var(--accent-hover); }
   .wordmark-sensei { font-size: 21px; }
   .masthead-purpose { padding-left: var(--space-3); font-size: 13px; }
   .masthead-source { font-size: 12px; }
+  .masthead-authenticated { min-height: auto; flex-wrap: wrap; padding: 6px 0; }
+  .masthead-authenticated .masthead-source { display: none; }
+  .masthead-authenticated .masthead-user { margin-left: auto; }
+  .masthead-authenticated .masthead-action { min-height: 40px; padding: 4px 8px; }
   .page-shell { min-height: calc(100vh - 108px); padding-top: 14px; }
   .site-footer { flex-direction: column; gap: 4px; font-size: 12px; }
 }
@@ -123,4 +139,8 @@ a:hover { color: var(--accent-hover); }
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
+}
+
+@media (max-width: 360px) {
+  .masthead-authenticated .masthead-purpose { display: none; }
 }

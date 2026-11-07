@@ -54,10 +54,14 @@ extension, then configure its API origin and token through the options page.
 ## Isolated browser-auth testing
 
 Browser authentication is disabled by default and should remain disabled in
-shared or deployed environments until its later integration review. This
-milestone provides login, session bootstrap, and logout only; it does not make
-URL analysis or any other bearer route available to browser sessions. Keep
-`API_ACCESS_TOKEN` server-side and do not place it in a browser bundle.
+shared or deployed environments until its later integration review. When
+explicitly enabled for an isolated single-process demonstration, the browser
+session can use `POST /api/browser/v1/analyse-url` for deterministic analysis.
+That route accepts only a URL, requires HTTPS, exact Origin and CSRF checks,
+and uses bounded process-local request and concurrency budgets. It does not
+call Gemini. It does not grant browser sessions access to the legacy bearer
+routes. Keep `API_ACCESS_TOKEN` server-side and do not place it in a browser
+bundle.
 
 For an isolated test, create a protected account directory outside the
 repository, provision an individual account, and run the API with an HTTPS
@@ -90,8 +94,13 @@ forwarded headers from direct clients.
 
 The current Caddy/Compose configuration does not route or enable this browser
 authentication flow. Do not infer a working browser-to-API deployment from a
-successful local API startup; same-origin routing, protected browser work
-endpoints, and end-to-end access control belong to later reviewed stages.
+successful local API startup; same-origin routing, real HTTPS proxy behavior,
+and authenticated browser-to-FastAPI end-to-end operation belong to a later
+reviewed stage. The new analysis route alone enforces its 4 KiB body cap on
+actual streamed bytes; the legacy routes still need application-level streamed
+body enforcement before public exposure. Browser sessions, analysis budgets,
+and active-work limits are process-local and do not support multiple workers
+or instances.
 
 ## CI expectations
 

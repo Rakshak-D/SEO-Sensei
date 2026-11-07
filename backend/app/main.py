@@ -28,7 +28,12 @@ from .api.errors import (
 from .ai.gemini import AIServiceError, GeminiService
 from .ai.models import AIRecommendationState, AIRecommendationsResult
 from .api.auth import require_auth
-from .api.browser_auth import BrowserAuthRuntime, router as browser_auth_router
+from .api.browser_auth import (
+    BrowserAuthRuntime,
+    BrowserNamespaceOriginMiddleware,
+    router as browser_auth_router,
+)
+from .api.browser_analysis import router as browser_analysis_router
 from .api.observability import request_context
 from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
@@ -37,6 +42,7 @@ from .metrics import Metrics
 from .schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnalysisRequest
 from .schemas.responses import ArticleGenerationResponse, HealthResponse, SEOBoostResponse, URLAnalysisResponse
 from .security.fetcher import SafeFetcher
+from .security.browser_analysis_limits import BrowserAnalysisLimits
 from .seo.models import SEOAnalysis
 
 
@@ -52,6 +58,7 @@ async def lifespan(application: FastAPI):
     application.state.metrics = metrics
     if settings.browser_auth_enabled:
         application.state.browser_auth = BrowserAuthRuntime.from_settings(settings)
+        application.state.browser_analysis_limits = BrowserAnalysisLimits()
     application.state.safe_fetcher = SafeFetcher(settings, metrics=metrics)
     application.state.rate_limiter = InMemoryRateLimiter(settings)
     application.state.gemini_service = None
@@ -78,6 +85,7 @@ app = FastAPI(
 app.state.settings = settings
 if settings.browser_auth_enabled:
     app.include_router(browser_auth_router)
+    app.include_router(browser_analysis_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -86,6 +94,14 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
+
+if settings.browser_auth_enabled:
+    # This path-specific guard wraps global CORS so a legacy extension origin
+    # cannot read browser session bootstrap data through credentialed CORS.
+    app.add_middleware(
+        BrowserNamespaceOriginMiddleware,
+        allowed_origin=settings.browser_app_origin or "",
+    )
 
 
 class RequestContextMiddleware:
@@ -112,11 +128,14 @@ class RequestContextMiddleware:
             except ValueError:
                 too_large = True
             if too_large:
+                error_code = (
+                    "request_too_large" if scope.get("path") == "/api/browser/v1/analyse-url" else "invalid_request"
+                )
                 response = JSONResponse(
                     status_code=413,
                     content={
                         "error": {
-                            "code": "invalid_request",
+                            "code": error_code,
                             "message": "Request body is too large.",
                             "request_id": request_id,
                         }

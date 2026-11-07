@@ -166,9 +166,9 @@ export function App() {
   const analysisActive = useRef(false);
   const logoutActive = useRef(false);
 
-  const setLiveReport = useCallback((next: AnalysisReport | null) => {
-    reportRef.current = next;
-    setReport(next);
+  const setLiveReport = useCallback((liveReport: AnalysisReport | null) => {
+    reportRef.current = liveReport;
+    setReport(liveReport);
   }, []);
 
   const invalidateAuthContext = useCallback(() => {

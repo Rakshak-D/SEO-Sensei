@@ -76,8 +76,7 @@ if [[ "${UPDATE_SOURCE}" == "true" ]]; then
 fi
 
 "${COMPOSE[@]}" config --quiet
-"${COMPOSE[@]}" pull caddy
-"${COMPOSE[@]}" build --pull api dashboard
+"${COMPOSE[@]}" build --pull api dashboard caddy
 "${COMPOSE[@]}" up -d --remove-orphans
 
 wait_for_health api
@@ -90,7 +89,7 @@ if [[ "${VERIFY_PUBLIC_URLS}" == "true" ]]; then
     [[ -n "${api_domain}" && -n "${app_domain}" ]] || fail "public domains are not configured"
     curl --fail --silent --show-error --location --max-time 20 "https://${api_domain}/health" >/dev/null
     curl --fail --silent --show-error --location --max-time 20 "https://${app_domain}/" >/dev/null
-    printf 'Public API and dashboard checks passed.\n'
+    printf 'Public API and web app checks passed.\n'
 fi
 
 "${COMPOSE[@]}" ps

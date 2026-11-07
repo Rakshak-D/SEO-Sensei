@@ -14,7 +14,8 @@ def test_deployment_helper_is_secret_safe_and_idempotent() -> None:
     assert "set -x" not in script
     assert "docker compose" in script
     assert "config --quiet" in script
-    assert "build --pull api dashboard" in script
+    assert "build --pull api dashboard caddy" in script
+    assert "pull caddy" not in script
     assert "wait_for_health" in script
     assert "chmod 600" in script
     assert "echo $" not in script

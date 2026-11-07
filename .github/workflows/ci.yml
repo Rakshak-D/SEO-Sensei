@@ -75,10 +75,17 @@ jobs:
           -e ACME_EMAIL=ops@example.com
           -v "${{ github.workspace }}/Caddyfile:/etc/caddy/Caddyfile:ro"
           caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Validate local HTTPS Caddy configuration
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}/Caddyfile.integration:/etc/caddy/Caddyfile:ro"
+          caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Build API image
         run: docker build --file Dockerfile.api --tag seo-sensei-api:ci .
       - name: Build dashboard image
         run: docker build --file Dockerfile.dashboard --tag seo-sensei-dashboard:ci .
+      - name: Build static web and Caddy image
+        run: docker build --file Dockerfile.web --tag seo-sensei-web:ci .
 
   frontend:
     runs-on: ubuntu-latest
@@ -108,3 +115,89 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser and accessibility checks
         run: npm run test:e2e
+
+  authenticated-integration:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: seo-sensei-phase2d-ci
+      PHASE2D_TEST_USERNAME: phase2d-reviewer
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Create disposable integration password
+        run: echo "PHASE2D_TEST_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Validate isolated Compose configuration
+        run: docker compose -f compose.integration.yaml config --quiet
+      - name: Start loopback HTTPS integration stack
+        run: docker compose -f compose.integration.yaml up --build --detach --wait --wait-timeout 180
+      - name: Install temporary Caddy root certificate
+        run: |
+          docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/seo-sensei-phase2d-root.crt
+          sudo install -m 0644 /tmp/seo-sensei-phase2d-root.crt /usr/local/share/ca-certificates/seo-sensei-phase2d.crt
+          sudo update-ca-certificates
+          sudo apt-get update
+          sudo apt-get install --yes libnss3-tools
+          mkdir -p "$HOME/.pki/nssdb"
+          if [[ ! -f "$HOME/.pki/nssdb/cert9.db" ]]; then
+            certutil -N --empty-password -d "sql:$HOME/.pki/nssdb"
+          fi
+          certutil -A -d "sql:$HOME/.pki/nssdb" -n "SEO Sensei Phase 2D Caddy Root" -t "C,," -i /tmp/seo-sensei-phase2d-root.crt
+          certutil -L -d "sql:$HOME/.pki/nssdb" | grep -F "SEO Sensei Phase 2D Caddy Root"
+          echo "NODE_EXTRA_CA_CERTS=/tmp/seo-sensei-phase2d-root.crt" >> "$GITHUB_ENV"
+      - name: Verify extension CORS and protected legacy route
+        run: |
+          api_host=seo-sensei-api.localhost
+          extension_origin=chrome-extension://abcdefghijklmnopabcdefghijklmnop
+          preflight_headers=$(mktemp)
+          preflight_status=$(curl --silent --show-error --resolve "$api_host:8443:127.0.0.1" --cacert /tmp/seo-sensei-phase2d-root.crt \
+            --output /dev/null --dump-header "$preflight_headers" --write-out '%{http_code}' --request OPTIONS \
+            --header "Origin: $extension_origin" --header 'Access-Control-Request-Method: POST' \
+            --header 'Access-Control-Request-Headers: authorization,content-type' "https://$api_host:8443/analyse-url")
+          test "$preflight_status" = 200
+          grep -F "access-control-allow-origin: $extension_origin" "$preflight_headers" -i
+          app_host=seo-sensei.localhost
+          origin_body=$(mktemp)
+          origin_status=$(curl --silent --show-error --resolve "$app_host:8443:127.0.0.1" --cacert /tmp/seo-sensei-phase2d-root.crt \
+            --output "$origin_body" --write-out '%{http_code}' --request POST --header 'Origin: https://attacker.example' \
+            --header 'Content-Type: application/json' --data '{"url":"https://phase2d.test/pages/noindex"}' "https://$app_host:8443/api/browser/v1/analyse-url")
+          test "$origin_status" = 403
+          grep -F '"code":"origin_rejected"' "$origin_body"
+          legacy_status=$(curl --silent --show-error --resolve "$api_host:8443:127.0.0.1" --cacert /tmp/seo-sensei-phase2d-root.crt \
+            --output /dev/null --write-out '%{http_code}' --request POST --header "Origin: $extension_origin" \
+            --header 'Content-Type: application/json' --data '{}' "https://$api_host:8443/analyse-url")
+          test "$legacy_status" = 401
+          api_id=$(docker compose ps -q api)
+          published_ports=$(docker inspect --format '{{json .NetworkSettings.Ports}}' "$api_id")
+          if [[ "$published_ports" == *'"HostPort"'* ]]; then
+            echo 'The integration API unexpectedly has a published host port.'
+            exit 1
+          fi
+      - name: Run authenticated browser-to-API HTTPS tests
+        working-directory: web
+        run: npm run test:e2e:integration
+      - name: Upload authenticated integration screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-2d-authenticated-integration-evidence
+          path: web/review/evidence/phase-2d/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Stop isolated stack and remove temporary CA trust
+        if: always()
+        run: |
+          docker compose -f compose.integration.yaml down --volumes --remove-orphans
+          sudo rm -f /usr/local/share/ca-certificates/seo-sensei-phase2d.crt /tmp/seo-sensei-phase2d-root.crt
+          sudo update-ca-certificates

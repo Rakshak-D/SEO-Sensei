@@ -1,21 +1,54 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const sampleAddress = "https://northstar.example/guides/home-solar/";
 
-test("supports direct report routes, keyboard activation, history, and focus restoration", async ({ page }) => {
+async function installAnonymousSession(page: Page) {
+  await page.route("**/api/browser/v1/session", async (route) => {
+    await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({
+      error: { code: "auth_required", message: "A valid browser session is required.", request_id: "e2e-session" },
+    }) });
+  });
+}
+
+async function installAuthenticatedSession(page: Page) {
+  await page.route("**/api/browser/v1/session", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      authenticated: true, user: { username: "test-reviewer" }, csrf_token: "c".repeat(43),
+    }) });
+  });
+  await page.route("**/api/browser/v1/analyse-url", async (route) => {
+    await route.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({
+      error: { code: "invalid_url", message: "The requested URL is invalid.", request_id: "e2e-analysis" },
+    }) });
+  });
+}
+
+async function showLocalExample(page: Page) {
+  await page.getByRole("button", { name: "Open local example" }).click();
+  await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
+}
+
+test("supports demo navigation, keyboard focus, filter state, and browser history", async ({ page }) => {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
-  const externalRequests: string[] = [];
+  const unexpectedRequests: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  page.on("request", (request) => {
-    if (new URL(request.url()).origin !== "http://127.0.0.1:4173") externalRequests.push(request.url());
+  page.on("console", (message) => {
+    // The anonymous session bootstrap intentionally returns a protected 401;
+    // Chromium reports failed HTTP resources as console errors despite the UI handling it.
+    if (message.type() === "error" && !/responded with a status of 401 \(Unauthorized\)/.test(message.text())) {
+      consoleErrors.push(message.text());
+    }
   });
+  page.on("request", (request) => {
+    if (new URL(request.url()).origin !== "http://127.0.0.1:4173") unexpectedRequests.push(request.url());
+  });
+  await installAnonymousSession(page);
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/?view=entry");
-  await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to review" })).toBeFocused();
   expect(await page.getByRole("link", { name: "Skip to review" }).evaluate((element) => getComputedStyle(element).outlineWidth)).toBe("3px");
@@ -23,12 +56,10 @@ test("supports direct report routes, keyboard activation, history, and focus res
   await expect(page.locator(".wordmark")).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(page.getByRole("link", { name: "Skip to review" })).toBeFocused();
-
-  const url = page.getByLabel("Page address");
-  await url.fill(sampleAddress);
-  await url.press("Enter");
-  await expect(page.getByRole("heading", { name: "Home Solar Installation: Planning Guide" })).toBeFocused();
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
+  await page.getByRole("button", { name: "Open local example" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main h1")).toBeFocused();
+  await expect(page.getByText(/Fictional local example · static HTML fixture/)).toBeVisible();
 
   await page.getByRole("link", { name: /Findings/ }).focus();
   await page.keyboard.press("Enter");
@@ -51,50 +82,37 @@ test("supports direct report routes, keyboard activation, history, and focus res
   await expect(page.locator("[data-finding-id='robots_directives']")).toBeFocused();
   await page.goForward();
   await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
-  await page.getByRole("link", { name: /Back to findings/ }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Findings investigation" })).toBeVisible();
   await expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
-  expect(externalRequests).toEqual([]);
+  expect(unexpectedRequests).toEqual([]);
+  expect(page.url()).not.toContain(encodeURIComponent(sampleAddress));
 });
 
-test("keeps local-only entry behavior, sample activation, simulated recheck, and reduced motion", async ({ page }) => {
-  const requested: string[] = [];
-  page.on("request", (request) => requested.push(request.url()));
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
-  const url = page.getByLabel("Page address");
-  await url.fill("https://elsewhere.example/page/");
-  await url.press("Enter");
-  await expect(page.getByRole("alert")).toContainText("This address was not requested");
-  expect(requested.some((item) => item.includes("elsewhere.example"))).toBe(false);
-
-  const sampleButton = page.getByRole("button", { name: "Open local sample" });
-  await sampleButton.focus();
-  await page.keyboard.press("Space");
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
-  await expect(page.getByText(/Optional AI suggestions are unavailable/)).toBeVisible();
-  await page.getByRole("button", { name: "Show recheck simulation" }).focus();
-  await page.keyboard.press("Space");
-  await expect(page.getByRole("status")).toContainText("No request is running");
-  await expect(page.getByRole("status")).toContainText("No recheck was performed", { timeout: 2_000 });
-  await page.getByRole("button", { name: "Change page" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
-  await page.getByRole("button", { name: "Open local sample" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
+test("uses the protected API for live submission and keeps the local example explicitly separate", async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).origin !== "http://127.0.0.1:4173") externalRequests.push(request.url());
+  });
+  await installAuthenticatedSession(page);
+  await page.goto("/?view=entry");
+  await expect(page.getByRole("heading", { name: "Inspect what a page returns." })).toBeVisible();
+  await page.getByLabel("Page address").fill("https://not-contacted.example/page/");
+  await page.getByLabel("Page address").press("Enter");
+  await expect(page.getByRole("alert")).toContainText("Enter a valid page address");
+  expect(externalRequests).toEqual([]);
+  await showLocalExample(page);
+  await expect(page.getByText(/Fictional local example/)).toBeVisible();
+  expect(page.url()).toContain("source=demo");
+  expect(page.url()).not.toContain(encodeURIComponent("https://not-contacted.example/page/"));
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await page.locator("html").evaluate((element) => getComputedStyle(element).scrollBehavior)).toBe("auto");
-  expect(requested.every((item) => new URL(item).origin === "http://127.0.0.1:4173")).toBe(true);
 });
 
-test("handles unavailable fixture on a direct detail route and retries without leaving the route", async ({ page }) => {
+test("recovers from an unavailable fixture on a direct demo-detail route", async ({ page }) => {
+  await installAnonymousSession(page);
   await page.route("**/fixtures/audit.json", (route) => route.abort("failed"));
-  await page.goto("/?view=detail&mode=review&check=robots_directives");
+  await page.goto("/?view=detail&source=demo&mode=review&check=robots_directives");
   await expect(page.getByRole("heading", { name: "The sample report could not be opened." })).toBeVisible();
   await expect(page.getByText("No website was requested. Restore the bundled Northstar example files, then retry.")).toBeVisible();
   await page.unroute("**/fixtures/audit.json");
@@ -103,13 +121,14 @@ test("handles unavailable fixture on a direct detail route and retries without l
   await expect(page).toHaveURL(/view=detail/);
 });
 
-test("has no automated axe violations on the principal entry and finding views", async ({ page }) => {
+test("has no automated axe violations on sign-in and local report views", async ({ page }) => {
+  await installAnonymousSession(page);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
-  const entryResults = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
-  expect(entryResults.violations).toEqual([]);
+  await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
+  const loginResults = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  expect(loginResults.violations).toEqual([]);
 
-  await page.getByRole("button", { name: "Open local sample" }).click();
+  await showLocalExample(page);
   const overviewResults = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(overviewResults.violations).toEqual([]);
   await page.getByRole("link", { name: /Findings/ }).click();
@@ -120,65 +139,37 @@ test("has no automated axe violations on the principal entry and finding views",
   expect(detailResults.violations).toEqual([]);
 });
 
-test("captures the required real-browser review screenshots", async ({ page }) => {
+test("captures demo and authentication browser review screenshots", async ({ page }) => {
   const pageErrors: string[] = [];
-  const externalRequests: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("request", (request) => {
-    if (new URL(request.url()).origin !== "http://127.0.0.1:4173") externalRequests.push(request.url());
-  });
-
+  await installAnonymousSession(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/?view=entry");
-  await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/desktop-entry-1440x900.png" });
-
-  await page.getByRole("button", { name: "Open local sample" }).click();
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/desktop-overview-1440x900.png" });
+  await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
+  await page.screenshot({ path: "review/evidence/phase-2d/login-1440x900.png", fullPage: true });
+  await showLocalExample(page);
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-overview-1440x900.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "review/evidence/mobile-overview-390x844.png" });
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-overview-390x844.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("link", { name: /Findings/ }).click();
-  await expect(page.getByRole("heading", { name: "Findings investigation" })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/desktop-needs-review-1440x900.png" });
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "review/evidence/mobile-needs-review-390x844.png" });
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-findings-1440x900.png", fullPage: true });
   await page.getByRole("link", { name: /All checks/ }).click();
-  await page.screenshot({ path: "review/evidence/desktop-all-checks-1440x900.png" });
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("link", { name: /Robots directives are reported/ }).click();
-  await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/desktop-evidence-1440x900.png" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "review/evidence/mobile-evidence-390x844.png" });
-
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-all-checks-1440x900.png", fullPage: true });
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.getByRole("link", { name: /Back to findings/ }).click();
-  await page.getByRole("link", { name: /All checks/ }).click();
   await expect(page.getByRole("list", { name: "All analyzer checks in fixture order" })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/findings-320x844.png" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-findings-320x844.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("**/fixtures/audit.json", (route) => route.abort("failed"));
-  await page.goto("/?view=overview");
-  await expect(page.getByRole("heading", { name: "The sample report could not be opened." })).toBeVisible();
-  await page.screenshot({ path: "review/evidence/fixture-error-390x844.png" });
-  await page.unroute("**/fixtures/audit.json");
-  await page.getByRole("button", { name: "Try loading the local example again" }).click();
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
-
+  await page.getByRole("link", { name: /Robots directives are reported/ }).click();
+  await page.screenshot({ path: "review/evidence/phase-2d/demo-evidence-390x844.png", fullPage: true });
   expect(pageErrors).toEqual([]);
-  expect(externalRequests).toEqual([]);
 });
 
-test("has no horizontal overflow at 390px and 320px in each report view", async ({ page }) => {
-  await page.goto("/?view=overview");
-  await expect(page.getByRole("heading", { name: "A noindex directive is present." })).toBeVisible();
+test("has no horizontal overflow at narrow widths across report views", async ({ page }) => {
+  await installAnonymousSession(page);
+  await page.goto("/?view=overview&source=demo");
+  await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
@@ -187,8 +178,8 @@ test("has no horizontal overflow at 390px and 320px in each report view", async 
     await page.getByRole("link", { name: /Robots directives are reported/ }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await page.getByRole("button", { name: "Change page" }).click();
-    await expect(page.getByRole("heading", { name: "A clearer view of what a page returns." })).toBeVisible();
-    await page.getByRole("button", { name: "Open local sample" }).click();
+    await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
+    await page.getByRole("button", { name: "Open local example" }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
 });

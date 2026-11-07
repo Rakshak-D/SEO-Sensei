@@ -1,11 +1,12 @@
 import { StatusTag } from "../../components/StatusTag";
 import { SourceMarker } from "../../components/SourceMarker";
-import { categoryLabels, statusLabels, type CheckStatus, type LocalFixture, type SeoCheck } from "./schema";
+import { categoryLabels, statusLabels, type CheckStatus, type SeoCheck } from "./schema";
+import type { AnalysisReport } from "./report";
 import { routeSearch, type AppRoute, type StatusFilter } from "../../app/route";
 
 type IndexedCheck = { check: SeoCheck; sourceIndex: number };
 type Props = {
-  fixture: LocalFixture;
+  report: AnalysisReport;
   route: AppRoute;
   onRouteChange: (route: AppRoute, options?: { replace?: boolean; focus?: "heading" | "url" | "finding" | "error" | "search" }) => void;
   onOpenFinding: (check: SeoCheck) => void;
@@ -23,8 +24,15 @@ function rowHref(route: AppRoute, check: SeoCheck) {
   return routeSearch({ ...route, view: "detail", check: check.id });
 }
 
-function FindingRow({ route, check, onOpenFinding }: { route: AppRoute; check: SeoCheck; onOpenFinding: (check: SeoCheck) => void }) {
-  const sourceLabel = check.id === "robots_directives" ? "Source: static HTML directive" : "Source: analyzer evidence text";
+function FindingRow({ route, check, reportSource, onOpenFinding }: {
+  route: AppRoute;
+  check: SeoCheck;
+  reportSource: AnalysisReport["source"];
+  onOpenFinding: (check: SeoCheck) => void;
+}) {
+  const sourceLabel = reportSource === "demo" && check.id === "robots_directives"
+    ? "Fictional fixture · static HTML observation"
+    : reportSource === "demo" ? "Fixture-backed analyzer evidence" : "Analyzer-returned evidence text";
   return (
     <li className="finding-item">
       <a className="finding-open" href={rowHref(route, check)} data-finding-id={check.id}
@@ -43,9 +51,9 @@ function FindingRow({ route, check, onOpenFinding }: { route: AppRoute; check: S
   );
 }
 
-export function Findings({ fixture, route, onRouteChange, onOpenFinding }: Props) {
-  const source = fixture.analysis.checks;
-  const ordered = orderedChecks(source, route.mode);
+export function Findings({ report, route, onRouteChange, onOpenFinding }: Props) {
+  const checks = report.analysis.checks;
+  const ordered = orderedChecks(checks, route.mode);
   const scoped = ordered.filter(({ check }) => route.status === "all" || check.status === route.status);
   const query = route.q.trim().toLocaleLowerCase();
   const visible = scoped.filter(({ check }) => {
@@ -55,8 +63,8 @@ export function Findings({ fixture, route, onRouteChange, onOpenFinding }: Props
     return searchable.includes(query);
   });
   const modeCounts = {
-    review: source.filter((check) => check.status === "fail" || check.status === "warning").length,
-    all: source.length,
+    review: checks.filter((check) => check.status === "fail" || check.status === "warning").length,
+    all: checks.length,
   };
 
   const setRoute = (partial: Partial<AppRoute>) => onRouteChange({ ...route, ...partial }, { replace: true });
@@ -76,9 +84,9 @@ export function Findings({ fixture, route, onRouteChange, onOpenFinding }: Props
     <section className="view findings-view" aria-labelledby="findings-title">
       <div className="findings-heading">
         <div>
-          <p className="eyebrow">Deterministic rule results</p>
+          <p className="eyebrow">{report.source === "demo" ? "Fictional example · deterministic rule results" : "Deterministic rule results"}</p>
           <h1 id="findings-title" tabIndex={-1}>Findings investigation</h1>
-          <p className="findings-intro">{source.length} checks are included in this fixture. Search findings and use rule status to narrow the list.</p>
+          <p className="findings-intro">{checks.length} {checks.length === 1 ? "check is" : "checks are"} included in this response. Search findings and use rule status to narrow the list.</p>
         </div>
         <p className="status-semantics">Fail and warning are analyzer statuses. They are not severity, urgency, or business value.</p>
       </div>
@@ -99,7 +107,7 @@ export function Findings({ fixture, route, onRouteChange, onOpenFinding }: Props
       <p className="ordering-note">
         {route.mode === "review"
           ? "Failed rules appear first, followed by warnings. Order within each status follows the analyzer response."
-          : "All checks follow the fixture’s original response order, including pass and not-applicable results."}
+            : `All checks follow the ${report.source === "demo" ? "fixture’s" : "server’s"} original response order, including pass and not-applicable results.`}
       </p>
 
       <div className="filters">
@@ -142,18 +150,18 @@ export function Findings({ fixture, route, onRouteChange, onOpenFinding }: Props
                 <span>{group.checks.length} {group.checks.length === 1 ? "check" : "checks"} · rule outcome</span>
               </div>
               <ul className="finding-list" aria-label={statusLabels[group.status] + " checks"}>
-                {group.checks.map((check) => <FindingRow key={check.id} route={route} check={check} onOpenFinding={onOpenFinding} />)}
+                {group.checks.map((check) => <FindingRow key={check.id} route={route} check={check} reportSource={report.source} onOpenFinding={onOpenFinding} />)}
               </ul>
             </section>
           ))}
         </div>
       ) : (
-        <ul className="finding-list all-finding-list" aria-label={route.mode === "all" ? "All analyzer checks in fixture order" : "Filtered analyzer checks"}>
-          {visible.map(({ check }) => <FindingRow key={check.id} route={route} check={check} onOpenFinding={onOpenFinding} />)}
+        <ul className="finding-list all-finding-list" aria-label={route.mode === "all" ? `All analyzer checks in ${report.source === "demo" ? "fixture" : "response"} order` : "Filtered analyzer checks"}>
+          {visible.map(({ check }) => <FindingRow key={check.id} route={route} check={check} reportSource={report.source} onOpenFinding={onOpenFinding} />)}
         </ul>
       )}
 
-      <p className="findings-disclosure">Needs review includes failed and warning rules, in that order. All checks follows fixture order and includes pass and not-applicable results. Status does not represent severity or business priority.</p>
+      <p className="findings-disclosure">Needs review includes failed and warning rules, in that order. All checks follows the original {report.source === "demo" ? "fixture" : "server response"} order and includes pass and not-applicable results. Status does not represent severity or business priority.</p>
     </section>
   );
 }

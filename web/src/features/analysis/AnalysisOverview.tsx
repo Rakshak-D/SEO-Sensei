@@ -142,5 +142,3 @@ export function AnalysisOverview({ report, isReanalyzing, reanalysisMessage, onR
     </section>
   );
 }
-
-\n

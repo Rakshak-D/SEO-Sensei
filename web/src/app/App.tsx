@@ -481,5 +481,3 @@ export function App() {
     </>
   );
 }
-
-\n

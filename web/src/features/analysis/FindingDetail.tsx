@@ -96,5 +96,3 @@ export function FindingDetail({ report, route, finding, onBack, onSelect }: Prop
     </article>
   );
 }
-
-\n

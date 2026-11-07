@@ -322,5 +322,3 @@ describe("Evidence Ledger authenticated application", () => {
     expect(screen.queryByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" })).not.toBeInTheDocument();
   });
 });
-
-\n

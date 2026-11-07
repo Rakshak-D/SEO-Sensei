@@ -23,5 +23,3 @@ export function demoReport(bundle: FixtureBundle): DemoReport {
     html: bundle.html,
   };
 }
-
-\n

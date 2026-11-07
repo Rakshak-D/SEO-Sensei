@@ -78,5 +78,3 @@ export function SignIn({ available, message, onSignIn, onRetry, onOpenDemo }: Pr
     </section>
   );
 }
-
-\n

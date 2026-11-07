@@ -207,5 +207,3 @@ function formatDuration(seconds: number): string {
   const remaining = minutes % 60;
   return remaining ? `${hours} hours ${remaining} minutes` : `${hours} hours`;
 }
-
-\n

@@ -147,6 +147,14 @@ jobs:
           docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/seo-sensei-phase2d-root.crt
           sudo install -m 0644 /tmp/seo-sensei-phase2d-root.crt /usr/local/share/ca-certificates/seo-sensei-phase2d.crt
           sudo update-ca-certificates
+          sudo apt-get update
+          sudo apt-get install --yes libnss3-tools
+          mkdir -p "$HOME/.pki/nssdb"
+          if [[ ! -f "$HOME/.pki/nssdb/cert9.db" ]]; then
+            certutil -N --empty-password -d "sql:$HOME/.pki/nssdb"
+          fi
+          certutil -A -d "sql:$HOME/.pki/nssdb" -n "SEO Sensei Phase 2D Caddy Root" -t "C,," -i /tmp/seo-sensei-phase2d-root.crt
+          certutil -L -d "sql:$HOME/.pki/nssdb" | grep -F "SEO Sensei Phase 2D Caddy Root"
           echo "NODE_EXTRA_CA_CERTS=/tmp/seo-sensei-phase2d-root.crt" >> "$GITHUB_ENV"
       - name: Verify extension CORS and protected legacy route
         run: |

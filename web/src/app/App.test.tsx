@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import auditFixture from "../../public/fixtures/audit.json";
 import { App } from "./App";
@@ -17,7 +17,10 @@ const sourceHtml = [
 type MockOptions = {
   unavailable?: boolean;
   initiallyAuthenticated?: boolean;
+  initialUsername?: string;
   analysis?: unknown;
+  analysisResponses?: Array<Promise<Response>>;
+  sessionResponses?: Array<Promise<Response> | null>;
   firstFixtureFailure?: boolean;
   fixture?: unknown;
   analysisStatus?: number;
@@ -38,29 +41,39 @@ function apiError(code: string, status: number, retryAfter?: string) {
 
 function mockServices(options: MockOptions = {}) {
   let authenticated = options.initiallyAuthenticated ?? false;
+  let username = options.initialUsername ?? "reviewer";
+  let sessionNumber = 0;
+  let csrfToken = "c".repeat(43);
   let auditCount = 0;
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     calls.push({ url, init });
     if (url === "/api/browser/v1/session") {
+      const pendingSessionResponse = options.sessionResponses?.shift();
+      if (pendingSessionResponse) return pendingSessionResponse;
       if (options.unavailable) return new Response("Not Found", { status: 404 });
       if (!authenticated) return apiError("auth_required", 401);
-      return json({ authenticated: true, user: { username: "reviewer" }, csrf_token: "c".repeat(43) });
+      return json({ authenticated: true, user: { username }, csrf_token: csrfToken });
     }
     if (url === "/api/browser/v1/session/login") {
       if (options.loginStatus && options.loginStatus !== 200) return apiError(options.loginCode ?? "rate_limited", options.loginStatus, options.retryAfter);
       const body = JSON.parse(String(init?.body)) as { username: string; password: string };
-      if (body.username !== "reviewer" || body.password !== "correct horse battery staple") return apiError("auth_invalid", 401);
+      if (!body.username || body.password !== "correct horse battery staple") return apiError("auth_invalid", 401);
       authenticated = true;
-      return json({ authenticated: true, user: { username: "reviewer" } });
+      username = body.username;
+      sessionNumber += 1;
+      csrfToken = String.fromCharCode(96 + sessionNumber).repeat(43);
+      return json({ authenticated: true, user: { username } });
     }
     if (url === "/api/browser/v1/session/logout") {
-      if (init?.headers && (init.headers as Record<string, string>)["X-CSRF-Token"] !== "c".repeat(43)) return apiError("csrf_rejected", 403);
+      if (init?.headers && (init.headers as Record<string, string>)["X-CSRF-Token"] !== csrfToken) return apiError("csrf_rejected", 403);
       authenticated = false;
       return json({ authenticated: false });
     }
     if (url === "/api/browser/v1/analyse-url") {
+      const pendingAnalysisResponse = options.analysisResponses?.shift();
+      if (pendingAnalysisResponse) return pendingAnalysisResponse;
       if (options.analysisStatus && options.analysisStatus !== 200) return apiError(options.analysisCode ?? "resource_unavailable", options.analysisStatus, options.retryAfter);
       return json(options.analysis ?? auditFixture.analysis);
     }
@@ -73,7 +86,27 @@ function mockServices(options: MockOptions = {}) {
     throw new Error(`Unexpected network request: ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
-  return { fetchMock, calls };
+  return { fetchMock, calls, getSessionToken: () => csrfToken };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function analysisWithTitle(title: string) {
+  const analysis = structuredClone(auditFixture.analysis);
+  analysis.metadata.title = title;
+  return analysis;
+}
+
+async function flushMicrotasks() {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
 }
 
 async function openDemo(user: ReturnType<typeof userEvent.setup>) {
@@ -84,6 +117,13 @@ async function openDemo(user: ReturnType<typeof userEvent.setup>) {
 async function openLiveEntry(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText("Username"), "reviewer");
   await user.type(await screen.findByLabelText("Password"), "correct horse battery staple");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await screen.findByRole("heading", { name: "Inspect what a page returns." });
+}
+
+async function signInAs(user: ReturnType<typeof userEvent.setup>, username: string) {
+  await user.type(await screen.findByLabelText("Username"), username);
+  await user.type(screen.getByLabelText("Password"), "correct horse battery staple");
   await user.click(screen.getByRole("button", { name: "Sign in" }));
   await screen.findByRole("heading", { name: "Inspect what a page returns." });
 }
@@ -192,7 +232,7 @@ describe("Evidence Ledger authenticated application", () => {
       { ...live.checks[0]!, id: "retrieval_success", title: "HTML retrieval succeeded", status: "pass", evidence: { observed: "HTTP response was 200.", value: 200 } },
     ];
     live.deterministic_score.overall_score = 100;
-    const { calls } = mockServices({ analysis: live });
+    const services = mockServices({ analysis: live });
     const user = userEvent.setup();
     render(<App />);
     await openLiveEntry(user);
@@ -204,10 +244,10 @@ describe("Evidence Ledger authenticated application", () => {
     expect(screen.getByText("100 / 100")).toBeVisible();
     expect(screen.getByText(/Observed fetch context/)).toBeVisible();
     expect(screen.queryByText(/Northstar Solar/)).not.toBeInTheDocument();
-    const analysisCall = calls.find((call) => call.url === "/api/browser/v1/analyse-url")!;
+    const analysisCall = services.calls.find((call) => call.url === "/api/browser/v1/analyse-url")!;
     expect(analysisCall.init?.credentials).toBe("same-origin");
     expect(JSON.parse(String(analysisCall.init?.body))).toEqual({ url: "https://example.org/new-path/" });
-    expect((analysisCall.init?.headers as Record<string, string>)["X-CSRF-Token"]).toBe("c".repeat(43));
+    expect((analysisCall.init?.headers as Record<string, string>)["X-CSRF-Token"]).toBe(services.getSessionToken());
     expect(analysisCall.init?.headers).not.toHaveProperty("Origin");
   });
 
@@ -320,5 +360,162 @@ describe("Evidence Ledger authenticated application", () => {
     await user.click(screen.getByRole("button", { name: "Sign out" }));
     expect(await screen.findByLabelText("Username")).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Home Solar Installation: Planning Guide | Northstar" })).not.toBeInTheDocument();
+  });
+
+  it("discards an analysis completed after logout and cannot reopen it through a live route", async () => {
+    const pending = deferred<Response>();
+    const services = mockServices({ initiallyAuthenticated: true, analysisResponses: [pending.promise] });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/race/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await waitFor(() => expect(services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url")).toHaveLength(1));
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(await screen.findByLabelText("Username")).toBeVisible();
+    await act(async () => {
+      pending.resolve(json(analysisWithTitle("Obsolete result after logout")));
+      await pending.promise;
+      await flushMicrotasks();
+    });
+
+    expect(screen.getByLabelText("Username")).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Obsolete result after logout" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    act(() => {
+      window.history.pushState({}, "", "/?view=overview&source=live");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(screen.getByLabelText("Username")).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Obsolete result after logout" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { label: "a different user", username: "user-b" },
+    { label: "a new session for the same username", username: "user-a" },
+  ])("isolates pending results across logout and reauthentication as $label", async ({ username }) => {
+    const oldResponse = deferred<Response>();
+    const currentTitle = `${username} current session report`;
+    const services = mockServices({
+      initiallyAuthenticated: true,
+      initialUsername: "user-a",
+      analysisResponses: [oldResponse.promise, Promise.resolve(json(analysisWithTitle(currentTitle)))],
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/shared-url/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await waitFor(() => expect(services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url")).toHaveLength(1));
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await screen.findByLabelText("Username");
+    await signInAs(user, username);
+    expect(screen.getByLabelText("Page address")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/shared-url/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    expect(await screen.findByRole("heading", { name: currentTitle })).toBeVisible();
+    await act(async () => {
+      oldResponse.resolve(json(analysisWithTitle("User A obsolete result")));
+      await oldResponse.promise;
+      await flushMicrotasks();
+    });
+
+    expect(screen.getByRole("heading", { name: currentTitle })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "User A obsolete result" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { label: "401 auth_required", status: 401, code: "auth_required" },
+    { label: "403 csrf_rejected", status: 403, code: "csrf_rejected" },
+    { label: "429 rate_limited", status: 429, code: "rate_limited" },
+    { label: "network failure", status: 0, code: "network" },
+  ])("ignores a stale $label after a newer session is established", async ({ status, code }) => {
+    const oldResponse = deferred<Response>();
+    const currentTitle = "User B protected report";
+    const services = mockServices({
+      initiallyAuthenticated: true,
+      initialUsername: "user-a",
+      analysisResponses: [oldResponse.promise, Promise.resolve(json(analysisWithTitle(currentTitle)))],
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/race-error/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await waitFor(() => expect(services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url")).toHaveLength(1));
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await screen.findByLabelText("Username");
+    await signInAs(user, "user-b");
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/race-error/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    expect(await screen.findByRole("heading", { name: currentTitle })).toBeVisible();
+
+    if (code === "network") {
+      await act(async () => {
+        oldResponse.reject(new TypeError("late network failure"));
+        await oldResponse.promise.catch(() => undefined);
+        await flushMicrotasks();
+      });
+    } else {
+      await act(async () => {
+        oldResponse.resolve(apiError(code, status, code === "rate_limited" ? "120" : undefined));
+        await oldResponse.promise;
+        await flushMicrotasks();
+      });
+    }
+
+    expect(screen.getByRole("heading", { name: currentTitle })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(services.calls.filter((call) => call.url === "/api/browser/v1/session")).toHaveLength(2);
+  });
+
+  it("discards an in-flight CSRF session bootstrap after logout and reauthentication", async () => {
+    const oldRefresh = deferred<Response>();
+    const services = mockServices({
+      initiallyAuthenticated: true,
+      initialUsername: "user-a",
+      analysisResponses: [
+        Promise.resolve(apiError("csrf_rejected", 403)),
+        Promise.resolve(json(analysisWithTitle("User B report"))),
+      ],
+      sessionResponses: [
+        null,
+        oldRefresh.promise,
+        null,
+      ],
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Inspect what a page returns." });
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/csrf-race/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    await waitFor(() => expect(services.calls.filter((call) => call.url === "/api/browser/v1/session")).toHaveLength(2));
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await screen.findByLabelText("Username");
+    await signInAs(user, "user-b");
+    await user.type(screen.getByLabelText("Page address"), "https://example.org/csrf-race/");
+    await user.click(screen.getByRole("button", { name: "Analyze page" }));
+    expect(await screen.findByRole("heading", { name: "User B report" })).toBeVisible();
+
+    await act(async () => {
+      oldRefresh.resolve(json({ authenticated: true, user: { username: "user-a" }, csrf_token: "z".repeat(43) }));
+      await oldRefresh.promise;
+      await flushMicrotasks();
+    });
+    expect(screen.getByText("user-b")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "User B report" })).toBeVisible();
+    expect(screen.queryByText(/server refreshed the session check/i)).not.toBeInTheDocument();
+    expect(services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url")).toHaveLength(2);
+
+    await user.click(screen.getByRole("button", { name: "Analyze again" }));
+    await waitFor(() => expect(services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url")).toHaveLength(3));
+    const latestAnalysis = services.calls.filter((call) => call.url === "/api/browser/v1/analyse-url").at(-1)!;
+    expect((latestAnalysis.init?.headers as Record<string, string>)["X-CSRF-Token"]).toBe(services.getSessionToken());
   });
 });

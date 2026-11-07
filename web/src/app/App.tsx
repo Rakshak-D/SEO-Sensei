@@ -21,6 +21,7 @@ import { findingsParent, routeFromSearch, routeSearch, type AppRoute, type ViewN
 type AuthState =
   | { status: "checking"; session: null; message: string }
   | { status: "authenticated"; session: BrowserSession; message: string }
+  | { status: "signingOut"; session: null; message: string }
   | { status: "anonymous"; session: null; message: string }
   | { status: "unavailable"; session: null; message: string };
 type DemoState =
@@ -158,8 +159,26 @@ export function App() {
   const currentRoute = useRef(route);
   const demoLoadActive = useRef(false);
   const reportRef = useRef(report);
+  const authEpoch = useRef(0);
+  const bootstrapGeneration = useRef(0);
+  const analysisGeneration = useRef(0);
+  const logoutGeneration = useRef(0);
+  const analysisActive = useRef(false);
+  const logoutActive = useRef(false);
 
-  useEffect(() => { reportRef.current = report; }, [report]);
+  const setLiveReport = useCallback((next: AnalysisReport | null) => {
+    reportRef.current = next;
+    setReport(next);
+  }, []);
+
+  const invalidateAuthContext = useCallback(() => {
+    authEpoch.current += 1;
+    bootstrapGeneration.current += 1;
+    analysisGeneration.current += 1;
+    analysisActive.current = false;
+    setAnalyzing(false);
+    return authEpoch.current;
+  }, []);
 
   const navigate = useCallback((next: AppRoute, options: { replace?: boolean; focus?: FocusRequest } = {}) => {
     if (options.focus) focusRequest.current = options.focus;
@@ -171,22 +190,30 @@ export function App() {
   }, []);
 
   const refreshSession = useCallback(async (focus = false, announce = true) => {
+    const epoch = authEpoch.current;
+    const generation = ++bootstrapGeneration.current;
     if (announce) setAuth({ status: "checking", session: null, message: "Checking the secure sign-in service." });
     try {
       const session = await getBrowserSession();
+      if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return null;
+      invalidateAuthContext();
+      setLiveReport(null);
       setAuth({ status: "authenticated", session, message: "" });
       if (focus) focusRequest.current = "url";
       return session;
     } catch (error) {
+      if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return null;
       if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
+        invalidateAuthContext();
         setAuth({ status: "anonymous", session: null, message: "No active browser session was found. Sign in to continue." });
-        setReport(null);
+        setLiveReport(null);
       } else {
+        invalidateAuthContext();
         setAuth({ status: "unavailable", session: null, message: messageForApiError(error) });
       }
       return null;
     }
-  }, []);
+  }, [invalidateAuthContext, setLiveReport]);
 
   const loadDemo = useCallback(async () => {
     if (demoLoadActive.current) return;
@@ -264,13 +291,14 @@ export function App() {
     setEntryError("");
     setAnalysisMessage("");
     setEntryValue(sampleUrl);
-    setReport(null);
+    setLiveReport(null);
     navigate({ ...route, source: "demo", view: "overview", mode: "review", q: "", status: "all", check: "" }, { focus: "heading" });
   };
 
   const clearForSignIn = (message: string) => {
+    invalidateAuthContext();
     setAuth({ status: "anonymous", session: null, message });
-    setReport(null);
+    setLiveReport(null);
     setDemo({ state: "idle" });
     setGlobalMessage("");
     setEntryError("");
@@ -281,13 +309,21 @@ export function App() {
   };
 
   const signIn = async (username: string, password: string) => {
+    const epoch = invalidateAuthContext();
+    setLiveReport(null);
+    setAnalysisMessage("");
+    setGlobalMessage("");
+    const generation = ++bootstrapGeneration.current;
     try {
       await login(username, password);
+      if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return;
       const session = await getBrowserSession();
+      if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return;
       setAuth({ status: "authenticated", session, message: "" });
       setGlobalMessage("");
       navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { replace: true, focus: "url" });
     } catch (error) {
+      if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return;
       if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
         clearForSignIn(messageForApiError(error));
         return;
@@ -297,20 +333,31 @@ export function App() {
   };
 
   const signOut = async () => {
-    if (auth.status !== "authenticated") return;
+    if (auth.status !== "authenticated" || logoutActive.current) return;
+    logoutActive.current = true;
+    const logoutId = ++logoutGeneration.current;
+    const epoch = invalidateAuthContext();
+    const session = auth.session;
+    setAuth({ status: "signingOut", session: null, message: "Signing out of the protected session." });
     try {
-      await logout(auth.session.csrf_token);
+      await logout(session.csrf_token);
+      if (epoch !== authEpoch.current) return;
       clearForSignIn("");
     } catch (error) {
+      if (epoch !== authEpoch.current) return;
       if (error instanceof BrowserApiError && error.status === 401) {
         clearForSignIn(messageForApiError(error));
       } else {
+        setAuth({ status: "authenticated", session, message: "" });
         setGlobalMessage(messageForApiError(error));
       }
+    } finally {
+      if (logoutId === logoutGeneration.current) logoutActive.current = false;
     }
   };
 
   const runAnalysis = async (rawValue: string) => {
+    if (analysisActive.current) return;
     const value = rawValue.trim();
     if (!value) {
       setEntryError("Enter the page address to analyze.");
@@ -334,27 +381,48 @@ export function App() {
 
     setEntryError("");
     setAnalysisMessage("");
+    analysisActive.current = true;
+    const epoch = authEpoch.current;
+    const generation = ++analysisGeneration.current;
+    const isCurrent = () => epoch === authEpoch.current && generation === analysisGeneration.current;
     setAnalyzing(true);
     try {
       const analysis = await analyzeUrl(value, auth.session.csrf_token);
+      if (!isCurrent()) return;
       const liveReport: AnalysisReport = { source: "live", analysis };
-      setReport(liveReport);
+      setLiveReport(liveReport);
       setAnalysisMessage("");
       navigate({ ...route, source: "live", view: "overview", check: "", mode: "review", status: "all", q: "" }, { focus: "heading" });
     } catch (error) {
+      if (!isCurrent()) return;
       if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
         clearForSignIn(messageForApiError(error));
         return;
       }
       if (error instanceof BrowserApiError && error.code === "csrf_rejected") {
+        const recoveryGeneration = ++bootstrapGeneration.current;
         try {
           const refreshed = await getBrowserSession();
+          if (!isCurrent() || recoveryGeneration !== bootstrapGeneration.current) return;
+          const sessionChanged = refreshed.user.username !== auth.session.user.username
+            || refreshed.csrf_token !== auth.session.csrf_token;
+          if (sessionChanged) {
+            invalidateAuthContext();
+            setLiveReport(null);
+            setAuth({ status: "authenticated", session: refreshed, message: "" });
+            setEntryValue(value);
+            setEntryError("The browser session changed. Submit the analysis again to start a new review.");
+            setAnalysisMessage("");
+            navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { replace: true, focus: "url" });
+            return;
+          }
           setAuth({ status: "authenticated", session: refreshed, message: "" });
           const explanation = "The server refreshed the session check. Submit the analysis again; no automatic repeat was made.";
           if (reportRef.current) setAnalysisMessage(explanation);
           else setEntryError(explanation);
           return;
         } catch (refreshError) {
+          if (!isCurrent() || recoveryGeneration !== bootstrapGeneration.current) return;
           clearForSignIn(messageForApiError(refreshError));
           return;
         }
@@ -363,7 +431,10 @@ export function App() {
       if (reportRef.current && route.view !== "entry") setAnalysisMessage(message);
       else setEntryError(message);
     } finally {
-      setAnalyzing(false);
+      if (isCurrent()) {
+        analysisActive.current = false;
+        setAnalyzing(false);
+      }
     }
   };
 
@@ -398,12 +469,14 @@ export function App() {
   let activeReport: AnalysisReport | null = report;
   if (route.source === "demo" && demo.state === "ready") activeReport = demoReport(demo.bundle);
   else if (route.source === "demo") activeReport = null;
-  else if (report?.source !== "live") activeReport = null;
+  else if (auth.status !== "authenticated" || report?.source !== "live") activeReport = null;
 
   let view: ReactNode;
   if (route.view === "entry") {
     if (auth.status === "checking") {
       view = <LoadingState title="Checking the sign-in service." message={auth.message} />;
+    } else if (auth.status === "signingOut") {
+      view = <LoadingState title="Signing out." message={auth.message} />;
     } else if (auth.status !== "authenticated") {
       view = <SignIn available={auth.status === "anonymous"} message={auth.message} onSignIn={signIn}
         onRetry={() => void refreshSession(true)} onOpenDemo={openDemo} />;
@@ -417,6 +490,8 @@ export function App() {
     view = <FixtureRecovery route={route} message={demo.message} onRetry={() => void loadDemo()} onChangePage={openEntry} />;
   } else if (!activeReport && route.source === "live" && auth.status === "checking") {
     view = <LoadingState title="Restoring the secure session." message="The live report is not stored; checking access before returning to URL entry." />;
+  } else if (!activeReport && route.source === "live" && auth.status === "signingOut") {
+    view = <LoadingState title="Signing out." message={auth.message} />;
   } else if (!activeReport && route.source === "live" && auth.status !== "authenticated") {
     view = <SignIn available={auth.status === "anonymous"} message={auth.message || "This live report is not stored. Sign in and run the analysis again."}
       onSignIn={signIn} onRetry={() => void refreshSession(true)} onOpenDemo={openDemo} />;
@@ -461,6 +536,7 @@ export function App() {
 
   const isDemoRoute = route.source === "demo" && route.view !== "entry";
   const headerSource = auth.status === "checking" ? "Checking session"
+    : auth.status === "signingOut" ? "Signing out"
     : isDemoRoute ? demo.state === "error" ? "Example unavailable" : "Fictional example"
       : route.view === "entry" ? auth.status === "authenticated" ? "Protected analysis" : "Sign in"
         : route.source === "live" ? "Live analysis" : "Report unavailable";

@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import logging
 
+from ..security.errors import FetchErrorCode
 from ..schemas.responses import ErrorDetail, ErrorResponse
 
 
@@ -51,6 +52,41 @@ ERROR_STATUS_CODES = {
     AUTH_INVALID: 401,
     INTERNAL_SERVER_ERROR: 500,
 }
+
+_FETCH_FAILURES_TO_PUBLIC: dict[FetchErrorCode, tuple[str, str, int]] = {
+    FetchErrorCode.INVALID_URL: (INVALID_URL, "The requested URL is invalid.", 422),
+    FetchErrorCode.CREDENTIALS_NOT_ALLOWED: (INVALID_URL, "The requested URL is invalid.", 422),
+    FetchErrorCode.UNSUPPORTED_SCHEME: (UNSUPPORTED_URL, "The requested URL is not supported.", 422),
+    FetchErrorCode.BLOCKED_DESTINATION: (
+        DESTINATION_BLOCKED,
+        "The requested destination is not permitted.",
+        422,
+    ),
+    FetchErrorCode.UNSAFE_REDIRECT: (
+        DESTINATION_BLOCKED,
+        "The requested destination is not permitted.",
+        422,
+    ),
+}
+
+
+def api_error_for_fetch_failure(fetch_error: object) -> APIError:
+    """Map known safe-fetch categories to sanitized, stable public API errors."""
+
+    if not isinstance(fetch_error, str):
+        category = None
+    else:
+        try:
+            category = FetchErrorCode(fetch_error)
+        except ValueError:
+            category = None
+
+    public_error = _FETCH_FAILURES_TO_PUBLIC.get(category) if category is not None else None
+    if public_error is None:
+        return APIError(RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502)
+
+    code, message, status_code = public_error
+    return APIError(code, message, status_code)
 
 
 def error_payload(request: Request, code: str, message: str) -> dict[str, Any]:

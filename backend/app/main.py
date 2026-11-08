@@ -21,9 +21,8 @@ from .api.errors import (
     INVALID_URL,
     INVALID_REQUEST,
     REQUEST_TOO_LARGE,
-    RESOURCE_UNAVAILABLE,
-    UNSUPPORTED_URL,
     UPSTREAM_AI_UNAVAILABLE,
+    api_error_for_fetch_failure,
     api_error_handler,
     unhandled_error_handler,
     validation_error_handler,
@@ -360,12 +359,8 @@ async def post_url(payload: URLAnalysisRequest, request: Request) -> URLAnalysis
             fetcher=request.app.state.safe_fetcher,
         )
         if not scraped_data or scraped_data.get("status") == "failed":
-            fetch_error = scraped_data.get("fetch_error") if scraped_data else None
-            if fetch_error in {"invalid_url", "credentials_not_allowed"}:
-                raise APIError(INVALID_URL, "The requested URL is invalid.", 422)
-            if fetch_error in {"unsupported_scheme", "unsafe_redirect"}:
-                raise APIError(UNSUPPORTED_URL, "The requested URL is not supported.", 422)
-            raise APIError(RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502)
+            fetch_error = scraped_data.get("fetch_error") if isinstance(scraped_data, dict) else None
+            raise api_error_for_fetch_failure(fetch_error)
 
         analysis_data = {key: value for key, value in scraped_data.items() if key != "status"}
         analysis = SEOAnalysis.model_validate(analysis_data)
@@ -433,7 +428,8 @@ async def post_boost_seo(payload: SEOBoostRequest, request: Request) -> SEOBoost
             from seo_crawler import get_full_seo_analysis_for_url
         scraped_data = await get_full_seo_analysis_for_url(str(payload.url), fetcher=request.app.state.safe_fetcher)
         if not scraped_data or scraped_data.get("status") == "failed":
-            raise APIError(RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502)
+            fetch_error = scraped_data.get("fetch_error") if isinstance(scraped_data, dict) else None
+            raise api_error_for_fetch_failure(fetch_error)
         analysis = SEOAnalysis.model_validate({key: value for key, value in scraped_data.items() if key != "status"})
         result = await ai_service.generate_boost(
             analysis,

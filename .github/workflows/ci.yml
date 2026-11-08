@@ -136,15 +136,30 @@ jobs:
       - name: Install Playwright Chromium
         working-directory: web
         run: npx playwright install --with-deps chromium
+      - name: Prepare disposable extension identity and API token
+        shell: bash
+        run: |
+          set -eu
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          printf 'PHASE2E_TEST_API_TOKEN=%s\n' "$token" >> "$GITHUB_ENV"
+          runtime_dir="$RUNNER_TEMP/seo-sensei-extension-runtime-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          metadata="$(node tests/integration/prepare_extension_runtime.mjs "$GITHUB_WORKSPACE/frontend" "$runtime_dir")"
+          printf 'PHASE2E_EXTENSION_ID=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).extensionId)' "$metadata")" >> "$GITHUB_ENV"
+          printf 'PHASE2E_EXTENSION_DIR=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).extensionDirectory)' "$metadata")" >> "$GITHUB_ENV"
+          printf 'PHASE2E_COMPOSE_OVERRIDE=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).composeOverride)' "$metadata")" >> "$GITHUB_ENV"
       - name: Create disposable integration password
-        run: echo "PHASE2D_TEST_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+        run: |
+          password="$(openssl rand -hex 32)"
+          echo "::add-mask::$password"
+          printf 'PHASE2D_TEST_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
       - name: Validate isolated Compose configuration
-        run: docker compose -f compose.integration.yaml config --quiet
+        run: docker compose -f compose.integration.yaml -f "$PHASE2E_COMPOSE_OVERRIDE" config --quiet
       - name: Start loopback HTTPS integration stack
-        run: docker compose -f compose.integration.yaml up --build --detach --wait --wait-timeout 180
+        run: docker compose -f compose.integration.yaml -f "$PHASE2E_COMPOSE_OVERRIDE" up --build --detach --wait --wait-timeout 180
       - name: Install temporary Caddy root certificate
         run: |
-          docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/seo-sensei-phase2d-root.crt
+          docker compose -f compose.integration.yaml -f "$PHASE2E_COMPOSE_OVERRIDE" cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/seo-sensei-phase2d-root.crt
           sudo install -m 0644 /tmp/seo-sensei-phase2d-root.crt /usr/local/share/ca-certificates/seo-sensei-phase2d.crt
           sudo update-ca-certificates
           sudo apt-get update
@@ -178,7 +193,7 @@ jobs:
             --output /dev/null --write-out '%{http_code}' --request POST --header "Origin: $extension_origin" \
             --header 'Content-Type: application/json' --data '{}' "https://$api_host:8443/analyse-url")
           test "$legacy_status" = 401
-          api_id=$(docker compose ps -q api)
+          api_id=$(docker compose -f compose.integration.yaml -f "$PHASE2E_COMPOSE_OVERRIDE" ps -q api)
           published_ports=$(docker inspect --format '{{json .NetworkSettings.Ports}}' "$api_id")
           if [[ "$published_ports" == *'"HostPort"'* ]]; then
             echo 'The integration API unexpectedly has a published host port.'
@@ -187,6 +202,14 @@ jobs:
       - name: Run authenticated browser-to-API HTTPS tests
         working-directory: web
         run: npm run test:e2e:integration
+      - name: Install isolated Chromium toolbar input tools
+        run: sudo apt-get update && sudo apt-get install --yes xdotool xvfb
+      - name: Run installed Chromium extension runtime verification
+        working-directory: web
+        env:
+          PHASE2E_API_ORIGIN: https://seo-sensei-api.localhost:8443
+          PHASE2E_EVIDENCE_DIR: review/evidence/phase-2e-c
+        run: xvfb-run -a -s "-screen 0 1440x1000x24" npx playwright test --config playwright.extension-runtime.config.ts
       - name: Upload authenticated integration screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -195,9 +218,17 @@ jobs:
           path: web/review/evidence/phase-2d/
           if-no-files-found: warn
           retention-days: 7
+      - name: Upload installed extension runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-2e-installed-extension-evidence
+          path: web/review/evidence/phase-2e-c/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Stop isolated stack and remove temporary CA trust
         if: always()
         run: |
-          docker compose -f compose.integration.yaml down --volumes --remove-orphans
+          docker compose -f compose.integration.yaml -f "$PHASE2E_COMPOSE_OVERRIDE" down --volumes --remove-orphans
           sudo rm -f /usr/local/share/ca-certificates/seo-sensei-phase2d.crt /tmp/seo-sensei-phase2d-root.crt
           sudo update-ca-certificates

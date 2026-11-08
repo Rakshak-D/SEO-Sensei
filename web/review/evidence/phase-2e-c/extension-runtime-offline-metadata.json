@@ -1,0 +1,8 @@
+{
+  "engine": "Playwright Chromium",
+  "playwrightVersion": "1.65.0",
+  "browserVersion": "158.0.8127.18",
+  "extensionId": "nahflolkoljikemomgfcckkcikjcbnpi",
+  "installation": "unpacked frontend copy loaded by Chromium extension flags in a fresh persistent profile",
+  "verifiedScope": "options page, Chrome storage, validation, save/reload/clear; no API stack"
+}

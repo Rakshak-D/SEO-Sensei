@@ -1028,14 +1028,18 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await outsideTab.goto("https://unrelated.test/");
     expect(observedAuthorizedOrigins).not.toContain("https://unrelated.test");
     const unrelatedOriginRead = await outsideTab.evaluate(async (url) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5_000);
       try {
-        const response = await fetch(`${url}/health`);
+        const response = await fetch(`${url}/health`, { signal: controller.signal });
         return { readable: true, status: response.status };
-      } catch {
-        return { readable: false, status: null };
+      } catch (error) {
+        return { readable: false, errorName: error instanceof Error ? error.name : "unknown" };
+      } finally {
+        clearTimeout(timeout);
       }
     }, apiOrigin);
-    expect(unrelatedOriginRead).toEqual({ readable: false, status: null });
+    expect(unrelatedOriginRead).toEqual({ readable: false, errorName: "TypeError" });
 
     const metadataPath = join(evidenceDirectory, "extension-runtime-metadata.json");
     writeFileSync(metadataPath, `${JSON.stringify({

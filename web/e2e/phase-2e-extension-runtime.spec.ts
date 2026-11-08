@@ -807,7 +807,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     expect(result.ai_recommendations?.state).not.toBe("available");
     await expectPopupText(popup, "#scoreValue", `${result.deterministic_score.overall_score}/100`);
     await expectPopupText(popup, "#pageTitle", result.metadata.title!);
-    await expectPopupText(popup, "#checksList", "ROBOTS DIRECTIVES", true);
+    await expectPopupText(popup, "#checksList", "Robots directives are reported", true);
     await expectPopupText(popup, "#checksList", "noindex", true);
     await expectPopupText(popup, "#aiState", /not configured|unavailable|disabled/i);
     await expectPopupText(popup, "#statusText", "Analysis complete.");

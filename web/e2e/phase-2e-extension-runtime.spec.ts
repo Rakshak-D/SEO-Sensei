@@ -393,6 +393,11 @@ async function openActionPopup(
   await browserSession.send("Target.setDiscoverTargets", { discover: true });
   const activeTitle = await activeTab.title();
   const { windowId, width } = findBrowserWindow(activeTitle);
+  const actionSettings = await options.evaluate(() => chrome.action.getUserSettings());
+  const toolbarScreenshot = join(evidenceDirectory, "extension-toolbar-before-popup.png");
+  execFileSync("scrot", ["--overwrite", toolbarScreenshot]);
+  expect(actionSettings.isOnToolbar, "The disposable Chromium profile must pin the real extension action before toolbar testing.").toBe(true);
+  console.info(`Installed extension action is pinned; toolbar window width=${width}; screenshot=${toolbarScreenshot}`);
   let targetId = "";
   let observedTargets: Array<{ type: string; url: string }> = [];
   for (const offset of [135, 155, 175, 195, 215, 235, 255, 275, 295]) {
@@ -411,7 +416,10 @@ async function openActionPopup(
     if (targetId) break;
     execFileSync("xdotool", ["key", "Escape"]);
   }
-  expect(targetId, `The toolbar click did not open the extension popup. Observed targets: ${JSON.stringify(observedTargets)}`).not.toBe("");
+  expect(
+    targetId,
+    `The toolbar click did not open the extension popup. Window width=${width}; action pinned=${actionSettings.isOnToolbar}; screenshot=${toolbarScreenshot}; observed targets=${JSON.stringify(observedTargets)}`,
+  ).not.toBe("");
   const { sessionId } = await browserSession.send("Target.attachToTarget", { targetId, flatten: false });
   const popup = new ActionPopup(browserSession, sessionId, targetId, onAuthorizedOrigin);
   await popup.send("Runtime.enable");

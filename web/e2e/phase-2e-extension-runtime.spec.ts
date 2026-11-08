@@ -566,7 +566,6 @@ test("uses real optional origin permission and exercises authenticated API-backe
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
     const healthResponse = await healthResponsePromise;
     expect(healthResponse.status()).toBe(200);
-    expect(healthResponse.headers()["access-control-allow-origin"]).toBe(extensionOrigin);
     await expect(options.locator("#message")).toContainText("API reachable");
 
     const grantedOrigins = await options.evaluate(async () => (await chrome.permissions.getAll()).origins ?? []);

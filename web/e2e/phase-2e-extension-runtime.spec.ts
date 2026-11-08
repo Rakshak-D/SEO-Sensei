@@ -516,6 +516,34 @@ test("loads the unpacked extension and handles local settings safely", async () 
   }
 });
 
+test("shows recovery guidance when real optional origin access is denied", async () => {
+  test.skip(
+    (process.platform !== "linux" || !apiOrigin || !apiToken || !process.env.PHASE2E_API_ORIGIN) && !process.env.CI,
+    "The real optional-origin permission prompt requires Linux/Xvfb and the isolated HTTPS Caddy/FastAPI stack.",
+  );
+
+  const installed = await installInIsolatedProfile();
+  const { options } = installed;
+  const apiUrl = new URL(apiOrigin);
+  const permittedPattern = `${apiUrl.origin}/*`;
+
+  try {
+    await saveConfiguration(options, apiOrigin, apiToken);
+    await expect(options.getByLabel("API access token")).toHaveValue("");
+    expect(await options.evaluate(async (pattern) =>
+      chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
+
+    await options.getByRole("button", { name: "Test /health" }).click();
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+    dismissPermissionPromptWithKeyboard();
+    await expect(options.locator("#message")).toHaveText("Allow API access for the configured origin, then try again.");
+    expect(await options.evaluate(async (pattern) =>
+      chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
+  } finally {
+    await closeIsolatedProfile(installed);
+  }
+});
+
 test("uses real optional origin permission and exercises authenticated API-backed extension flows", async () => {
   test.skip(
     (process.platform !== "linux" || !apiOrigin || !apiToken || !process.env.PHASE2E_API_ORIGIN) && !process.env.CI,
@@ -539,12 +567,6 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const beforePermission = await options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern);
     expect(beforePermission).toBe(false);
-    await options.getByRole("button", { name: "Test /health" }).click();
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
-    dismissPermissionPromptWithKeyboard();
-    await expect(options.locator("#message")).toHaveText("Allow API access for the configured origin, then try again.");
-    expect(await options.evaluate(async (pattern) => chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
-
     const healthResponsePromise = options.waitForResponse((response) => new URL(response.url()).pathname === "/health");
     await options.getByRole("button", { name: "Test /health" }).click();
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));

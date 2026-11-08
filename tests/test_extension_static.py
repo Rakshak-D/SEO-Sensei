@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 
@@ -51,3 +53,57 @@ def test_extension_json_posts_set_content_type_without_changing_health_get() -> 
     assert '"X-Request-ID": requestId' in source
     assert 'headers.Authorization = `Bearer ${config.token || ""}`' in source
     assert "?token=" not in source
+
+
+def test_extension_api_client_surfaces_destination_blocked_envelope_safely() -> None:
+    node = shutil.which("node")
+    assert node is not None, "Node.js is required by the repository's extension validation job."
+    api_path = json.dumps(str(FRONTEND / "api-client.js"))
+    script = f"""
+globalThis.chrome = {{
+  storage: {{ local: {{ get: async (key) => ({{ [key]: {{ baseUrl: "https://api.example.test", token: "extension-contract-test-token" }} }}) }} }},
+  permissions: {{ contains: async () => true }},
+  tabs: {{ query: async () => [] }}
+}};
+globalThis.fetch = async (url, options) => {{
+  if (url !== "https://api.example.test/boost-seo" || options.headers.Authorization !== "Bearer extension-contract-test-token") {{
+    throw new Error("unexpected mock request");
+  }}
+  return {{
+    ok: false,
+    status: 422,
+    headers: {{ get: (name) => name.toLowerCase() === "x-request-id" ? "extension-contract-request" : null }},
+    json: async () => ({{ error: {{
+      code: "destination_blocked",
+      message: "The requested destination is not permitted.",
+      request_id: "extension-contract-request"
+    }} }})
+  }};
+}};
+require({api_path});
+globalThis.SeoSenseiApi.boost("https://page.example.test/").then(
+  () => {{ throw new Error("expected API error"); }},
+  (error) => process.stdout.write(JSON.stringify({{
+    name: error.name,
+    code: error.code,
+    status: error.status,
+    message: error.message,
+    requestId: error.requestId,
+    retryAfter: error.retryAfter
+  }}))
+);
+"""
+    completed = subprocess.run([node, "-e", script], check=True, capture_output=True, text=True)
+    result = json.loads(completed.stdout)
+    assert result == {
+        "name": "ExtensionApiError",
+        "code": "destination_blocked",
+        "status": 422,
+        "message": "The requested destination is not permitted.",
+        "requestId": "extension-contract-request",
+        "retryAfter": None,
+    }
+
+    popup = (FRONTEND / "popup.js").read_text(encoding="utf-8")
+    assert '$("errorMessage").textContent = error.message' in popup
+    assert '$("errorRequestId").textContent' in popup

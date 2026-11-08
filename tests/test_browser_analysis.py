@@ -457,24 +457,68 @@ def test_invalid_framing_is_rejected(analysis_harness) -> None:
 
 
 @pytest.mark.parametrize(
-    ("fetch_code", "status", "public_code"),
+    ("fetch_code", "status", "public_code", "public_message"),
     [
-        (FetchErrorCode.BLOCKED_DESTINATION, 422, "destination_blocked"),
-        (FetchErrorCode.UNSAFE_REDIRECT, 422, "destination_blocked"),
-        (FetchErrorCode.DNS_RESOLUTION_FAILED, 502, "resource_unavailable"),
-        (FetchErrorCode.CONNECTION_TIMEOUT, 502, "resource_unavailable"),
-        (FetchErrorCode.READ_TIMEOUT, 502, "resource_unavailable"),
-        (FetchErrorCode.RESPONSE_TOO_LARGE, 502, "resource_unavailable"),
-        (FetchErrorCode.UNSUPPORTED_CONTENT_TYPE, 502, "resource_unavailable"),
-        (FetchErrorCode.HTTP_ERROR, 502, "resource_unavailable"),
+        (FetchErrorCode.INVALID_URL, 422, "invalid_url", "The requested URL is invalid."),
+        (FetchErrorCode.CREDENTIALS_NOT_ALLOWED, 422, "invalid_url", "The requested URL is invalid."),
+        (FetchErrorCode.UNSUPPORTED_SCHEME, 422, "unsupported_url", "The requested URL is not supported."),
+        (
+            FetchErrorCode.BLOCKED_DESTINATION,
+            422,
+            "destination_blocked",
+            "The requested destination is not permitted.",
+        ),
+        (
+            FetchErrorCode.UNSAFE_REDIRECT,
+            422,
+            "destination_blocked",
+            "The requested destination is not permitted.",
+        ),
+        (
+            FetchErrorCode.DNS_RESOLUTION_FAILED,
+            502,
+            "resource_unavailable",
+            "The requested page could not be analyzed.",
+        ),
+        (FetchErrorCode.CONNECTION_FAILED, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (FetchErrorCode.CONNECTION_TIMEOUT, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (FetchErrorCode.READ_TIMEOUT, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (FetchErrorCode.OVERALL_TIMEOUT, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (
+            FetchErrorCode.REDIRECT_LIMIT_EXCEEDED,
+            502,
+            "resource_unavailable",
+            "The requested page could not be analyzed.",
+        ),
+        (
+            FetchErrorCode.UNSUPPORTED_CONTENT_TYPE,
+            502,
+            "resource_unavailable",
+            "The requested page could not be analyzed.",
+        ),
+        (FetchErrorCode.RESPONSE_TOO_LARGE, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (FetchErrorCode.HTTP_ERROR, 502, "resource_unavailable", "The requested page could not be analyzed."),
+        (
+            FetchErrorCode.UNEXPECTED_FETCH_ERROR,
+            502,
+            "resource_unavailable",
+            "The requested page could not be analyzed.",
+        ),
     ],
 )
-def test_fetch_failures_map_to_safe_stable_errors(analysis_harness, fetch_code, status: int, public_code: str) -> None:
+def test_fetch_failures_map_to_safe_stable_errors(
+    analysis_harness,
+    fetch_code: FetchErrorCode,
+    status: int,
+    public_code: str,
+    public_message: str,
+) -> None:
     client, _, fetcher, headers, *_ = analysis_harness
     fetcher.error = fetch_code
     response = _post(client, headers, {"url": SAMPLE_URL})
     assert response.status_code == status
     assert response.json()["error"]["code"] == public_code
+    assert response.json()["error"]["message"] == public_message
     assert SAMPLE_URL not in response.text
 
 

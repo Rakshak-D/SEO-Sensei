@@ -34,6 +34,8 @@ Only `text/html` and `application/xhtml+xml` are processed. A missing or unknown
 
 Fetch failures use typed internal categories such as `blocked_destination`, `dns_resolution_failed`, `connection_timeout`, `unsafe_redirect`, `unsupported_content_type`, and `response_too_large`. The crawler returns only bounded status/error metadata to its callers; the API maps failures to safe public errors. Raw exception text, response bodies, arbitrary remote headers, credentials, and query strings are not returned or logged by the fetcher.
 
+The bearer-authenticated `/analyse-url` and `/boost-seo` routes use the same public fetch-error mapping as browser analysis: invalid URLs and unsupported schemes return sanitized `422` errors; explicit `blocked_destination` and `unsafe_redirect` categories return `422 destination_blocked`; remote fetch failures return sanitized `502 resource_unavailable`. Unknown or malformed failure metadata is treated as unavailable and never as proof of a policy block. The error envelope and request-ID headers remain unchanged for extension clients.
+
 ## No arbitrary proxy behavior
 
 The analysis API accepts a target URL only to obtain bounded HTML for SEO analysis. It does not return arbitrary response objects, headers, binary payloads, redirect histories beyond the bounded internal result, or unrestricted network protocols. The Streamlit dashboard calls the authenticated FastAPI API through its typed client; only the API path reaches the crawler and `SafeFetcher`. There is no second `requests`, `urllib`, or direct page-fetching implementation in the dashboard.

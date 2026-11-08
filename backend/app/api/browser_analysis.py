@@ -21,15 +21,12 @@ from ..api.browser_auth import (
 from ..api.errors import (
     APIError,
     AUTH_REQUIRED,
-    DESTINATION_BLOCKED,
     INTERNAL_SERVER_ERROR,
     INVALID_REQUEST,
-    INVALID_URL,
     RATE_LIMITED,
     REQUEST_TOO_LARGE,
-    RESOURCE_UNAVAILABLE,
     UNSUPPORTED_MEDIA_TYPE,
-    UNSUPPORTED_URL,
+    api_error_for_fetch_failure,
 )
 from ..api.proxy import client_ip
 from ..config import Settings
@@ -45,21 +42,6 @@ from ...seo_crawler import get_full_seo_analysis_for_url
 logger = logging.getLogger("seo_sensei.browser_analysis")
 router = APIRouter(prefix="/api/browser/v1", tags=["browser-analysis"])
 MAX_ANALYSIS_BODY_BYTES = 4_096
-_FETCH_FAILURES_TO_PUBLIC: dict[FetchErrorCode, tuple[str, str, int]] = {
-    FetchErrorCode.INVALID_URL: (INVALID_URL, "The requested URL is invalid.", 422),
-    FetchErrorCode.CREDENTIALS_NOT_ALLOWED: (INVALID_URL, "The requested URL is invalid.", 422),
-    FetchErrorCode.UNSUPPORTED_SCHEME: (UNSUPPORTED_URL, "The requested URL is not supported.", 422),
-    FetchErrorCode.BLOCKED_DESTINATION: (
-        DESTINATION_BLOCKED,
-        "The requested destination is not permitted.",
-        422,
-    ),
-    FetchErrorCode.UNSAFE_REDIRECT: (
-        DESTINATION_BLOCKED,
-        "The requested destination is not permitted.",
-        422,
-    ),
-}
 
 
 class DuplicateJSONKeyError(ValueError):
@@ -125,11 +107,7 @@ def _parse_request_body(body: bytes) -> BrowserURLAnalysisRequest:
 
 
 def _raise_url_error(error: FetchError) -> None:
-    code, message, status = _FETCH_FAILURES_TO_PUBLIC.get(
-        error.code,
-        (RESOURCE_UNAVAILABLE, "The requested page could not be analyzed.", 502),
-    )
-    raise APIError(code, message, status) from error
+    raise api_error_for_fetch_failure(error.code) from error
 
 
 def _analysis_error_responses() -> dict[int | str, dict[str, Any]]:

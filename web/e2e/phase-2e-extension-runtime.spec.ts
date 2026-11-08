@@ -492,6 +492,26 @@ function dismissPermissionPromptWithKeyboard(): void {
   execFileSync("xdotool", ["key", "--clearmodifiers", "Escape"]);
 }
 
+function pressNativeBrowserKey(tabTitle: string, key: "Return" | "space"): void {
+  const { windowId } = findBrowserWindow(tabTitle);
+  execFileSync("xdotool", ["windowfocus", "--sync", windowId]);
+  execFileSync("xdotool", ["key", "--clearmodifiers", key]);
+}
+
+async function capturePage(page: Page, path: string): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await page.screenshot({ path, fullPage: true, animations: "disabled", timeout: 15_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 150));
+    }
+  }
+  throw new Error(`Could not capture the isolated extension page screenshot at ${basename(path)}.`, { cause: lastError });
+}
+
 function findBrowserWindow(tabTitle: string): { windowId: string; x: number; y: number; width: number } {
   if (process.platform !== "linux") throw new Error("A real toolbar click is available only in the isolated Linux/Xvfb browser job.");
   const windowIds = execFileSync("xdotool", ["search", "--onlyvisible", "--name", tabTitle], { encoding: "utf8" })
@@ -527,7 +547,7 @@ test("loads the unpacked extension and handles local settings safely", async () 
 
   try {
     await expect(options.locator("#savedOrigin")).toHaveText("No API origin saved.");
-    await options.screenshot({ path: join(evidenceDirectory, "extension-options-empty.png"), fullPage: true });
+    await capturePage(options, join(evidenceDirectory, "extension-options-empty.png"));
 
     const invalidOrigin = "https://user:password@seo-sensei-api.localhost:8443";
     await saveConfiguration(options, invalidOrigin, `unpersisted-${randomUUID()}`);
@@ -565,7 +585,7 @@ test("loads the unpacked extension and handles local settings safely", async () 
     await expect(options.getByLabel("API access token")).toHaveValue("");
     const tokenDisplayedAfterReload = await options.locator("body").evaluate((body, tokenValue) => body.textContent?.includes(tokenValue) ?? false, disposableToken);
     expect(tokenDisplayedAfterReload).toBe(false);
-    await options.screenshot({ path: join(evidenceDirectory, "extension-options-configured.png"), fullPage: true });
+    await capturePage(options, join(evidenceDirectory, "extension-options-configured.png"));
 
     await options.getByRole("button", { name: "Clear" }).click();
     await expect(options.locator("#connectionState")).toHaveText("Not configured");
@@ -575,7 +595,7 @@ test("loads the unpacked extension and handles local settings safely", async () 
     });
     expect(clearedState).toBe(false);
     await expect(options.locator("#apiToken")).toHaveValue("");
-    await options.screenshot({ path: join(evidenceDirectory, "extension-options-cleared.png"), fullPage: true });
+    await capturePage(options, join(evidenceDirectory, "extension-options-cleared.png"));
     const resultsAfterClear = await options.evaluate(async (url) => {
       const api = (globalThis as typeof globalThis & { SeoSenseiApi: { health: () => Promise<unknown>; boost: (target: string) => Promise<unknown> } }).SeoSenseiApi;
       const results = await Promise.allSettled([api.health(), api.boost(url)]);
@@ -659,7 +679,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const grantedOrigins = await options.evaluate(async () => (await chrome.permissions.getAll()).origins ?? []);
     expect(grantedOrigins).toContain(permittedPattern);
     expect(grantedOrigins).toHaveLength(1);
-    await options.screenshot({ path: join(evidenceDirectory, "extension-api-connected.png"), fullPage: true });
+    await capturePage(options, join(evidenceDirectory, "extension-api-connected.png"));
 
     const bearerlessLegacyResult = await options.evaluate(async (url) => {
       try {
@@ -743,13 +763,26 @@ test("uses real optional origin permission and exercises authenticated API-backe
     expect(focusState.tag).toBe("BUTTON");
     expect(focusState.outlineStyle).not.toBe("none");
     expect(focusState.outlineWidth).not.toBe("0px");
-    await popup.screenshot({ path: join(evidenceDirectory, "extension-popup-ready.png"), fullPage: true });
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-popup-ready.png") });
 
     const responsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
     console.info("Activating analysis with Enter in the installed popup.");
-    await popup.press("Enter");
-    console.info("Enter key dispatch completed; waiting for the authenticated analysis response.");
-    const analysisResponse = await responsePromise;
+    pressNativeBrowserKey("Controlled active tab", "Return");
+    console.info("Native Return key sent to the focused Chromium window; waiting for the authenticated analysis response.");
+    let analysisResponse: RuntimeResponse;
+    try {
+      analysisResponse = await responsePromise;
+    } catch (error) {
+      const state = await popup.evaluate(() => ({
+        focusedId: (document.activeElement as HTMLElement | null)?.id ?? "",
+        hasFocus: document.hasFocus(),
+        status: document.getElementById("statusText")?.textContent?.trim() ?? "",
+        errorTitle: document.getElementById("errorTitle")?.textContent?.trim() ?? "",
+        errorMessage: document.getElementById("errorMessage")?.textContent?.trim() ?? "",
+        buttonDisabled: (document.getElementById("analyzeBtn") as HTMLButtonElement | null)?.disabled ?? null,
+      }));
+      throw new Error(`${error instanceof Error ? error.message : "Analysis response wait failed."} Popup state: ${JSON.stringify(state)}; matching API requests: ${popup.requestsTo(apiPath)}.`, { cause: error });
+    }
     expect(analysisResponse.status()).toBe(200);
     expect(JSON.parse(popup.requestBodiesTo(apiPath)[0])).toEqual({
       url: "https://phase2d.test/pages/noindex",
@@ -792,7 +825,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await popup.mockResponse(apiPath, 429, JSON.stringify(rateLimitPayload), rateLimitedRequestId, 37);
     const rateLimitedResponsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
     await analyzeButton.focus();
-    await popup.press("Space");
+    pressNativeBrowserKey("Controlled active tab", "space");
     const rateLimitedResponse = await rateLimitedResponsePromise;
     expect(rateLimitedResponse.status()).toBe(429);
     expect(rateLimitedResponse.header("retry-after")).toBe("37");

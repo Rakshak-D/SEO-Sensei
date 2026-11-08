@@ -603,6 +603,9 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const firstHealthResponsePromise = waitForContextResponse(context, "/health");
     await options.getByRole("button", { name: "Test /health" }).click();
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+    const permissionPromptScreenshot = join(evidenceDirectory, "extension-origin-permission-prompt.png");
+    execFileSync("scrot", ["--overwrite", permissionPromptScreenshot]);
+    console.info(`Captured isolated Chromium permission state; focused window=${execFileSync("xdotool", ["getwindowfocus", "getwindowname"], { encoding: "utf8" }).trim()}; screenshot=${permissionPromptScreenshot}`);
     clickPermissionPromptWithKeyboard();
 
     const firstHealthResponse = await firstHealthResponsePromise;

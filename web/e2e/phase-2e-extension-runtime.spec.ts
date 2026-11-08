@@ -162,6 +162,11 @@ class ActionPopup {
       .map(([requestId]) => this.requestBodies.get(requestId) ?? "");
   }
 
+  async isOpen(): Promise<boolean> {
+    const { targetInfos } = await this.browserSession.send("Target.getTargets");
+    return (targetInfos as Array<{ targetId: string }>).some((target) => target.targetId === this.targetId);
+  }
+
   async text(selector: string, hasText?: string | RegExp, role?: string): Promise<string> {
     return this.evaluate((query) => {
       const elements = Array.from(document.querySelectorAll(query.selector));
@@ -271,8 +276,7 @@ class ActionPopup {
 
   async close(): Promise<void> {
     const exceptions = [...this.uncaughtExceptions];
-    await this.browserSession.send("Target.closeTarget", { targetId: this.targetId });
-    await this.browserSession.detach();
+    if (await this.isOpen()) await this.browserSession.send("Target.closeTarget", { targetId: this.targetId });
     expect(exceptions, "The installed extension popup must not throw uncaught JavaScript exceptions.").toEqual([]);
   }
 
@@ -643,7 +647,6 @@ test("requests optional API permission from a native Analyze gesture in the real
     expect(await options.evaluate(async (pattern) => chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
 
     popup = await openActionPopup(context, options, activeTab);
-    const responsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
     const analyzeButton = popup.getByRole("button", { name: /Analyze current page/ });
     await expectPopupEnabled(popup, analyzeButton);
     await analyzeButton.focus();
@@ -658,10 +661,20 @@ test("requests optional API permission from a native Analyze gesture in the real
     expect(await popup.requestsTo(apiPath)).toBe(0);
     clickPermissionPromptAllow("Controlled active tab");
 
-    const response = await responsePromise;
-    expect(response.status()).toBe(200);
     await expect.poll(async () => options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
+    await expect.poll(() => popup!.isOpen()).toBe(false);
+    expect(await popup.requestsTo(apiPath)).toBe(0);
+    await popup.close();
+
+    popup = await openActionPopup(context, options, activeTab);
+    const responsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
+    const reopenedAnalyzeButton = popup.getByRole("button", { name: /Analyze current page/ });
+    await expectPopupEnabled(popup, reopenedAnalyzeButton);
+    await reopenedAnalyzeButton.focus();
+    pressNativeBrowserKey("Controlled active tab", "Return");
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
     expect(await popup.requestsTo(apiPath)).toBe(1);
     await expectPopupText(popup, "#statusText", "Analysis complete.");
     await popup.screenshot({ path: join(evidenceDirectory, "extension-popup-permission-analysis.png"), scrollTo: "#scoreValue" });

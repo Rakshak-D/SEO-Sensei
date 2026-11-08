@@ -403,18 +403,29 @@ async function fulfillJson(route: Route, status: number, payload: unknown, reque
   await route.fulfill({ status, headers, body: JSON.stringify(payload) });
 }
 
-function clickPermissionPromptWithKeyboard(): void {
+function focusBrowserWindow(titleFragment: string): void {
   if (process.platform !== "linux") {
-    throw new Error("The isolated runtime test needs headed Linux keyboard input to approve Chromium's real optional-origin prompt.");
+    throw new Error("The isolated runtime test needs a headed Linux Chromium window to interact with the real permission prompt.");
   }
+  const windowIds = execFileSync("xdotool", ["search", "--onlyvisible", "--name", titleFragment], { encoding: "utf8" })
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const matches = windowIds.filter((windowId) =>
+    execFileSync("xdotool", ["getwindowname", windowId], { encoding: "utf8" }).includes(titleFragment),
+  );
+  expect(matches).toHaveLength(1);
+  execFileSync("xdotool", ["windowfocus", "--sync", matches[0]]);
+}
+
+function clickPermissionPromptWithKeyboard(): void {
+  focusBrowserWindow("SEO-Sensei API settings");
   execFileSync("xdotool", ["key", "--clearmodifiers", "Tab"]);
   execFileSync("xdotool", ["key", "--clearmodifiers", "Return"]);
 }
 
 function dismissPermissionPromptWithKeyboard(): void {
-  if (process.platform !== "linux") {
-    throw new Error("A real permission-prompt dismissal is available only in the isolated Linux/Xvfb browser job.");
-  }
+  focusBrowserWindow("SEO-Sensei API settings");
   execFileSync("xdotool", ["key", "--clearmodifiers", "Escape"]);
 }
 

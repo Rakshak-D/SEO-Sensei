@@ -1027,19 +1027,29 @@ test("uses real optional origin permission and exercises authenticated API-backe
     );
     await outsideTab.goto("https://unrelated.test/");
     expect(observedAuthorizedOrigins).not.toContain("https://unrelated.test");
+    const browserCorsProbeUrl = "https://cors-probe.test/health";
+    await context.route(browserCorsProbeUrl, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok" }) }),
+    );
     const unrelatedOriginRead = await outsideTab.evaluate(async (url) => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5_000);
       try {
-        const response = await fetch(`${url}/health`, { signal: controller.signal });
+        const response = await fetch(url, { signal: controller.signal });
         return { readable: true, status: response.status };
       } catch (error) {
         return { readable: false, errorName: error instanceof Error ? error.name : "unknown" };
       } finally {
         clearTimeout(timeout);
       }
-    }, apiOrigin);
+    }, browserCorsProbeUrl);
     expect(unrelatedOriginRead).toEqual({ readable: false, errorName: "TypeError" });
+    await context.unroute(browserCorsProbeUrl);
+    const serverCorsProbe = await fetch(`${apiUrl.origin}/health`, {
+      headers: { Origin: "https://unrelated.test" },
+    });
+    expect(serverCorsProbe.status).toBe(200);
+    expect(serverCorsProbe.headers.get("access-control-allow-origin")).toBeNull();
 
     const metadataPath = join(evidenceDirectory, "extension-runtime-metadata.json");
     writeFileSync(metadataPath, `${JSON.stringify({

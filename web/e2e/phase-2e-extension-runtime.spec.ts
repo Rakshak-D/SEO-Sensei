@@ -41,6 +41,7 @@ class ActionPopup {
   private readonly responseWaiters: Array<{
     predicate: (response: RuntimeResponse) => boolean;
     resolve: (response: RuntimeResponse) => void;
+    reject: (error: Error) => void;
   }> = [];
   readonly uncaughtExceptions: string[] = [];
 
@@ -236,7 +237,26 @@ class ActionPopup {
   }
 
   waitForResponse(predicate: (response: RuntimeResponse) => boolean): Promise<RuntimeResponse> {
-    return new Promise((resolve) => this.responseWaiters.push({ predicate, resolve }));
+    return new Promise((resolve, reject) => {
+      const timer: { id?: ReturnType<typeof setTimeout> } = {};
+      const waiter = {
+        predicate,
+        resolve: (response: RuntimeResponse) => {
+          if (timer.id !== undefined) clearTimeout(timer.id);
+          resolve(response);
+        },
+        reject: (error: Error) => {
+          if (timer.id !== undefined) clearTimeout(timer.id);
+          reject(error);
+        },
+      };
+      timer.id = setTimeout(() => {
+        const index = this.responseWaiters.indexOf(waiter);
+        if (index >= 0) this.responseWaiters.splice(index, 1);
+        reject(new Error("Timed out waiting for the installed extension's matching API response."));
+      }, 20_000);
+      this.responseWaiters.push(waiter);
+    });
   }
 
   async screenshot(options: { path: string }): Promise<void> {
@@ -427,6 +447,7 @@ async function openActionPopup(
   await popup.send("Network.enable", { maxPostDataSize: 4096 });
   const activeUrl = await popup.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url);
   expect(activeUrl).toBe(activeTab.url());
+  console.info(`Opened real extension action popup for active tab ${new URL(activeTab.url()).origin}; popup target was ${expectedPopupUrl}`);
   return popup;
 }
 
@@ -725,7 +746,9 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await popup.screenshot({ path: join(evidenceDirectory, "extension-popup-ready.png"), fullPage: true });
 
     const responsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
+    console.info("Activating analysis with Enter in the installed popup.");
     await popup.press("Enter");
+    console.info("Enter key dispatch completed; waiting for the authenticated analysis response.");
     const analysisResponse = await responsePromise;
     expect(analysisResponse.status()).toBe(200);
     expect(JSON.parse(popup.requestBodiesTo(apiPath)[0])).toEqual({

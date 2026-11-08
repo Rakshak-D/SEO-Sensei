@@ -845,7 +845,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const missingTokenButton = missingTokenPopup.getByRole("button", { name: /Analyze current page/ });
     const analysisRequestsBeforeMissingToken = missingTokenPopup.requestsTo(apiPath);
     await missingTokenButton.focus();
-    await missingTokenPopup.press("Enter");
+    pressNativeBrowserKey("Controlled active tab", "Return");
     await expectPopupText(missingTokenPopup, "#errorTitle", "API configuration needed");
     await expectPopupText(missingTokenPopup, "#errorMessage", "Configure the API access token in extension settings.");
     expect(missingTokenPopup.requestsTo(apiPath)).toBe(analysisRequestsBeforeMissingToken);

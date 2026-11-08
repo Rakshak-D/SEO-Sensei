@@ -528,6 +528,9 @@ test("uses real optional origin permission and exercises authenticated API-backe
   const apiUrl = new URL(apiOrigin);
   const permittedPattern = `${apiUrl.origin}/*`;
   const authorizationOrigins: string[] = [];
+  const browserLifecycle: string[] = [];
+  options.on("close", () => browserLifecycle.push("options-page-closed"));
+  context.on("close", () => browserLifecycle.push("browser-context-closed"));
   context.on("request", (request) => {
     if (request.headers().authorization) authorizationOrigins.push(new URL(request.url()).origin);
   });
@@ -539,6 +542,10 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const beforePermission = await options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern);
     expect(beforePermission).toBe(false);
+    expect(
+      options.isClosed(),
+      `The extension options page closed before the health action. Lifecycle=${browserLifecycle.join(",") || "none"}; remainingPages=${context.pages().map((page) => page.url()).join(",") || "none"}`,
+    ).toBe(false);
     const healthResponsePromise = options.waitForResponse((response) => new URL(response.url()).pathname === "/health");
     await options.getByRole("button", { name: "Test /health" }).click();
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));

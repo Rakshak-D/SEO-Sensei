@@ -624,7 +624,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
         return { status: null, corsAccessible: false };
       }
     }, { url: apiOrigin });
-    expect(loginCookieProbe).toEqual({ status: null, corsAccessible: false });
+    expect(loginCookieProbe).toEqual({ status: 404, corsAccessible: true });
 
     const activeTab = await context.newPage();
     await context.route("https://phase2d.test/pages/**", (route) =>

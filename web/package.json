@@ -15,6 +15,7 @@
     "test": "vitest run && npm run check:fixtures",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:integration": "playwright test --config playwright.integration.config.ts",
     "check:fixtures": "node scripts/verify-fixtures.mjs"
   },
   "dependencies": {

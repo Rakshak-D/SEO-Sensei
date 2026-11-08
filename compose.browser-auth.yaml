@@ -1,0 +1,12 @@
+# Opt-in overlay. Prepare the external file with owner-read-only mode for UID 10001.
+services:
+  api:
+    environment:
+      BROWSER_AUTH_ENABLED: "true"
+      BROWSER_AUTH_ACCOUNTS_FILE: /run/secrets/browser-users.json
+      BROWSER_APP_ORIGIN: https://${APP_DOMAIN:?APP_DOMAIN is required}
+    volumes:
+      - type: bind
+        source: ${BROWSER_AUTH_HOST_FILE:?Set BROWSER_AUTH_HOST_FILE to an external account file}
+        target: /run/secrets/browser-users.json
+        read_only: true

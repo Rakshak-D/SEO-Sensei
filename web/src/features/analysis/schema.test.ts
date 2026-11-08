@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixtureData from "../../../public/fixtures/audit.json";
-import { fixtureSchema } from "./schema";
+import { fixtureSchema, liveSeoAnalysisSchema } from "./schema";
 import { filteredChecks } from "./findingSelection";
 import { routeFromSearch } from "../../app/route";
 
@@ -50,5 +50,29 @@ describe("Northstar fixture contract", () => {
     const wrongCounts = structuredClone(fixtureData);
     wrongCounts.analysis.checks[0]!.status = "not_applicable";
     expect(fixtureSchema.safeParse(wrongCounts).success).toBe(false);
+  });
+
+  it("accepts real-format live results without fixture metadata or fixed finding totals", () => {
+    const live = structuredClone(fixtureData.analysis);
+    live.requested_url = "https://example.test/a-different-page/";
+    live.final_url = live.requested_url;
+    delete (live as Partial<typeof live>).metadata;
+    live.checks = [live.checks[0]!];
+    expect(liveSeoAnalysisSchema.parse(live).checks).toHaveLength(1);
+
+    const empty = structuredClone(live);
+    empty.checks = [];
+    empty.deterministic_score.categories = [];
+    expect(liveSeoAnalysisSchema.parse(empty).checks).toHaveLength(0);
+  });
+
+  it("rejects malformed live values and duplicate rule identifiers", () => {
+    const live = structuredClone(fixtureData.analysis);
+    live.checks = [live.checks[0]!, { ...live.checks[0]!, status: "warning" }];
+    expect(liveSeoAnalysisSchema.safeParse(live).success).toBe(false);
+
+    const malformed = structuredClone(fixtureData.analysis);
+    malformed.fetch.bytes_read = -1;
+    expect(liveSeoAnalysisSchema.safeParse(malformed).success).toBe(false);
   });
 });

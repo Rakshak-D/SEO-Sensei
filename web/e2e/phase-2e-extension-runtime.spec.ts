@@ -346,6 +346,14 @@ async function saveConfiguration(page: Page, origin: string, token: string): Pro
   await page.getByRole("button", { name: "Save configuration" }).click();
 }
 
+async function reopenOptionsPage(installed: InstalledExtension): Promise<Page> {
+  const options = await installed.context.newPage();
+  options.on("pageerror", (error) => installed.pageErrors.push(error.name));
+  await options.goto(`chrome-extension://${extensionId}/options.html`);
+  await expect(options.locator("#connectionState")).toHaveText("Configured locally");
+  return options;
+}
+
 async function expectPopupText(popup: ActionPopup, selector: string, expected: string | RegExp, contains = false): Promise<void> {
   const assertion = expect.poll(() => popup.text(selector));
   if (expected instanceof RegExp) await assertion.toMatch(expected);
@@ -534,7 +542,8 @@ test("uses real optional origin permission and exercises authenticated API-backe
   );
 
   const installed = await installInIsolatedProfile();
-  const { context, options } = installed;
+  const { context } = installed;
+  let options = installed.options;
   const extensionOrigin = `chrome-extension://${extensionId}`;
   const apiUrl = new URL(apiOrigin);
   const permittedPattern = `${apiUrl.origin}/*`;
@@ -562,9 +571,21 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
     clickPermissionPromptWithKeyboard();
 
+    let healthResponse = await healthResponsePromise.catch(() => null);
+    if (!healthResponse || options.isClosed()) {
+      if (!options.isClosed()) {
+        throw new Error("The extension health request did not complete after the browser permission action.");
+      }
+      console.info("Chromium closed the options page during permission confirmation; reopened it and retried /health.");
+      options = await reopenOptionsPage(installed);
+      await expect.poll(async () => options.evaluate(async (pattern) =>
+        chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
+      const retryHealthResponsePromise = options.waitForResponse((response) => new URL(response.url()).pathname === "/health");
+      await options.getByRole("button", { name: "Test /health" }).click();
+      healthResponse = await retryHealthResponsePromise;
+    }
     await expect.poll(async () => options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
-    const healthResponse = await healthResponsePromise;
     expect(healthResponse.status()).toBe(200);
     await expect(options.locator("#message")).toContainText("API reachable");
 

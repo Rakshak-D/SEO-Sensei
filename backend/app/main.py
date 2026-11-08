@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -18,6 +19,8 @@ from .api.errors import (
     APIError,
     INTERNAL_SERVER_ERROR,
     INVALID_URL,
+    INVALID_REQUEST,
+    REQUEST_TOO_LARGE,
     RESOURCE_UNAVAILABLE,
     UNSUPPORTED_URL,
     UPSTREAM_AI_UNAVAILABLE,
@@ -33,7 +36,7 @@ from .api.browser_auth import (
     BrowserNamespaceOriginMiddleware,
     router as browser_auth_router,
 )
-from .api.browser_analysis import router as browser_analysis_router
+from .api.browser_analysis import MAX_ANALYSIS_BODY_BYTES, router as browser_analysis_router
 from .api.observability import request_context
 from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
@@ -47,6 +50,7 @@ from .seo.models import SEOAnalysis
 
 
 REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+REQUEST_BODY_REPLAY_CHUNK_BYTES = 64 * 1024
 logger = logging.getLogger("seo_sensei.api")
 settings: Settings = get_settings()
 configure_logging(settings.log_level)
@@ -105,49 +109,62 @@ if settings.browser_auth_enabled:
 
 
 class RequestContextMiddleware:
-    """Attach a bounded correlation ID and enforce the configured body hint."""
+    """Attach a correlation ID and enforce bounded ASGI request bodies."""
 
-    def __init__(self, app: ASGIApp, max_body_size: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        max_body_size: int,
+        path_body_limits: dict[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_body_size = max_body_size
+        self.path_body_limits = dict(path_body_limits or {})
+
+    def _body_limit(self, path: str) -> int:
+        route_limit = self.path_body_limits.get(path.rstrip("/"))
+        return min(self.max_body_size, route_limit) if route_limit is not None else self.max_body_size
+
+    @staticmethod
+    def _declared_length(headers: dict[bytes, list[bytes]], limit: int) -> tuple[int | None, str | None]:
+        lengths = headers.get(b"content-length", [])
+        transfer_encodings = headers.get(b"transfer-encoding", [])
+        if len(lengths) > 1 or len(transfer_encodings) > 1 or (lengths and transfer_encodings):
+            return None, "invalid"
+        if transfer_encodings:
+            if transfer_encodings[0].strip().lower() != b"chunked":
+                return None, "invalid"
+        if not lengths:
+            return None, None
+
+        value = lengths[0].strip(b" \t")
+        if not value or not value.isdigit():
+            return None, "invalid"
+        significant = value.lstrip(b"0") or b"0"
+        limit_digits = str(limit).encode("ascii")
+        if len(significant) > len(limit_digits):
+            return None, "too_large"
+        declared = int(significant)
+        if declared > limit:
+            return None, "too_large"
+        return declared, None
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
-        headers = dict(scope.get("headers", []))
-        supplied = headers.get(b"x-request-id", b"").decode("ascii", errors="ignore")
+        headers: dict[bytes, list[bytes]] = {}
+        for name, value in scope.get("headers", []):
+            headers.setdefault(name.lower(), []).append(value)
+        supplied = headers.get(b"x-request-id", [b""])[-1].decode("ascii", errors="ignore")
         request_id = supplied if REQUEST_ID_RE.fullmatch(supplied) else uuid.uuid4().hex
         scope.setdefault("state", {})["request_id"] = request_id
-
-        content_length = headers.get(b"content-length")
-        if content_length:
-            try:
-                too_large = int(content_length) > self.max_body_size
-            except ValueError:
-                too_large = True
-            if too_large:
-                error_code = (
-                    "request_too_large" if scope.get("path") == "/api/browser/v1/analyse-url" else "invalid_request"
-                )
-                response = JSONResponse(
-                    status_code=413,
-                    content={
-                        "error": {
-                            "code": error_code,
-                            "message": "Request body is too large.",
-                            "request_id": request_id,
-                        }
-                    },
-                    headers={"X-Request-ID": request_id},
-                )
-                await response(scope, receive, send)
-                return
 
         start = time.perf_counter()
 
         completed = False
+        force_no_store = False
 
         async def send_with_headers(message: Message) -> None:
             nonlocal completed
@@ -155,7 +172,7 @@ class RequestContextMiddleware:
                 completed = True
                 response_headers = list(message.get("headers", []))
                 response_headers.append((b"x-request-id", request_id.encode("ascii")))
-                if scope.get("path") not in {"/health", "/ready"}:
+                if force_no_store or scope.get("path") not in {"/health", "/ready"}:
                     response_headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": response_headers}
                 logger.info(
@@ -173,7 +190,93 @@ class RequestContextMiddleware:
             await send(message)
 
         try:
-            await self.app(scope, receive, send_with_headers)
+            body_limit = self._body_limit(scope.get("path", ""))
+            declared_length, framing_error = self._declared_length(headers, body_limit)
+
+            async def reject(status_code: int, code: str, message: str) -> None:
+                nonlocal force_no_store
+                force_no_store = True
+                response = JSONResponse(
+                    status_code=status_code,
+                    content={
+                        "error": {
+                            "code": code,
+                            "message": message,
+                            "request_id": request_id,
+                        }
+                    },
+                )
+                await response(scope, receive, send_with_headers)
+
+            if framing_error == "too_large":
+                await reject(413, REQUEST_TOO_LARGE, "Request body is too large.")
+                return
+            if framing_error == "invalid":
+                await reject(400, INVALID_REQUEST, "Request framing is invalid.")
+                return
+
+            chunks: list[bytes] = []
+            replay_buffer = bytearray()
+            actual_length = 0
+            while True:
+                message = await receive()
+                message_type = message.get("type")
+                if message_type == "http.disconnect":
+                    # A disconnected caller cannot receive a response, and no downstream
+                    # route work should begin with an incomplete request body.
+                    return
+                if message_type != "http.request":
+                    await reject(400, INVALID_REQUEST, "Request body framing is invalid.")
+                    return
+
+                chunk = message.get("body", b"")
+                more_body = message.get("more_body", False)
+                if not isinstance(chunk, bytes) or not isinstance(more_body, bool):
+                    await reject(400, INVALID_REQUEST, "Request body framing is invalid.")
+                    return
+                if len(chunk) > body_limit - actual_length:
+                    await reject(413, REQUEST_TOO_LARGE, "Request body is too large.")
+                    return
+                actual_length += len(chunk)
+                offset = 0
+                while offset < len(chunk):
+                    append_length = min(REQUEST_BODY_REPLAY_CHUNK_BYTES - len(replay_buffer), len(chunk) - offset)
+                    replay_buffer.extend(memoryview(chunk)[offset : offset + append_length])
+                    offset += append_length
+                    if len(replay_buffer) == REQUEST_BODY_REPLAY_CHUNK_BYTES:
+                        chunks.append(bytes(replay_buffer))
+                        replay_buffer.clear()
+                if not more_body:
+                    break
+
+            if declared_length is not None and actual_length != declared_length:
+                await reject(400, INVALID_REQUEST, "Request framing is invalid.")
+                return
+            if replay_buffer:
+                chunks.append(bytes(replay_buffer))
+
+            # Replay bounded, coalesced chunks. ASGI chunk boundaries are transport
+            # details; the byte stream and final-body marker remain unchanged.
+            replay_index = 0
+
+            async def replay_receive() -> Message:
+                nonlocal replay_index
+                if replay_index < len(chunks):
+                    current = replay_index
+                    replay_index += 1
+                    return {
+                        "type": "http.request",
+                        "body": chunks[current],
+                        "more_body": replay_index < len(chunks),
+                    }
+                if not chunks and replay_index == 0:
+                    replay_index = 1
+                    return {"type": "http.request", "body": b"", "more_body": False}
+                return await receive()
+
+            await self.app(scope, replay_receive, send_with_headers)
+        except asyncio.CancelledError:
+            raise
         except BaseException:
             if not completed:
                 logger.exception(
@@ -188,7 +291,11 @@ class RequestContextMiddleware:
             raise
 
 
-app.add_middleware(RequestContextMiddleware, max_body_size=settings.max_request_body_size_bytes)
+app.add_middleware(
+    RequestContextMiddleware,
+    max_body_size=settings.max_request_body_size_bytes,
+    path_body_limits={"/api/browser/v1/analyse-url": MAX_ANALYSIS_BODY_BYTES},
+)
 app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, unhandled_error_handler)

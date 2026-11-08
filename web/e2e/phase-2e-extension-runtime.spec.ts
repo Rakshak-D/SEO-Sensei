@@ -391,14 +391,27 @@ async function openActionPopup(
   if (!browser) throw new Error("The installed extension context has no Chromium browser connection.");
   const browserSession = await browser.newBrowserCDPSession();
   await browserSession.send("Target.setDiscoverTargets", { discover: true });
-  clickPinnedActionToolbarButton(await activeTab.title());
+  const activeTitle = await activeTab.title();
+  const { windowId, width } = findBrowserWindow(activeTitle);
   let targetId = "";
-  await expect.poll(async () => {
-    const { targetInfos } = await browserSession.send("Target.getTargets");
-    const target = targetInfos.find((item: { url: string; type: string }) => item.type === "page" && item.url === expectedPopupUrl);
-    targetId = target?.targetId ?? "";
-    return Boolean(targetId);
-  }).toBe(true);
+  let observedTargets: Array<{ type: string; url: string }> = [];
+  for (const offset of [135, 155, 175, 195, 215, 235, 255, 275, 295]) {
+    clickToolbarAt(windowId, width - offset);
+    const deadline = Date.now() + 700;
+    while (Date.now() < deadline) {
+      const { targetInfos } = await browserSession.send("Target.getTargets");
+      observedTargets = targetInfos.map((item: { url: string; type: string }) => ({ type: item.type, url: item.url }));
+      const target = targetInfos.find((item: { url: string; targetId: string }) => item.url.startsWith(expectedPopupUrl));
+      if (target) {
+        targetId = target.targetId;
+        break;
+      }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+    }
+    if (targetId) break;
+    execFileSync("xdotool", ["key", "Escape"]);
+  }
+  expect(targetId, `The toolbar click did not open the extension popup. Observed targets: ${JSON.stringify(observedTargets)}`).not.toBe("");
   const { sessionId } = await browserSession.send("Target.attachToTarget", { targetId, flatten: false });
   const popup = new ActionPopup(browserSession, sessionId, targetId, onAuthorizedOrigin);
   await popup.send("Runtime.enable");
@@ -448,10 +461,8 @@ function dismissPermissionPromptWithKeyboard(): void {
   execFileSync("xdotool", ["key", "--clearmodifiers", "Escape"]);
 }
 
-function clickPinnedActionToolbarButton(tabTitle: string): void {
-  if (process.platform !== "linux") {
-    throw new Error("A real toolbar click is available only in the isolated Linux/Xvfb browser job.");
-  }
+function findBrowserWindow(tabTitle: string): { windowId: string; width: number } {
+  if (process.platform !== "linux") throw new Error("A real toolbar click is available only in the isolated Linux/Xvfb browser job.");
   const windowIds = execFileSync("xdotool", ["search", "--onlyvisible", "--name", tabTitle], { encoding: "utf8" })
     .trim()
     .split(/\s+/)
@@ -464,8 +475,12 @@ function clickPinnedActionToolbarButton(tabTitle: string): void {
   const geometry = execFileSync("xdotool", ["getwindowgeometry", "--shell", windowId], { encoding: "utf8" });
   const width = Number(geometry.match(/^WIDTH=(\d+)$/m)?.[1]);
   expect(width).toBeGreaterThan(500);
+  return { windowId, width };
+}
+
+function clickToolbarAt(windowId: string, x: number): void {
   execFileSync("xdotool", ["windowfocus", "--sync", windowId]);
-  execFileSync("xdotool", ["mousemove", "--window", windowId, String(width - 135), "82", "click", "1"]);
+  execFileSync("xdotool", ["mousemove", "--window", windowId, String(x), "82", "click", "1"]);
 }
 
 test("loads the unpacked extension and handles local settings safely", async () => {

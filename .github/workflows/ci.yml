@@ -179,7 +179,7 @@ jobs:
           preflight_status=$(curl --silent --show-error --resolve "$api_host:8443:127.0.0.1" --cacert /tmp/seo-sensei-phase2d-root.crt \
             --output /dev/null --dump-header "$preflight_headers" --write-out '%{http_code}' --request OPTIONS \
             --header "Origin: $extension_origin" --header 'Access-Control-Request-Method: POST' \
-            --header 'Access-Control-Request-Headers: authorization,content-type' "https://$api_host:8443/analyse-url")
+            --header 'Access-Control-Request-Headers: authorization,content-type,x-request-id' "https://$api_host:8443/analyse-url")
           test "$preflight_status" = 200
           grep -F "access-control-allow-origin: $extension_origin" "$preflight_headers" -i
           rejected_origin=chrome-extension://bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
@@ -187,7 +187,7 @@ jobs:
           rejected_status=$(curl --silent --show-error --resolve "$api_host:8443:127.0.0.1" --cacert /tmp/seo-sensei-phase2d-root.crt \
             --output /dev/null --dump-header "$rejected_headers" --write-out '%{http_code}' --request OPTIONS \
             --header "Origin: $rejected_origin" --header 'Access-Control-Request-Method: POST' \
-            --header 'Access-Control-Request-Headers: authorization,content-type' "https://$api_host:8443/analyse-url")
+            --header 'Access-Control-Request-Headers: authorization,content-type,x-request-id' "https://$api_host:8443/analyse-url")
           test "$rejected_status" = 400
           if grep -qi '^access-control-allow-origin:' "$rejected_headers"; then
             echo 'An unrelated extension origin unexpectedly received a CORS grant.'

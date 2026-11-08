@@ -51,11 +51,29 @@
         await chrome.storage.local.remove(STORAGE_KEY);
     }
 
+    function permissionDeniedError() {
+        return new ExtensionApiError("permission_denied", "Allow API access for the configured origin, then try again.");
+    }
+
+    function requestOriginPermission(baseUrl) {
+        const pattern = originPermission(normalizeBaseUrl(baseUrl));
+        let permissionRequest;
+        // Invoke this from the user's click handler before any asynchronous work; Chromium requires the active gesture.
+        try { permissionRequest = chrome.permissions.request({ origins: [pattern] }); }
+        catch (_) { return Promise.reject(permissionDeniedError()); }
+        return Promise.resolve(permissionRequest).then((granted) => {
+            if (!granted) throw permissionDeniedError();
+            return true;
+        }).catch((error) => {
+            if (error instanceof ExtensionApiError) throw error;
+            throw permissionDeniedError();
+        });
+    }
+
     async function ensurePermission(baseUrl) {
         const pattern = originPermission(baseUrl);
         if (await chrome.permissions.contains({ origins: [pattern] })) return;
-        const granted = await chrome.permissions.request({ origins: [pattern] });
-        if (!granted) throw new ExtensionApiError("permission_denied", "Allow API access for the configured origin, then try again.");
+        throw permissionDeniedError();
     }
 
     function validateAnalysis(data) {
@@ -129,5 +147,5 @@
         return requestJson("/health", { authenticated: false });
     }
 
-    root.SeoSenseiApi = { ExtensionApiError, normalizeBaseUrl, getConfig, saveConfig, clearConfig, analyzeCurrentTab, boost, health };
+    root.SeoSenseiApi = { ExtensionApiError, normalizeBaseUrl, getConfig, saveConfig, clearConfig, requestOriginPermission, analyzeCurrentTab, boost, health };
 }(globalThis));

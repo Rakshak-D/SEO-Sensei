@@ -484,8 +484,8 @@ function focusBrowserWindow(titleFragment: string): void {
   execFileSync("xdotool", ["windowfocus", "--sync", matches[0]]);
 }
 
-function clickPermissionPromptAllow(): void {
-  const { windowId, x: windowX, y: windowY } = findBrowserWindow("SEO-Sensei API settings");
+function clickPermissionPromptAllow(tabTitle = "SEO-Sensei API settings"): void {
+  const { windowId, x: windowX, y: windowY } = findBrowserWindow(tabTitle);
   execFileSync("xdotool", ["windowfocus", "--sync", windowId]);
   const allowX = Math.round(1440 * 0.627) - windowX;
   const allowY = 265 - windowY;
@@ -617,6 +617,56 @@ test("loads the unpacked extension and handles local settings safely", async () 
       verifiedScope: "options page, Chrome storage, validation, save/reload/clear; no API stack",
     }, null, 2)}\n`);
   } finally {
+    await closeIsolatedProfile(installed);
+  }
+});
+
+test("requests optional API permission from a native Analyze gesture in the real popup", async () => {
+  test.skip(
+    (process.platform !== "linux" || !apiOrigin || !apiToken || !process.env.PHASE2E_API_ORIGIN) && !process.env.CI,
+    "The popup permission prompt requires Linux/Xvfb and the isolated HTTPS Caddy/FastAPI stack.",
+  );
+
+  const installed = await installInIsolatedProfile();
+  const { context, options } = installed;
+  const apiUrl = new URL(apiOrigin);
+  const permittedPattern = `${apiUrl.origin}/*`;
+  const activeTab = await context.newPage();
+  let popup: ActionPopup | undefined;
+
+  try {
+    await saveConfiguration(options, apiOrigin, apiToken);
+    await activeTab.route("https://phase2d.test/pages/noindex", (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Controlled active tab</title>" }),
+    );
+    await activeTab.goto("https://phase2d.test/pages/noindex");
+    expect(await options.evaluate(async (pattern) => chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
+
+    popup = await openActionPopup(context, options, activeTab);
+    const responsePromise = popup.waitForResponse((response) => new URL(response.url()).pathname === apiPath);
+    const analyzeButton = popup.getByRole("button", { name: /Analyze current page/ });
+    await expectPopupEnabled(popup, analyzeButton);
+    await analyzeButton.focus();
+    expect(await popup.requestsTo(apiPath)).toBe(0);
+    pressNativeBrowserKey("Controlled active tab", "Return");
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
+
+    const promptScreenshot = join(evidenceDirectory, "extension-popup-origin-permission-prompt.png");
+    execFileSync("scrot", ["--overwrite", promptScreenshot]);
+    console.info(`Captured the installed popup's optional-origin prompt; focused window=${execFileSync("xdotool", ["getwindowfocus", "getwindowname"], { encoding: "utf8" }).trim()}; screenshot=${promptScreenshot}`);
+    expect(await options.evaluate(async (pattern) => chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
+    expect(await popup.requestsTo(apiPath)).toBe(0);
+    clickPermissionPromptAllow("Controlled active tab");
+
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+    await expect.poll(async () => options.evaluate(async (pattern) =>
+      chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
+    expect(await popup.requestsTo(apiPath)).toBe(1);
+    await expectPopupText(popup, "#statusText", "Analysis complete.");
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-popup-permission-analysis.png"), scrollTo: "#scoreValue" });
+  } finally {
+    if (popup) await popup.close();
     await closeIsolatedProfile(installed);
   }
 });

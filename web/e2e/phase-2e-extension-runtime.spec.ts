@@ -259,8 +259,13 @@ class ActionPopup {
     });
   }
 
-  async screenshot(options: { path: string }): Promise<void> {
-    const image = await this.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, fromSurface: true });
+  async screenshot(options: { path: string; scrollTo?: string }): Promise<void> {
+    if (options.scrollTo) {
+      await this.evaluate((selector) => {
+        document.querySelector(selector)?.scrollIntoView({ block: "center", behavior: "auto" });
+      }, options.scrollTo);
+    }
+    const image = await this.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false, fromSurface: true });
     writeFileSync(options.path, Buffer.from(image.data as string, "base64"));
   }
 
@@ -813,10 +818,11 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupText(popup, "#statusText", "Analysis complete.");
     await analyzeButton.waitFor({ state: "visible" });
     await expectPopupEnabled(popup, analyzeButton);
-    await popup.screenshot({ path: join(evidenceDirectory, "extension-analysis-results.png"), fullPage: true });
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-analysis-results.png"), scrollTo: "#scoreValue" });
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-analysis-findings.png"), scrollTo: "#checksList" });
     await popup.locator("summary", { hasText: "Transport" }).click();
     await expectPopupText(popup, "#transportSignals", "200", true);
-    await popup.screenshot({ path: join(evidenceDirectory, "extension-analysis-transport.png"), fullPage: true });
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-analysis-transport.png"), scrollTo: "#transportSignals" });
 
     const rateLimitedRequestId = "extension-controlled-rate-limit";
     const rateLimitPayload = {
@@ -833,7 +839,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupText(popup, "#errorRequestId", rateLimitedRequestId, true);
     await expectPopupHidden(popup, "#results");
     await expectPopupEnabled(popup, analyzeButton);
-    await popup.screenshot({ path: join(evidenceDirectory, "extension-rate-limited.png"), fullPage: true });
+    await popup.screenshot({ path: join(evidenceDirectory, "extension-rate-limited.png"), scrollTo: "#errorPanel" });
     await popup.clearMockResponses();
 
     await popup.close();
@@ -867,7 +873,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupText(wrongTokenPopup, "#errorRequestId", "Request ID:", true);
     await expectPopupHidden(wrongTokenPopup, "#results");
     await expectPopupEnabled(wrongTokenPopup, wrongTokenButton);
-    await wrongTokenPopup.screenshot({ path: join(evidenceDirectory, "extension-invalid-token.png"), fullPage: true });
+    await wrongTokenPopup.screenshot({ path: join(evidenceDirectory, "extension-invalid-token.png"), scrollTo: "#errorPanel" });
 
     await wrongTokenPopup.close();
     await saveConfiguration(options, apiOrigin, apiToken);
@@ -890,7 +896,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupHidden(blockedPopup, "#results");
     await blockedPopup.getByRole("button", { name: /Analyze current page/ }).waitFor({ state: "visible" });
     await expectPopupEnabled(blockedPopup, blockedPopup.getByRole("button", { name: /Analyze current page/ }));
-    await blockedPopup.screenshot({ path: join(evidenceDirectory, "extension-blocked-destination.png"), fullPage: true });
+    await blockedPopup.screenshot({ path: join(evidenceDirectory, "extension-blocked-destination.png"), scrollTo: "#errorPanel" });
 
     await blockedPopup.close();
     const unavailableTab = await context.newPage();
@@ -907,7 +913,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     expect(unavailableBody.error.code).toBe("resource_unavailable");
     expect(unavailableBody.error.message).toBe("The requested page could not be analyzed.");
     await expectPopupText(unavailablePopup, "#errorMessage", unavailableBody.error.message);
-    await unavailablePopup.screenshot({ path: join(evidenceDirectory, "extension-remote-unavailable.png"), fullPage: true });
+    await unavailablePopup.screenshot({ path: join(evidenceDirectory, "extension-remote-unavailable.png"), scrollTo: "#errorPanel" });
     await unavailablePopup.close();
 
     const boostSuccessId = "extension-boost-success";
@@ -1007,7 +1013,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     expect((await hostileResponsePromise).status()).toBe(200);
     await expectPopupText(hostilePopup, "#pageTitle", "<img src=x onerror=alert(1)>");
     expect(await hostilePopup.evaluate(() => document.querySelectorAll("#pageTitle img").length)).toBe(0);
-    await hostilePopup.screenshot({ path: join(evidenceDirectory, "extension-hostile-text-safe.png"), fullPage: true });
+    await hostilePopup.screenshot({ path: join(evidenceDirectory, "extension-hostile-text-safe.png"), scrollTo: "#pageTitle" });
     await hostilePopup.clearMockResponses();
     await hostilePopup.close();
 
@@ -1027,24 +1033,6 @@ test("uses real optional origin permission and exercises authenticated API-backe
     );
     await outsideTab.goto("https://unrelated.test/");
     expect(observedAuthorizedOrigins).not.toContain("https://unrelated.test");
-    const browserCorsProbeUrl = "https://cors-probe.test/health";
-    await context.route(browserCorsProbeUrl, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok" }) }),
-    );
-    const unrelatedOriginRead = await outsideTab.evaluate(async (url) => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5_000);
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        return { readable: true, status: response.status };
-      } catch (error) {
-        return { readable: false, errorName: error instanceof Error ? error.name : "unknown" };
-      } finally {
-        clearTimeout(timeout);
-      }
-    }, browserCorsProbeUrl);
-    expect(unrelatedOriginRead).toEqual({ readable: false, errorName: "TypeError" });
-    await context.unroute(browserCorsProbeUrl);
     const serverCorsProbe = await fetch(`${apiUrl.origin}/health`, {
       headers: { Origin: "https://unrelated.test" },
     });

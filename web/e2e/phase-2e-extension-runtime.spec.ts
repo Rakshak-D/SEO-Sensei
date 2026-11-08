@@ -392,7 +392,7 @@ async function openActionPopup(
   const browserSession = await browser.newBrowserCDPSession();
   await browserSession.send("Target.setDiscoverTargets", { discover: true });
   const activeTitle = await activeTab.title();
-  const { windowId, width } = findBrowserWindow(activeTitle);
+  const { windowId, x: windowX, y: windowY, width } = findBrowserWindow(activeTitle);
   const actionSettings = await options.evaluate(() => chrome.action.getUserSettings());
   const toolbarScreenshot = join(evidenceDirectory, "extension-toolbar-before-popup.png");
   execFileSync("scrot", ["--overwrite", toolbarScreenshot]);
@@ -400,8 +400,8 @@ async function openActionPopup(
   console.info(`Installed extension action is pinned; toolbar window width=${width}; screenshot=${toolbarScreenshot}`);
   let targetId = "";
   let observedTargets: Array<{ type: string; url: string }> = [];
-  for (const offset of [135, 155, 175, 195, 215, 235, 255, 275, 295]) {
-    clickToolbarAt(windowId, width - offset);
+  for (const offset of [118, 120, 122, 124, 126, 128, 130, 132, 134]) {
+    clickToolbarAt(windowId, width - offset, 64);
     const deadline = Date.now() + 700;
     while (Date.now() < deadline) {
       const { targetInfos } = await browserSession.send("Target.getTargets");
@@ -418,7 +418,7 @@ async function openActionPopup(
   }
   expect(
     targetId,
-    `The toolbar click did not open the extension popup. Window width=${width}; action pinned=${actionSettings.isOnToolbar}; screenshot=${toolbarScreenshot}; observed targets=${JSON.stringify(observedTargets)}`,
+    `The toolbar click did not open the extension popup. Window=${windowX},${windowY} ${width}px wide; action pinned=${actionSettings.isOnToolbar}; screenshot=${toolbarScreenshot}; observed targets=${JSON.stringify(observedTargets)}`,
   ).not.toBe("");
   const { sessionId } = await browserSession.send("Target.attachToTarget", { targetId, flatten: false });
   const popup = new ActionPopup(browserSession, sessionId, targetId, onAuthorizedOrigin);
@@ -458,10 +458,12 @@ function focusBrowserWindow(titleFragment: string): void {
   execFileSync("xdotool", ["windowfocus", "--sync", matches[0]]);
 }
 
-function clickPermissionPromptWithKeyboard(): void {
-  focusBrowserWindow("SEO-Sensei API settings");
-  execFileSync("xdotool", ["key", "--clearmodifiers", "Tab"]);
-  execFileSync("xdotool", ["key", "--clearmodifiers", "Return"]);
+function clickPermissionPromptAllow(): void {
+  const { windowId, x: windowX, y: windowY } = findBrowserWindow("SEO-Sensei API settings");
+  execFileSync("xdotool", ["windowfocus", "--sync", windowId]);
+  const allowX = Math.round(1440 * 0.627) - windowX;
+  const allowY = 265 - windowY;
+  execFileSync("xdotool", ["mousemove", "--window", windowId, String(allowX), String(allowY), "click", "1"]);
 }
 
 function dismissPermissionPromptWithKeyboard(): void {
@@ -469,7 +471,7 @@ function dismissPermissionPromptWithKeyboard(): void {
   execFileSync("xdotool", ["key", "--clearmodifiers", "Escape"]);
 }
 
-function findBrowserWindow(tabTitle: string): { windowId: string; width: number } {
+function findBrowserWindow(tabTitle: string): { windowId: string; x: number; y: number; width: number } {
   if (process.platform !== "linux") throw new Error("A real toolbar click is available only in the isolated Linux/Xvfb browser job.");
   const windowIds = execFileSync("xdotool", ["search", "--onlyvisible", "--name", tabTitle], { encoding: "utf8" })
     .trim()
@@ -481,14 +483,18 @@ function findBrowserWindow(tabTitle: string): { windowId: string; width: number 
   expect(matches).toHaveLength(1);
   const windowId = matches[0];
   const geometry = execFileSync("xdotool", ["getwindowgeometry", "--shell", windowId], { encoding: "utf8" });
+  const x = Number(geometry.match(/^X=(-?\d+)$/m)?.[1]);
+  const y = Number(geometry.match(/^Y=(-?\d+)$/m)?.[1]);
   const width = Number(geometry.match(/^WIDTH=(\d+)$/m)?.[1]);
+  expect(Number.isFinite(x)).toBe(true);
+  expect(Number.isFinite(y)).toBe(true);
   expect(width).toBeGreaterThan(500);
-  return { windowId, width };
+  return { windowId, x, y, width };
 }
 
-function clickToolbarAt(windowId: string, x: number): void {
+function clickToolbarAt(windowId: string, x: number, y: number): void {
   execFileSync("xdotool", ["windowfocus", "--sync", windowId]);
-  execFileSync("xdotool", ["mousemove", "--window", windowId, String(x), "82", "click", "1"]);
+  execFileSync("xdotool", ["mousemove", "--window", windowId, String(x), String(y), "click", "1"]);
 }
 
 test("loads the unpacked extension and handles local settings safely", async () => {
@@ -606,7 +612,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     const permissionPromptScreenshot = join(evidenceDirectory, "extension-origin-permission-prompt.png");
     execFileSync("scrot", ["--overwrite", permissionPromptScreenshot]);
     console.info(`Captured isolated Chromium permission state; focused window=${execFileSync("xdotool", ["getwindowfocus", "getwindowname"], { encoding: "utf8" }).trim()}; screenshot=${permissionPromptScreenshot}`);
-    clickPermissionPromptWithKeyboard();
+    clickPermissionPromptAllow();
 
     const firstHealthResponse = await firstHealthResponsePromise;
     const optionsPageClosedDuringPermission = options.isClosed();

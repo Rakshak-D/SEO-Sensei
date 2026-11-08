@@ -354,6 +354,17 @@ async function reopenOptionsPage(installed: InstalledExtension): Promise<Page> {
   return options;
 }
 
+async function waitForContextResponse(context: BrowserContext, pathname: string): Promise<import("@playwright/test").Response | null> {
+  try {
+    return await context.waitForEvent("response", {
+      predicate: (response) => new URL(response.url()).pathname === pathname,
+      timeout: 10_000,
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function expectPopupText(popup: ActionPopup, selector: string, expected: string | RegExp, contains = false): Promise<void> {
   const assertion = expect.poll(() => popup.text(selector));
   if (expected instanceof RegExp) await assertion.toMatch(expected);
@@ -566,26 +577,29 @@ test("uses real optional origin permission and exercises authenticated API-backe
       options.isClosed(),
       `The extension options page closed before the health action. Lifecycle=${browserLifecycle.join(",") || "none"}; remainingPages=${context.pages().map((page) => page.url()).join(",") || "none"}`,
     ).toBe(false);
-    const healthResponsePromise = options.waitForResponse((response) => new URL(response.url()).pathname === "/health");
+    const firstHealthResponsePromise = waitForContextResponse(context, "/health");
     await options.getByRole("button", { name: "Test /health" }).click();
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 450));
     clickPermissionPromptWithKeyboard();
 
-    let healthResponse = await healthResponsePromise.catch(() => null);
-    if (!healthResponse || options.isClosed()) {
-      if (!options.isClosed()) {
-        throw new Error("The extension health request did not complete after the browser permission action.");
-      }
+    const firstHealthResponse = await firstHealthResponsePromise;
+    const optionsPageClosedDuringPermission = options.isClosed();
+    if (optionsPageClosedDuringPermission) {
       console.info("Chromium closed the options page during permission confirmation; reopened it and retried /health.");
       options = await reopenOptionsPage(installed);
-      await expect.poll(async () => options.evaluate(async (pattern) =>
-        chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
-      const retryHealthResponsePromise = options.waitForResponse((response) => new URL(response.url()).pathname === "/health");
-      await options.getByRole("button", { name: "Test /health" }).click();
-      healthResponse = await retryHealthResponsePromise;
     }
     await expect.poll(async () => options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(true);
+    let healthResponse = firstHealthResponse;
+    if (!healthResponse || optionsPageClosedDuringPermission) {
+      const retryHealthResponsePromise = waitForContextResponse(context, "/health");
+      await options.getByRole("button", { name: "Test /health" }).click();
+      healthResponse = await retryHealthResponsePromise;
+    }
+    if (!healthResponse) {
+      const message = (await options.locator("#message").textContent())?.trim() || "no connection message";
+      throw new Error(`The permitted extension origin did not complete /health: ${message}`);
+    }
     expect(healthResponse.status()).toBe(200);
     await expect(options.locator("#message")).toContainText("API reachable");
 

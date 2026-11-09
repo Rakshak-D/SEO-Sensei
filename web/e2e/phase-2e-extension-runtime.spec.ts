@@ -401,7 +401,6 @@ async function saveConfiguration(page: Page, origin: string, token: string): Pro
 async function submitConfiguration(page: Page, origin: string, token: string): Promise<void> {
   await page.bringToFront();
   await expect(page.locator("#settingsForm")).toHaveAttribute("data-settings-ready", "true");
-  if (token) maskTestCredential(token);
   await page.getByLabel("API base URL").fill(origin);
   await page.getByLabel("API access token").fill(token);
   await page.evaluate(() => {
@@ -417,8 +416,13 @@ async function submitConfiguration(page: Page, origin: string, token: string): P
   await page.getByRole("button", { name: "Save configuration" }).click();
 }
 
-function maskTestCredential(value: string): void {
-  if (process.env.GITHUB_ACTIONS === "true" && value) process.stdout.write(`::add-mask::${value}\n`);
+function disposableTestCredential(variable: string, localPurpose: string): string {
+  const provisioned = process.env[variable];
+  if (process.env.GITHUB_ACTIONS === "true") {
+    if (!provisioned) throw new Error(`Required pre-masked test credential ${variable} is missing.`);
+    return provisioned;
+  }
+  return `${localPurpose}-${randomUUID()}`;
 }
 
 async function safeConfigurationOutcome(page: Page, expectedOrigin: string): Promise<SafeConfigurationOutcome> {
@@ -664,23 +668,28 @@ test("loads the unpacked extension and handles local settings safely", async () 
     await capturePage(options, join(evidenceDirectory, "extension-options-empty.png"));
 
     const invalidOrigin = "https://user:password@seo-sensei-api.localhost:8443";
-    await submitConfiguration(options, invalidOrigin, `unpersisted-${randomUUID()}`);
+    await submitConfiguration(
+      options,
+      invalidOrigin,
+      disposableTestCredential("PHASE2E_TEST_INVALID_ORIGIN_TOKEN", "local-invalid-origin"),
+    );
     await expect(options.locator("#message")).toContainText("credential-free HTTP or HTTPS origin");
 
+    const invalidUrlToken = disposableTestCredential("PHASE2E_TEST_INVALID_URL_TOKEN", "local-invalid-url");
     for (const invalidUrl of [
       { value: "not a URL", message: "Enter a valid API URL." },
       { value: "ftp://seo-sensei-api.localhost:8443", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
       { value: "https://seo-sensei-api.localhost:8443?token=sample", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
       { value: "https://seo-sensei-api.localhost:8443#sample", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
     ]) {
-      await submitConfiguration(options, invalidUrl.value, `invalid-${randomUUID()}`);
+      await submitConfiguration(options, invalidUrl.value, invalidUrlToken);
       await expect(options.locator("#message")).toHaveText(invalidUrl.message);
     }
 
     await submitConfiguration(options, "https://seo-sensei-api.localhost:8443", "");
     await expect(options.locator("#message")).toContainText("Enter an API access token.");
 
-    const disposableToken = `offline-${randomUUID()}`;
+    const disposableToken = disposableTestCredential("PHASE2E_TEST_OFFLINE_TOKEN", "local-offline");
     await saveConfiguration(options, "https://seo-sensei-api.localhost:8443", disposableToken);
     const savedState = await options.evaluate(async () => {
       const stored = await chrome.storage.local.get("seoSenseiApiConfig");
@@ -730,7 +739,7 @@ test("loads the unpacked extension and handles local settings safely", async () 
 test("does not report success or expose credentials when extension storage rejects a save", async () => {
   const installed = await installInIsolatedProfile();
   const origin = "https://seo-sensei-api.localhost:8443";
-  const token = `storage-failure-${randomUUID()}`;
+  const token = disposableTestCredential("PHASE2E_TEST_STORAGE_FAILURE_TOKEN", "local-storage-failure");
 
   try {
     expect(await installStorageWriteFailure(installed.options)).toBe(true);
@@ -1053,7 +1062,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupHidden(missingTokenPopup, "#results");
     await missingTokenPopup.close();
 
-    const wrongToken = `incorrect-${randomUUID()}`;
+    const wrongToken = disposableTestCredential("PHASE2E_TEST_WRONG_API_TOKEN", "local-wrong-api");
     await saveConfiguration(options, apiOrigin, wrongToken);
     await activeTab.bringToFront();
     const wrongTokenPopup = await openActionPopup(context, options, activeTab, (origin) => authorizationOrigins.push(origin));

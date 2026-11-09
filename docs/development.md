@@ -161,3 +161,44 @@ afterward.
 
 The frontend development dependency tree has a previously reported moderate
 npm advisory; it remains a separately reviewed dependency-maintenance item.
+
+## Installed extension runtime check
+
+The authenticated integration job also loads the actual unpacked `frontend/`
+extension into a fresh, headed Playwright Chromium profile. It makes a temporary
+copy with a generated public manifest key only to give that run a known
+extension ID; the private key is never written, and the production manifest is
+untouched. A Compose override allowlists that single generated extension origin
+alongside the existing integration-test origin and supplies a random, masked
+API bearer value. The installed extension's options page and toolbar action
+then exercise the existing FastAPI routes over the loopback HTTPS Caddy stack.
+
+The test uses Chromium's actual toolbar action, `activeTab`, Chrome storage and
+optional-origin permission prompt. The CI runner installs Caddy's generated
+root only into its disposable trust stores; TLS validation remains enabled.
+The API container has no published port, its fetcher is replaced only by the
+existing controlled fixture transport, and Gemini credentials are absent. The
+job uses Xvfb and `xdotool` for the isolated toolbar and permission-prompt
+inputs, then uploads sanitized screenshots without traces or credentials.
+Each test closes and removes only the uniquely created browser profile. CI's
+temporary extension copy is discarded with its runner; the local PowerShell
+command leaves its generated extension copy under `$runtimeRoot` for inspection.
+
+On Windows, the offline extension-options portion can be run in a separate
+Playwright profile without starting the HTTPS stack:
+
+```powershell
+cd web
+$runtimeRoot = Join-Path $env:TEMP ('seo-sensei-extension-check-' + [guid]::NewGuid().ToString('N'))
+$runtime = node ..\tests\integration\prepare_extension_runtime.mjs ..\frontend $runtimeRoot | ConvertFrom-Json
+$env:PHASE2E_EXTENSION_ID = $runtime.extensionId
+$env:PHASE2E_EXTENSION_DIR = $runtime.extensionDirectory
+$env:PHASE2E_EVIDENCE_DIR = 'review/evidence/phase-2e-c'
+npx playwright test --config playwright.extension-runtime.config.ts --grep 'loads the unpacked extension'
+```
+
+This local check verifies installation and options-page storage only. It does
+not verify the toolbar's `activeTab` grant, optional host-permission prompt, or
+HTTPS API integration. Do not trust Caddy's local test CA in a user-owned
+Windows or browser certificate store to claim those checks; use the disposable
+CI runner or a separately isolated Linux test environment.

@@ -3,6 +3,7 @@
     const api = globalThis.SeoSenseiApi;
     const $ = (id) => document.getElementById(id);
     let current = null;
+    let configuredApiBaseUrl = "";
 
     function addText(parent, className, text) {
         const node = document.createElement("span");
@@ -91,12 +92,20 @@
 
     async function analyze() {
         const button = $("analyzeBtn"); button.disabled = true; clearError(); $("results").hidden = true; $("statusText").textContent = "Asking the API to inspect this page…";
-        try { const result = await api.analyzeCurrentTab(); render(result.analysis, result.tab); }
+        try {
+            if (configuredApiBaseUrl) await api.requestOriginPermission(configuredApiBaseUrl);
+            const result = await api.analyzeCurrentTab(); render(result.analysis, result.tab);
+        }
         catch (error) { showError(error instanceof api.ExtensionApiError ? error : new api.ExtensionApiError("unknown", "The extension could not complete the request.")); }
         finally { button.disabled = false; }
     }
 
     function openOptions() { chrome.runtime.openOptionsPage(); }
-    $("analyzeBtn").addEventListener("click", analyze); $("settingsBtn").addEventListener("click", openOptions); $("optionsLink").addEventListener("click", openOptions);
+    const analyzeButton = $("analyzeBtn");
+    analyzeButton.disabled = true;
+    api.getConfig().then((config) => { configuredApiBaseUrl = config.baseUrl || ""; })
+        .catch(() => { configuredApiBaseUrl = ""; })
+        .finally(() => { analyzeButton.disabled = false; });
+    analyzeButton.addEventListener("click", analyze); $("settingsBtn").addEventListener("click", openOptions); $("optionsLink").addEventListener("click", openOptions);
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => { const tab = tabs[0]; if (tab && tab.url) { try { $("pageHost").textContent = new URL(tab.url).hostname; } catch (_) {} $("pageTitle").textContent = tab.title || "Ready to analyze."; } });
 }());

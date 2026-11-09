@@ -11,7 +11,7 @@
         <p class="eyebrow">SEO-SENSEI / PRIVATE CLIENT</p>
         <h1>API settings</h1>
         <p class="intro">Connect this extension to a self-hosted or private SEO-Sensei API. This is an operator credential, not a multi-user identity system.</p>
-        <form id="settingsForm" novalidate>
+        <form id="settingsForm" novalidate data-settings-ready="false" aria-busy="true">
             <label for="apiBaseUrl">API base URL</label>
             <input id="apiBaseUrl" type="url" placeholder="https://seo-sensei.example" autocomplete="url" required>
             <small>Use the FastAPI origin only. Credentials, query strings, and fragments are rejected.</small>
@@ -21,7 +21,7 @@
             <div class="actions"><button id="saveBtn" type="submit">Save configuration</button><button id="clearBtn" type="button" class="secondary">Clear</button></div>
         </form>
         <section class="connection-card">
-            <div><p class="eyebrow">CONNECTION</p><strong id="connectionState">Not configured</strong><p id="savedOrigin">No API origin saved.</p></div>
+            <div><p class="eyebrow">CONNECTION</p><strong id="connectionState" role="status">Loading local settings…</strong><p id="savedOrigin">No API origin saved.</p></div>
             <button id="testBtn" type="button" class="secondary">Test /health</button>
         </section>
         <p id="message" class="message" role="status"></p>

@@ -148,6 +148,28 @@ jobs:
           printf 'PHASE2E_EXTENSION_ID=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).extensionId)' "$metadata")" >> "$GITHUB_ENV"
           printf 'PHASE2E_EXTENSION_DIR=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).extensionDirectory)' "$metadata")" >> "$GITHUB_ENV"
           printf 'PHASE2E_COMPOSE_OVERRIDE=%s\n' "$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).composeOverride)' "$metadata")" >> "$GITHUB_ENV"
+      - name: Prepare masked extension runtime credentials
+        shell: bash
+        run: |
+          set +x
+          set -eu
+          invalid_origin_token="$(openssl rand -hex 32)"
+          invalid_url_token="$(openssl rand -hex 32)"
+          offline_token="$(openssl rand -hex 32)"
+          storage_failure_token="$(openssl rand -hex 32)"
+          wrong_api_token="$(openssl rand -hex 32)"
+          printf '::add-mask::%s\n' "$invalid_origin_token"
+          printf '::add-mask::%s\n' "$invalid_url_token"
+          printf '::add-mask::%s\n' "$offline_token"
+          printf '::add-mask::%s\n' "$storage_failure_token"
+          printf '::add-mask::%s\n' "$wrong_api_token"
+          {
+            printf 'PHASE2E_TEST_INVALID_ORIGIN_TOKEN=%s\n' "$invalid_origin_token"
+            printf 'PHASE2E_TEST_INVALID_URL_TOKEN=%s\n' "$invalid_url_token"
+            printf 'PHASE2E_TEST_OFFLINE_TOKEN=%s\n' "$offline_token"
+            printf 'PHASE2E_TEST_STORAGE_FAILURE_TOKEN=%s\n' "$storage_failure_token"
+            printf 'PHASE2E_TEST_WRONG_API_TOKEN=%s\n' "$wrong_api_token"
+          } >> "$GITHUB_ENV"
       - name: Create disposable integration password
         run: |
           password="$(openssl rand -hex 32)"
@@ -215,6 +237,13 @@ jobs:
         run: npm run test:e2e:integration
       - name: Install isolated Chromium toolbar input tools
         run: sudo apt-get update && sudo apt-get install --yes scrot xdotool xvfb
+      - name: Guard against credential-bearing test-worker commands
+        working-directory: web
+        run: |
+          if grep -En '::add-mask::|maskTestCredential|process\.stdout\.write' e2e/phase-2e-extension-runtime.spec.ts; then
+            echo 'Credential masking and worker output must remain in the CI shell setup.' >&2
+            exit 1
+          fi
       - name: Run installed Chromium extension runtime verification
         working-directory: web
         env:

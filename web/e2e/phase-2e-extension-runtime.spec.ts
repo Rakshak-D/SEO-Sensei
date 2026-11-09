@@ -29,6 +29,20 @@ type PopupRequest = { requestId: string; request: { url: string; method: string;
 type PopupRequestHeaders = { requestId: string; headers: Record<string, string> };
 type PopupPausedRequest = { requestId: string; request: { url: string; method: string } };
 type PopupMock = { status: number; body: string; requestId: string; retryAfter?: number };
+type SafeConfigurationOutcome = {
+  settingsReady: boolean;
+  formValidAtSubmit: boolean;
+  submitObserved: boolean;
+  success: boolean;
+  storageError: boolean;
+  messageSafe: boolean;
+  inputEmpty: boolean;
+  hasConfig: boolean;
+  hasToken: boolean;
+  originMatches: boolean;
+  configured: boolean;
+  unconfigured: boolean;
+};
 
 class ActionPopup {
   private nextCommandId = 0;
@@ -87,8 +101,8 @@ class ActionPopup {
         const params = message.params as PopupPausedRequest;
         void this.handlePausedRequest(params);
       } else if (message.method === "Runtime.exceptionThrown") {
-        const params = message.params as { exceptionDetails?: { text?: string; exception?: { description?: string } } };
-        this.uncaughtExceptions.push(params.exceptionDetails?.exception?.description ?? params.exceptionDetails?.text ?? "Unspecified popup exception");
+        const params = message.params as { exceptionDetails?: { exception?: { className?: string } } };
+        this.uncaughtExceptions.push(params.exceptionDetails?.exception?.className ?? "UncaughtExtensionException");
       }
     });
   }
@@ -167,19 +181,12 @@ class ActionPopup {
     return (targetInfos as Array<{ targetId: string }>).some((target) => target.targetId === this.targetId);
   }
 
-  async text(selector: string, hasText?: string | RegExp, role?: string): Promise<string> {
+  async textMatches(selector: string, expected: { value?: string; pattern?: string; flags?: string; contains: boolean }): Promise<boolean> {
     return this.evaluate((query) => {
-      const elements = Array.from(document.querySelectorAll(query.selector));
-      const found = elements.find((element) => {
-        const name = element.getAttribute("aria-label") ?? element.textContent ?? "";
-        const matchesRole = !query.role || element.getAttribute("role") === query.role || element.tagName.toLowerCase() === query.role;
-        const matchesText = query.text == null || (query.text.regex
-          ? new RegExp(query.text.source, query.text.flags).test(name)
-          : name.includes(query.text.value));
-        return matchesRole && matchesText;
-      });
-      return found?.textContent?.trim() ?? "";
-    }, { selector, role, text: hasText instanceof RegExp ? { regex: true, source: hasText.source, flags: hasText.flags } : hasText == null ? null : { regex: false, value: hasText } } as never);
+      const text = document.querySelector(query.selector)?.textContent?.trim() ?? "";
+      if (query.expected.pattern !== undefined) return new RegExp(query.expected.pattern, query.expected.flags).test(text);
+      return query.expected.contains ? text.includes(query.expected.value ?? "") : text === (query.expected.value ?? "");
+    }, { selector, expected });
   }
 
   async visible(selector: string, hasText?: string): Promise<boolean> {
@@ -345,6 +352,7 @@ async function installInIsolatedProfile(): Promise<InstalledExtension> {
   const pageErrors: string[] = [];
   options.on("pageerror", (error) => pageErrors.push(error.name));
   await options.goto(`chrome-extension://${extensionId}/options.html`);
+  await expect(options.locator("#settingsForm")).toHaveAttribute("data-settings-ready", "true");
   await expect(options.locator("#connectionState")).toHaveText("Not configured");
   const runtimeId = await options.evaluate(() => chrome.runtime.id);
   expect(runtimeId).toBe(extensionId);
@@ -370,15 +378,113 @@ async function closeIsolatedProfile(installed: InstalledExtension): Promise<void
 }
 
 async function saveConfiguration(page: Page, origin: string, token: string): Promise<void> {
+  await submitConfiguration(page, origin, token);
+  await expect.poll(
+    () => safeConfigurationOutcome(page, origin),
+    "Configuration save is verified with redacted boolean state.",
+  ).toEqual({
+    settingsReady: true,
+    formValidAtSubmit: true,
+    submitObserved: true,
+    success: true,
+    storageError: false,
+    messageSafe: true,
+    inputEmpty: true,
+    hasConfig: true,
+    hasToken: true,
+    originMatches: true,
+    configured: true,
+    unconfigured: false,
+  });
+}
+
+async function submitConfiguration(page: Page, origin: string, token: string): Promise<void> {
+  await page.bringToFront();
+  await expect(page.locator("#settingsForm")).toHaveAttribute("data-settings-ready", "true");
   await page.getByLabel("API base URL").fill(origin);
   await page.getByLabel("API access token").fill(token);
+  await page.evaluate(() => {
+    const form = document.getElementById("settingsForm");
+    if (!form) throw new Error("The settings form is unavailable.");
+    (window as Window & { __phase2eSubmitObserved?: boolean }).__phase2eSubmitObserved = false;
+    (window as Window & { __phase2eFormValidAtSubmit?: boolean }).__phase2eFormValidAtSubmit = false;
+    form.addEventListener("submit", () => {
+      (window as Window & { __phase2eSubmitObserved?: boolean }).__phase2eSubmitObserved = true;
+      (window as Window & { __phase2eFormValidAtSubmit?: boolean }).__phase2eFormValidAtSubmit = form.checkValidity();
+    }, { capture: true, once: true });
+  });
   await page.getByRole("button", { name: "Save configuration" }).click();
+}
+
+function disposableTestCredential(variable: string, localPurpose: string): string {
+  const provisioned = process.env[variable];
+  if (process.env.GITHUB_ACTIONS === "true") {
+    if (!provisioned) throw new Error(`Required pre-masked test credential ${variable} is missing.`);
+    return provisioned;
+  }
+  return `${localPurpose}-${randomUUID()}`;
+}
+
+async function safeConfigurationOutcome(page: Page, expectedOrigin: string): Promise<SafeConfigurationOutcome> {
+  return page.evaluate(async ({ expectedOrigin: expected }) => {
+    const chromeApi = (globalThis as typeof globalThis & {
+      chrome: { storage: { local: { get: (key: string) => Promise<Record<string, unknown>> } } };
+    }).chrome;
+    const stored = await chromeApi.storage.local.get("seoSenseiApiConfig");
+    const config = stored.seoSenseiApiConfig as { baseUrl?: string; token?: string } | undefined;
+    const form = document.getElementById("settingsForm") as HTMLFormElement | null;
+    const tokenInput = document.getElementById("apiToken") as HTMLInputElement | null;
+    const state = document.getElementById("connectionState")?.textContent?.trim() ?? "";
+    const message = document.getElementById("message")?.textContent?.trim() ?? "";
+    return {
+      settingsReady: form?.dataset.settingsReady === "true",
+      formValidAtSubmit: (window as Window & { __phase2eFormValidAtSubmit?: boolean }).__phase2eFormValidAtSubmit === true,
+      submitObserved: (window as Window & { __phase2eSubmitObserved?: boolean }).__phase2eSubmitObserved === true,
+      success: message === "Saved. The token will not be displayed.",
+      storageError: message === "Could not save configuration. Check browser storage and try again.",
+      messageSafe: message === "Saved. The token will not be displayed."
+        || message === "Could not save configuration. Check browser storage and try again.",
+      inputEmpty: tokenInput?.value.length === 0,
+      hasConfig: Boolean(config),
+      hasToken: Boolean(config?.token),
+      originMatches: config?.baseUrl === expected,
+      configured: state === "Configured locally",
+      unconfigured: state === "Not configured",
+    };
+  }, { expectedOrigin });
+}
+
+async function installStorageWriteFailure(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const chromeApi = (globalThis as typeof globalThis & {
+      chrome: { storage: { local: Record<string, unknown> } };
+    }).chrome;
+    try {
+      Object.defineProperty(chromeApi.storage.local, "set", {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: () => Promise.reject(new Error("synthetic-storage-write-failure")),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function expectTokenInputEmpty(page: Page): Promise<void> {
+  await expect.poll(
+    () => page.locator("#apiToken").evaluate((input) => (input as HTMLInputElement).value.length === 0),
+    "Token-field emptiness is checked without including its value in diagnostics.",
+  ).toBe(true);
 }
 
 async function reopenOptionsPage(installed: InstalledExtension): Promise<Page> {
   const options = await installed.context.newPage();
   options.on("pageerror", (error) => installed.pageErrors.push(error.name));
   await options.goto(`chrome-extension://${extensionId}/options.html`);
+  await expect(options.locator("#settingsForm")).toHaveAttribute("data-settings-ready", "true");
   await expect(options.locator("#connectionState")).toHaveText("Configured locally");
   return options;
 }
@@ -395,10 +501,13 @@ async function waitForContextResponse(context: BrowserContext, pathname: string)
 }
 
 async function expectPopupText(popup: ActionPopup, selector: string, expected: string | RegExp, contains = false): Promise<void> {
-  const assertion = expect.poll(() => popup.text(selector));
-  if (expected instanceof RegExp) await assertion.toMatch(expected);
-  else if (contains) await assertion.toContain(expected);
-  else await assertion.toBe(expected);
+  const expectedState = expected instanceof RegExp
+    ? { pattern: expected.source, flags: expected.flags, contains: false }
+    : { value: expected, contains };
+  await expect.poll(
+    () => popup.textMatches(selector, expectedState),
+    "Extension UI text is checked without serializing its contents.",
+  ).toBe(true);
 }
 
 async function expectPopupHidden(popup: ActionPopup, selector: string): Promise<void> {
@@ -559,28 +668,29 @@ test("loads the unpacked extension and handles local settings safely", async () 
     await capturePage(options, join(evidenceDirectory, "extension-options-empty.png"));
 
     const invalidOrigin = "https://user:password@seo-sensei-api.localhost:8443";
-    await saveConfiguration(options, invalidOrigin, `unpersisted-${randomUUID()}`);
+    await submitConfiguration(
+      options,
+      invalidOrigin,
+      disposableTestCredential("PHASE2E_TEST_INVALID_ORIGIN_TOKEN", "local-invalid-origin"),
+    );
     await expect(options.locator("#message")).toContainText("credential-free HTTP or HTTPS origin");
 
+    const invalidUrlToken = disposableTestCredential("PHASE2E_TEST_INVALID_URL_TOKEN", "local-invalid-url");
     for (const invalidUrl of [
       { value: "not a URL", message: "Enter a valid API URL." },
       { value: "ftp://seo-sensei-api.localhost:8443", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
       { value: "https://seo-sensei-api.localhost:8443?token=sample", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
       { value: "https://seo-sensei-api.localhost:8443#sample", message: "The API URL must be a credential-free HTTP or HTTPS origin." },
     ]) {
-      await options.getByLabel("API base URL").fill(invalidUrl.value);
-      await options.getByRole("button", { name: "Save configuration" }).click();
+      await submitConfiguration(options, invalidUrl.value, invalidUrlToken);
       await expect(options.locator("#message")).toHaveText(invalidUrl.message);
     }
 
-    await options.getByLabel("API base URL").fill("https://seo-sensei-api.localhost:8443");
-    await options.getByLabel("API access token").fill("");
-    await options.getByRole("button", { name: "Save configuration" }).click();
+    await submitConfiguration(options, "https://seo-sensei-api.localhost:8443", "");
     await expect(options.locator("#message")).toContainText("Enter an API access token.");
 
-    const disposableToken = `offline-${randomUUID()}`;
+    const disposableToken = disposableTestCredential("PHASE2E_TEST_OFFLINE_TOKEN", "local-offline");
     await saveConfiguration(options, "https://seo-sensei-api.localhost:8443", disposableToken);
-    await expect(options.locator("#apiToken")).toHaveValue("");
     const savedState = await options.evaluate(async () => {
       const stored = await chrome.storage.local.get("seoSenseiApiConfig");
       return {
@@ -590,8 +700,9 @@ test("loads the unpacked extension and handles local settings safely", async () 
     });
     expect(savedState).toEqual({ baseUrl: "https://seo-sensei-api.localhost:8443", hasToken: true });
     await options.reload();
+    await expect(options.locator("#settingsForm")).toHaveAttribute("data-settings-ready", "true");
     await expect(options.getByLabel("API base URL")).toHaveValue("https://seo-sensei-api.localhost:8443");
-    await expect(options.getByLabel("API access token")).toHaveValue("");
+    await expectTokenInputEmpty(options);
     const tokenDisplayedAfterReload = await options.locator("body").evaluate((body, tokenValue) => body.textContent?.includes(tokenValue) ?? false, disposableToken);
     expect(tokenDisplayedAfterReload).toBe(false);
     await capturePage(options, join(evidenceDirectory, "extension-options-configured.png"));
@@ -603,7 +714,7 @@ test("loads the unpacked extension and handles local settings safely", async () 
       return Boolean(stored.seoSenseiApiConfig);
     });
     expect(clearedState).toBe(false);
-    await expect(options.locator("#apiToken")).toHaveValue("");
+    await expectTokenInputEmpty(options);
     await capturePage(options, join(evidenceDirectory, "extension-options-cleared.png"));
     const resultsAfterClear = await options.evaluate(async (url) => {
       const api = (globalThis as typeof globalThis & { SeoSenseiApi: { health: () => Promise<unknown>; boost: (target: string) => Promise<unknown> } }).SeoSenseiApi;
@@ -620,6 +731,36 @@ test("loads the unpacked extension and handles local settings safely", async () 
       installation: "unpacked frontend copy loaded by Chromium extension flags in a fresh persistent profile",
       verifiedScope: "options page, Chrome storage, validation, save/reload/clear; no API stack",
     }, null, 2)}\n`);
+  } finally {
+    await closeIsolatedProfile(installed);
+  }
+});
+
+test("does not report success or expose credentials when extension storage rejects a save", async () => {
+  const installed = await installInIsolatedProfile();
+  const origin = "https://seo-sensei-api.localhost:8443";
+  const token = disposableTestCredential("PHASE2E_TEST_STORAGE_FAILURE_TOKEN", "local-storage-failure");
+
+  try {
+    expect(await installStorageWriteFailure(installed.options)).toBe(true);
+    await submitConfiguration(installed.options, origin, token);
+    await expect.poll(
+      () => safeConfigurationOutcome(installed.options, origin),
+      "Storage failure state contains only redacted booleans.",
+    ).toEqual({
+      settingsReady: true,
+      formValidAtSubmit: true,
+      submitObserved: true,
+      success: false,
+      storageError: true,
+      messageSafe: true,
+      inputEmpty: false,
+      hasConfig: false,
+      hasToken: false,
+      originMatches: false,
+      configured: false,
+      unconfigured: true,
+    });
   } finally {
     await closeIsolatedProfile(installed);
   }
@@ -706,7 +847,7 @@ test("uses real optional origin permission and exercises authenticated API-backe
 
   try {
     await saveConfiguration(options, apiOrigin, apiToken);
-    await expect(options.getByLabel("API access token")).toHaveValue("");
+    await expectTokenInputEmpty(options);
 
     const beforePermission = await options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern);
@@ -840,16 +981,16 @@ test("uses real optional origin permission and exercises authenticated API-backe
     let analysisResponse: RuntimeResponse;
     try {
       analysisResponse = await responsePromise;
-    } catch (error) {
+    } catch {
       const state = await popup.evaluate(() => ({
-        focusedId: (document.activeElement as HTMLElement | null)?.id ?? "",
+        focusedOnAnalyze: (document.activeElement as HTMLElement | null)?.id === "analyzeBtn",
         hasFocus: document.hasFocus(),
-        status: document.getElementById("statusText")?.textContent?.trim() ?? "",
-        errorTitle: document.getElementById("errorTitle")?.textContent?.trim() ?? "",
-        errorMessage: document.getElementById("errorMessage")?.textContent?.trim() ?? "",
+        hasStatus: Boolean(document.getElementById("statusText")?.textContent?.trim()),
+        hasErrorTitle: Boolean(document.getElementById("errorTitle")?.textContent?.trim()),
+        hasErrorMessage: Boolean(document.getElementById("errorMessage")?.textContent?.trim()),
         buttonDisabled: (document.getElementById("analyzeBtn") as HTMLButtonElement | null)?.disabled ?? null,
       }));
-      throw new Error(`${error instanceof Error ? error.message : "Analysis response wait failed."} Popup state: ${JSON.stringify(state)}; matching API requests: ${popup.requestsTo(apiPath)}.`, { cause: error });
+      throw new Error(`The extension analysis response did not arrive. Popup state: ${JSON.stringify(state)}; matching API requests: ${popup.requestsTo(apiPath)}.`);
     }
     expect(analysisResponse.status()).toBe(200);
     expect(JSON.parse(popup.requestBodiesTo(apiPath)[0])).toEqual({
@@ -921,9 +1062,8 @@ test("uses real optional origin permission and exercises authenticated API-backe
     await expectPopupHidden(missingTokenPopup, "#results");
     await missingTokenPopup.close();
 
-    await options.getByLabel("API access token").fill("incorrect-disposable-test-token");
-    await options.getByRole("button", { name: "Save configuration" }).click();
-    await expect(options.locator("#apiToken")).toHaveValue("");
+    const wrongToken = disposableTestCredential("PHASE2E_TEST_WRONG_API_TOKEN", "local-wrong-api");
+    await saveConfiguration(options, apiOrigin, wrongToken);
     await activeTab.bringToFront();
     const wrongTokenPopup = await openActionPopup(context, options, activeTab, (origin) => authorizationOrigins.push(origin));
     const wrongTokenButton = wrongTokenPopup.getByRole("button", { name: /Analyze current page/ });
@@ -1124,13 +1264,16 @@ test("shows recovery guidance when real optional origin access is denied", async
   );
 
   const installed = await installInIsolatedProfile();
-  const { options } = installed;
+  const { context, options } = installed;
   const apiUrl = new URL(apiOrigin);
   const permittedPattern = `${apiUrl.origin}/*`;
+  let analysisRequests = 0;
+  context.on("request", (request) => {
+    if (new URL(request.url()).pathname === apiPath && request.method() === "POST") analysisRequests += 1;
+  });
 
   try {
     await saveConfiguration(options, apiOrigin, apiToken);
-    await expect(options.getByLabel("API access token")).toHaveValue("");
     expect(await options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
 
@@ -1140,6 +1283,7 @@ test("shows recovery guidance when real optional origin access is denied", async
     await expect(options.locator("#message")).toHaveText("Allow API access for the configured origin, then try again.");
     expect(await options.evaluate(async (pattern) =>
       chrome.permissions.contains({ origins: [pattern] }), permittedPattern)).toBe(false);
+    expect(analysisRequests).toBe(0);
   } finally {
     await closeIsolatedProfile(installed);
   }

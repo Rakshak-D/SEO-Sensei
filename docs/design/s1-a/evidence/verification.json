@@ -1,0 +1,837 @@
+{
+  "browserVersion": "158.0.8127.18",
+  "browserEngine": "Playwright-bundled Chromium",
+  "profile": "Playwright disposable in-memory browser context; no existing user profile used",
+  "viewportTests": "CSS viewport changes only; not browser zoom",
+  "baseOrigin": "http://127.0.0.1:58574",
+  "requestCount": 897,
+  "hosts": [
+    "127.0.0.1:58574"
+  ],
+  "externalHostCount": 0,
+  "unexpectedRequests": 0,
+  "consoleErrors": [],
+  "reports": [
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "home",
+      "sample": "",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "home",
+      "sample": "",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "home",
+      "sample": "",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "home",
+      "sample": "",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "weak",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "weak",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "weak",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "weak",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 17,
+      "state": "on-page",
+      "sample": "weak",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 17,
+      "state": "on-page",
+      "sample": "weak",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 17,
+      "state": "on-page",
+      "sample": "weak",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 17,
+      "state": "on-page",
+      "sample": "weak",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "previews",
+      "sample": "weak",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "previews",
+      "sample": "weak",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "previews",
+      "sample": "weak",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "previews",
+      "sample": "weak",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 14,
+      "state": "fix-list",
+      "sample": "weak",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 14,
+      "state": "fix-list",
+      "sample": "weak",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 14,
+      "state": "fix-list",
+      "sample": "weak",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 14,
+      "state": "fix-list",
+      "sample": "weak",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "loading",
+      "sample": "weak",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "loading",
+      "sample": "weak",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "loading",
+      "sample": "weak",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "loading",
+      "sample": "weak",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "error",
+      "sample": "",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "error",
+      "sample": "",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "error",
+      "sample": "",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 16,
+      "state": "error",
+      "sample": "",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "basic",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "basic",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "basic",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "basic",
+      "viewport": "390x844"
+    },
+    {
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "noindex",
+      "viewport": "1440x900"
+    },
+    {
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "noindex",
+      "viewport": "1024x768"
+    },
+    {
+      "viewportWidth": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "noindex",
+      "viewport": "768x1024"
+    },
+    {
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "overlaps": 0,
+      "bodyFontPx": 16,
+      "evidenceFontPx": 13,
+      "state": "summary",
+      "sample": "noindex",
+      "viewport": "390x844"
+    }
+  ],
+  "narrow320": {
+    "viewportWidth": 320,
+    "documentWidth": 320,
+    "overflow": false,
+    "overlaps": 0,
+    "bodyFontPx": 16,
+    "evidenceFontPx": 13,
+    "state": "summary",
+    "sample": "weak",
+    "viewport": "320x844"
+  },
+  "tabletUrlFieldWidth": 377,
+  "tabletAnatomyWidth": 707,
+  "hostnameLines": {
+    "320": 1,
+    "390": 1
+  },
+  "cls": {
+    "supported": true,
+    "initial": 0,
+    "loadingToResult": 0,
+    "initialEntries": 0,
+    "transitionEntries": 0,
+    "initialSources": [],
+    "transitionSources": []
+  },
+  "anatomyDiffs": 8,
+  "anatomyDifferences": [
+    "title",
+    "description",
+    "canonical",
+    "h1",
+    "headings",
+    "body",
+    "links",
+    "images"
+  ],
+  "priorityIds": [
+    "meta_description",
+    "h1_structure",
+    "title",
+    "image_alt",
+    "html_lang"
+  ],
+  "priorityCount": 5,
+  "contrast": {
+    "minTextRatio": 6.096869214440414,
+    "minTextSample": {
+      "ratio": 6.096869214440414,
+      "text": "On-page",
+      "fontPx": 14
+    },
+    "minStatusRatio": 3.8068087226950227,
+    "statusSamples": {
+      "labels": 5,
+      "dots": 12
+    },
+    "focusRatio": 3.8068087226950227,
+    "focusedElement": "a",
+    "focusOutlineStyle": "solid"
+  },
+  "reloadStates": 7,
+  "missingRecovery": true,
+  "keyboardPass": true,
+  "keyboardActions": 3,
+  "requestResponse": 200,
+  "sourceNotes": "Supplementary source inspection for this offline proof only. SEOAnalysis does not return per-element attributes or line numbers.",
+  "tasteStates": 7,
+  "manualVisualReview": true,
+  "mappedChecks": 23,
+  "unmappedChecks": 0,
+  "summaryWords": 36,
+  "credentialInputs": 0,
+  "bearerMatches": 0,
+  "animatedProperties": [
+    "opacity",
+    "transform"
+  ],
+  "reducedMotionDuration": "1e-05s",
+  "motionPass": true,
+  "caveatCount": 1,
+  "caveatPass": true,
+  "bannedUiLabels": 0,
+  "sourceWordOccurrences": 3,
+  "captures": [
+    {
+      "fileName": "s1-a-home-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-home-1440x900.png",
+      "query": "?state=home",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-summary-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-1440x900.png",
+      "query": "?state=summary&sample=weak",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-on-page-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-1440x900.png",
+      "query": "?state=on-page&sample=weak",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-previews-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-1440x900.png",
+      "query": "?state=previews&sample=weak",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-fix-list-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-1440x900.png",
+      "query": "?state=fix-list&sample=weak",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-loading-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-1440x900.png",
+      "query": "?state=loading&sample=weak",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-error-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-error-1440x900.png",
+      "query": "?state=error&reason=static-preview",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-summary-basic-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-1440x900.png",
+      "query": "?state=summary&sample=basic",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-summary-noindex-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-1440x900.png",
+      "query": "?state=summary&sample=noindex",
+      "viewport": "1440x900"
+    },
+    {
+      "fileName": "s1-a-home-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-home-768x1024.png",
+      "query": "?state=home",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-summary-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-768x1024.png",
+      "query": "?state=summary&sample=weak",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-on-page-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-768x1024.png",
+      "query": "?state=on-page&sample=weak",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-previews-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-768x1024.png",
+      "query": "?state=previews&sample=weak",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-fix-list-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-768x1024.png",
+      "query": "?state=fix-list&sample=weak",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-loading-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-768x1024.png",
+      "query": "?state=loading&sample=weak",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-error-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-error-768x1024.png",
+      "query": "?state=error&reason=static-preview",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-summary-basic-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-768x1024.png",
+      "query": "?state=summary&sample=basic",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-summary-noindex-768x1024.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-768x1024.png",
+      "query": "?state=summary&sample=noindex",
+      "viewport": "768x1024"
+    },
+    {
+      "fileName": "s1-a-home-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-home-390x844.png",
+      "query": "?state=home",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-summary-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-390x844.png",
+      "query": "?state=summary&sample=weak",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-on-page-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-390x844.png",
+      "query": "?state=on-page&sample=weak",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-previews-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-390x844.png",
+      "query": "?state=previews&sample=weak",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-fix-list-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png",
+      "query": "?state=fix-list&sample=weak",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-loading-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-390x844.png",
+      "query": "?state=loading&sample=weak",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-error-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-error-390x844.png",
+      "query": "?state=error&reason=static-preview",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-summary-basic-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-390x844.png",
+      "query": "?state=summary&sample=basic",
+      "viewport": "390x844"
+    },
+    {
+      "fileName": "s1-a-summary-noindex-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-390x844.png",
+      "query": "?state=summary&sample=noindex",
+      "viewport": "390x844"
+    }
+  ],
+  "checks": [
+    {
+      "name": "offline analyzer data",
+      "status": "PASS",
+      "detail": "{\"audit-weak.json\":{\"score\":55,\"checks\":23,\"statuses\":{\"pass\":8,\"warning\":11,\"fail\":3,\"not_applicable\":1},\"enrichment\":23},\"audit-basic.json\":{\"score\":84,\"checks\":23,\"statuses\":{\"pass\":14,\"warning\":7,\"not_applicable\":2},\"enrichment\":23},\"audit-noindex-test.json\":{\"score\":50,\"checks\":23,\"statuses\":{\"pass\":7,\"fail\":4,\"warning\":11,\"not_applicable\":1},\"enrichment\":23}}"
+    },
+    {
+      "name": "analysis-shaped anatomy",
+      "status": "PASS",
+      "detail": "8 anatomy regions differ across analyses; 23/23 check IDs map to a region"
+    },
+    {
+      "name": "simulated noindex comparison renders",
+      "status": "PASS",
+      "detail": "{\"sample\":\"noindex\",\"score\":\"50\",\"blockingBanner\":true,\"recoveryState\":false,\"simulatedContext\":true,\"observedDirective\":\"Detected directives: noindex.\"}"
+    },
+    {
+      "name": "tablet URL field width",
+      "status": "PASS",
+      "detail": "377px at 768px viewport"
+    },
+    {
+      "name": "tablet subpage anatomy width",
+      "status": "PASS",
+      "detail": "707px at 768px viewport"
+    },
+    {
+      "name": "mobile hostname line integrity",
+      "status": "PASS",
+      "detail": "example.test occupies 1 line(s) at 390px and 1 at 320px"
+    },
+    {
+      "name": "summary content bound",
+      "status": "PASS",
+      "detail": "5 prioritized fixes; 36 explanatory words"
+    },
+    {
+      "name": "single score caveat",
+      "status": "PASS",
+      "detail": "1 score-help panel(s) on summary"
+    },
+    {
+      "name": "needs-review order",
+      "status": "PASS",
+      "detail": "meta_description → h1_structure → title → image_alt → html_lang"
+    },
+    {
+      "name": "score help link",
+      "status": "PASS",
+      "detail": "Score note link opens the single native details panel"
+    },
+    {
+      "name": "semantic landmarks and names",
+      "status": "PASS",
+      "detail": "{\"mainCount\":1,\"h1Count\":1,\"navLabel\":\"Report views\",\"unnamedButtons\":0,\"visuallyUnnamedButtons\":0}"
+    },
+    {
+      "name": "no browser credential surface",
+      "status": "PASS",
+      "detail": "0 credential-style inputs; 0 browser bearer-code matches"
+    },
+    {
+      "name": "motion properties and reduced motion",
+      "status": "PASS",
+      "detail": "animated properties opacity,transform; reduced animation 1e-05s"
+    },
+    {
+      "name": "mouse bidirectional selection",
+      "status": "PASS",
+      "detail": "Finding click highlights its anatomy; anatomy click opens the mapped observation and moves focus"
+    },
+    {
+      "name": "Tab and Shift+Tab order",
+      "status": "PASS",
+      "detail": "Shift+Tab and Tab move between adjacent report navigation links"
+    },
+    {
+      "name": "keyboard navigation activation",
+      "status": "PASS",
+      "detail": "Tab reached On-page after 4 steps; Enter opened the route"
+    },
+    {
+      "name": "keyboard finding activation",
+      "status": "PASS",
+      "detail": "Tab reached a finding after 24 steps; Enter selected it; focus outline 3px"
+    },
+    {
+      "name": "keyboard anatomy activation",
+      "status": "PASS",
+      "detail": "Tab reached anatomy after 20 further steps; Space opened the mapped finding and focused its heading"
+    },
+    {
+      "name": "copy success",
+      "status": "PASS",
+      "detail": "success feedback true; source pattern present true; value not logged"
+    },
+    {
+      "name": "copy denial recovery",
+      "status": "PASS",
+      "detail": "page target found true; context ID available true; override applied true; permission state denied; command error none; recovery guidance shown true"
+    },
+    {
+      "name": "URL form Enter activation",
+      "status": "PASS",
+      "detail": "Enter opened the selected local analysis without making an outbound request"
+    },
+    {
+      "name": "arbitrary URL limitation",
+      "status": "PASS",
+      "detail": "Context stays in history state, no URL query payload and no browser request is made"
+    },
+    {
+      "name": "browser Back and Forward",
+      "status": "PASS",
+      "detail": "Back → summary; Forward → on-page"
+    },
+    {
+      "name": "direct state URLs and reload",
+      "status": "PASS",
+      "detail": "7/7 supported state URLs reloaded without losing the route"
+    },
+    {
+      "name": "missing analysis recovery",
+      "status": "PASS",
+      "detail": "Missing sample shows a recovery message and does not substitute another analysis"
+    },
+    {
+      "name": "malformed analysis recovery",
+      "status": "PASS",
+      "detail": "Malformed contract renders a bounded recovery state"
+    },
+    {
+      "name": "source text is not interpreted as HTML",
+      "status": "PASS",
+      "detail": "Hostile-looking title remains text; 0 injected elements"
+    },
+    {
+      "name": "text contrast",
+      "status": "PASS",
+      "detail": "6.10:1 minimum observed; sample {\"ratio\":6.096869214440414,\"text\":\"On-page\",\"fontPx\":14}"
+    },
+    {
+      "name": "status and focus contrast",
+      "status": "PASS",
+      "detail": "3.81:1 status; 3.81:1 visible focus after 8 Tab steps"
+    },
+    {
+      "name": "seven-state taste coverage",
+      "status": "PASS",
+      "detail": "7/7 required state sections found in TASTE.md"
+    },
+    {
+      "name": "screenshot set",
+      "status": "PASS",
+      "detail": "27/27 exact state-size captures saved under docs/design/s1-a/screenshots/"
+    },
+    {
+      "name": "request isolation",
+      "status": "PASS",
+      "detail": "897 requests; 1 host(s); no unexpected destination"
+    },
+    {
+      "name": "browser console",
+      "status": "PASS",
+      "detail": "0 uncaught console/page errors"
+    },
+    {
+      "name": "responsive reflow",
+      "status": "PASS",
+      "detail": "37 layout cases; no horizontal overflow or sibling overlap"
+    },
+    {
+      "name": "cumulative layout shift",
+      "status": "PASS",
+      "detail": "initial 0; loading→result 0; sources none"
+    }
+  ]
+}

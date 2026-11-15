@@ -1,0 +1,19 @@
+{
+  "note": "Supplementary source inspection for this offline proof only. SEOAnalysis does not return per-element attributes or line numbers.",
+  "samples": {
+    "weak": {
+      "source_path": "tests/fixtures/weak.html",
+      "images": [
+        {
+          "src": "image.png",
+          "has_alt_attribute": false,
+          "line": 2
+        }
+      ]
+    },
+    "basic": {
+      "source_path": "tests/fixtures/basic.html",
+      "images": []
+    }
+  }
+}

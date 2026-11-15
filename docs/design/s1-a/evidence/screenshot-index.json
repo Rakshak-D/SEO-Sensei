@@ -1,0 +1,164 @@
+[
+  {
+    "fileName": "s1-a-home-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-home-1440x900.png",
+    "query": "?state=home",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-summary-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-1440x900.png",
+    "query": "?state=summary&sample=weak",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-on-page-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-1440x900.png",
+    "query": "?state=on-page&sample=weak",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-previews-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-1440x900.png",
+    "query": "?state=previews&sample=weak",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-fix-list-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-1440x900.png",
+    "query": "?state=fix-list&sample=weak",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-loading-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-1440x900.png",
+    "query": "?state=loading&sample=weak",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-error-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-error-1440x900.png",
+    "query": "?state=error&reason=static-preview",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-summary-basic-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-1440x900.png",
+    "query": "?state=summary&sample=basic",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-summary-noindex-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-1440x900.png",
+    "query": "?state=summary&sample=noindex",
+    "viewport": "1440x900"
+  },
+  {
+    "fileName": "s1-a-home-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-home-768x1024.png",
+    "query": "?state=home",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-summary-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-768x1024.png",
+    "query": "?state=summary&sample=weak",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-on-page-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-768x1024.png",
+    "query": "?state=on-page&sample=weak",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-previews-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-768x1024.png",
+    "query": "?state=previews&sample=weak",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-fix-list-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-768x1024.png",
+    "query": "?state=fix-list&sample=weak",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-loading-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-768x1024.png",
+    "query": "?state=loading&sample=weak",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-error-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-error-768x1024.png",
+    "query": "?state=error&reason=static-preview",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-summary-basic-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-768x1024.png",
+    "query": "?state=summary&sample=basic",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-summary-noindex-768x1024.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-768x1024.png",
+    "query": "?state=summary&sample=noindex",
+    "viewport": "768x1024"
+  },
+  {
+    "fileName": "s1-a-home-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-home-390x844.png",
+    "query": "?state=home",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-summary-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-390x844.png",
+    "query": "?state=summary&sample=weak",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-on-page-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-on-page-390x844.png",
+    "query": "?state=on-page&sample=weak",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-previews-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-previews-390x844.png",
+    "query": "?state=previews&sample=weak",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-fix-list-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png",
+    "query": "?state=fix-list&sample=weak",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-loading-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-loading-390x844.png",
+    "query": "?state=loading&sample=weak",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-error-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-error-390x844.png",
+    "query": "?state=error&reason=static-preview",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-summary-basic-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-basic-390x844.png",
+    "query": "?state=summary&sample=basic",
+    "viewport": "390x844"
+  },
+  {
+    "fileName": "s1-a-summary-noindex-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-390x844.png",
+    "query": "?state=summary&sample=noindex",
+    "viewport": "390x844"
+  }
+]

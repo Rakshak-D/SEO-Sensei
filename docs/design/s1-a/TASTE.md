@@ -1,65 +1,67 @@
-# S1-A taste review
+# S1-A R1 taste review
 
 ## Design decisions
 
-This proof starts from the S1-A X-ray design bible, not the earlier warm serif Evidence Ledger system. It uses Archivo for interface and headings and IBM Plex Mono for URLs, tags, and code. Both are bundled locally with their OFL notices; there is no font CDN.
+This revision follows the page-X-ray brief and does not reuse the rejected cream-and-serif Evidence Ledger style. Archivo carries interface and heading text; IBM Plex Mono marks URLs, observations, tags and code. Both fonts are bundled with their licence notices. The page remains near-white (`#FAFAF7`) with white paper, warm rules, dark ink and the single red action signal (`#E5481C`). Existing palette tokens were not changed. Search-preview titles now use ink instead of green; medium-impact labels use neutral ink; review explanations use dark text with a small amber status dot. These usage corrections keep green and amber as status marks and retain readable contrast.
 
-The seed colors are unchanged: page `#FAFAF7`, sheet `#FFFFFF`, ink `#14130F`, and action signal `#E5481C`. The structural and status tokens make the rules explicit: rule `#D8D6CE`, strong rule `#A9A69D`, muted ink `#625F57`, deep action `#A72D0F`, pass `#216B49`, warning `#805100`, fail `#A72D0F`, neutral `#59574F`, quiet surface `#F0EFE9`, and blocking tint `#FFF0E9`. The fail mark reuses the deep action token; green and amber are reserved for small check-status cues. No blue, purple, gradient, or serif styling is used.
-
-No pre-existing spacing scale was supplied. The added rhythm uses 4/8px increments for controls and small gaps, 16/24/32px for section structure, and fluid page gutters (`clamp(20px, 4vw, 64px)`, reduced to 19px on mobile). A few 1px offsets and 13px evidence labels remain for alignment and density; larger evidence text is 14px.
+The summary report header is compressed to 17px top padding, a 12px identity divider, and a 12px gap before its work area. At mobile width, the report title uses `clamp(27px, 8.2vw, 35px)`, and the priority list follows the verdict and schematic entry. The page silhouette uses borders and nested regions rather than repeated diagnostic rows. Its labels explicitly say that the arrangement is schematic, not DOM geometry. Response metadata sits in a separate rail; JSON-LD and sharing fields are never drawn as body content.
 
 ## State-by-state taste check
 
 ### Home
 
-If the wordmark were covered, the oversized “See what your page says” headline leads directly into a URL field, and the side list names two reserved page paths with observed audit differences. The title is not a generic SaaS greeting: it sets up page observation, and the URL field is the only primary action. The side list uses plain rows and actual source URLs instead of feature cards. The optional keyword field is visibly marked as not checked.
+With the wordmark covered, the screen still reads as an audit because its headline names the page itself and the URL field is the dominant action. Two visible local page addresses sit in plain ruled rows beside that field, so the visitor sees a concrete path from URL to inspection rather than generic feature cards. The optional keyword field is identified as unchecked. Weakness: the large home headline still takes substantial space on mobile, but the URL control remains in the first screen.
 
 ### Summary
 
-If the wordmark were covered, the page is still identifiable as an audit because a page-shaped specimen shows actual title, description, H1, heading, text, link, image, structured-data, and sharing signals, while the neighboring top-five list names specific returned checks. Selecting “Image alternative text” lights the image region and exposes the aggregate check evidence plus a clearly separate offline source note. The noindex comparison shows a blocking observation before its smaller score. Page anatomy and evidence—not a chart or widget—own the main working area.
+The page-shaped specimen is the first unmistakable audit cue: title and description at its top, an H1 block, indented content bands, and image/link regions only when returned counts justify them. The first priorities sit beside it on desktop, and each has its own evidence, action and copy-or-review control. Mobile shows the verdict, the first two priorities and a miniature anatomy entry before scrolling. The desktop specimen continues below the 900px capture edge, and its full metadata rail is dense; this is the weakest remaining Summary tradeoff. The score is secondary to the verdict, and its one help disclosure is the only score caveat.
 
 ### On-page
 
-If the wordmark were covered, the primary content is a sequence of actual title, description, heading values, visible-word count, and canonical observation. Each check row has a working “Inspect in anatomy” path that returns to the scan and focuses the related note. The right-side mini anatomy repeats the real page structure, which keeps inspection linked to the source rather than turning this into an editorial article.
+The specialist heading is followed immediately by returned title and description values; heading text and approximate visible-word count come next. Monospace values distinguish observations from UI copy. On mobile the structure control is below the page-specific content and starts closed; opening it exposes the schematic without replacing the current selection. The first viewport now answers the page's job before offering extra anatomy.
 
 ### Previews
 
-If the wordmark were covered, the four separate surfaces are labeled by the metadata source they use: page metadata, Open Graph, and X values with page-metadata fallback. Missing share images remain empty neutral regions instead of fake artwork. The page URL, title, and descriptions come from the analysis JSON; each surface says it is a sketch and may differ from platform rendering.
+The search-result treatment is first and uses only returned title, URL and description. Social surfaces follow in a single mobile column; absent images remain explicitly empty, not decorated with invented artwork. The preview title uses the same dark ink as the rest of the report so green remains a small status color. The platform surfaces are still sketches; they do not claim exact rendering or guaranteed truncation behavior.
 
 ### Fix list
 
-If the wordmark were covered, each open check has a status, design-only impact, effort, observed evidence, and a control to inspect its anatomy mapping. Rows are separated by rules rather than repeated boxed cards. The exact snippet is either derived from observed values or remains an editable template with an explicit review note; checks that cannot support a safe snippet explain why no code was drafted.
+An actionable finding, its status, impact, evidence, plain action and copy-or-review control appear immediately after the distinct Fix list heading. Ruled rows keep the list readable without turning each entry into a boxed dashboard card. Editable templates are labelled as such and carry review notes; a missing defensible snippet gets a Review fix action instead. The list is long by design because it exposes every actionable non-passing check, so users must scroll for later findings.
 
 ### Loading
 
-If the wordmark were covered, the reserved two-column footprint already resembles the page scan beside an ordered inspection list. The stepping outline positions match the metadata and heading regions used in the result screen. The copy states this is a local motion study and provides a real link to the completed local result; it does not suggest a request has been sent.
+The staged bars echo the same specimen-and-findings composition used by the report. Their widths vary like content regions, and animation uses only opacity and transform. Copy states that no crawl or service request is running. The screenshot is a timed capture of the local motion study, not a live analysis state.
 
 ### Error
 
-If the wordmark were covered, “No live scan here” states why an arbitrary URL has no report, and the URL appears only as preserved in-memory navigation context. The recovery actions return to URL entry or open an available local analysis. The visible state avoids an invented crawl failure and has no retry that would imply a backend request.
+“No live scan here” identifies why an arbitrary URL cannot produce a result in this offline proof. The visible URL is inert history context, and the two recovery links return to URL entry or an available local analysis. This state looks like a failed audit only in the sense that no report is loaded; it does not invent a fetch failure or offer a fake retry.
 
-## Responsive decisions
+## Before and after
 
-At 1024px and desktop widths the scan and ranked findings share the main work surface, with the scan receiving slightly more width. At 768px the report navigation wraps to its own row and the report still keeps the scan beside the prioritized findings. The subpage anatomy and URL-entry fields stack at tablet widths: the previous 171px URL field was too narrow for a useful pasted address, and the 199px side anatomy forced returned text into narrow columns. At mobile width the top-five list comes before the anatomy, so the first actions are visible sooner; the scan remains a sequence of full-width, keyboard-operable regions below it. Categories stack to two columns and then continue vertically. Subpage side context moves above the main content, previews become a single column, and there is no fixed navigation.
+The R1 comparison is linked in [`evidence/R1-BEFORE-AFTER.md`](evidence/R1-BEFORE-AFTER.md). The prior desktop Summary put a large header above a row-shaped diagnostic anatomy; the anatomy started late and the top findings had no direct copy control. The mobile Summary showed the verdict and first findings but no recognizable anatomy entry. On-page, Previews and Fix list started with the same large header and anatomy, burying their distinct work. R1 changes these to a page specimen, task-first subpages, and direct Summary actions.
 
-Browser measurement found a 13px side-rail overhang at 768px caused by the anatomy status words. The compact subpage rail now hides those redundant visible words at widths up to 900px; each anatomy control retains its full accessible name, including status. No palette, font, or spacing token changed.
+The weak and basic results differ structurally, not just by labels: weak has a dashed missing-H1 region, one image slot and an observed link area; basic places its returned H1 in the heading block and draws no image or link area. A footer position remains explicitly unassessed. JSON-LD and sharing observations remain outside the page silhouette.
 
-The 390px and 320px captures showed `example.test` splitting with a single terminal character on its own line because the hostname shared a row with the score. The mobile heading now uses a smaller fluid size (`clamp(31px, 10vw, 46px)`) so this short hostname remains on one line at both widths. The typeface and desktop title sizes are unchanged.
+## Responsive decisions and measurements
 
-The noindex comparison initially fell into the unavailable-data state because supplementary source notes exist for the original `weak` HTML only, while the loader required a separate `noindex` note record. It now reuses the weak-source note set for the noindex analysis because both engine outputs derive from the same unchanged HTML. The report itself still reads the separately generated noindex analyzer output and labels the response-header condition as simulated.
+At 1440×900, the verdict occupies y=268–306; the specimen begins at y=420; the first three priority rows end at y=515, 676 and 837. At 390×844, the verdict occupies y=239–265, the anatomy entry y=295–360, and the first two priority rows end at y=506 and 632. On-page primary values, the first preview and first fix item all fit within their 390×844 first viewport. The detailed anatomy is available in a labelled, keyboard-operable disclosure on tablet and mobile; the disclosure opens when a check is inspected.
 
-The first-load CLS probe identified the initial boot placeholder moving the document body and the navigation text changing width during local font swap. The root now reserves the viewport before the script runs, report routes use the already-designed loading skeleton while data files load, the footer is appended after the report content, and the bundled fonts are preloaded. These changes preserve the selected typefaces and layout tokens while addressing the measured shift sources.
+Measurements run at 390, 768, 1024 and 1440 CSS pixels show no horizontal overflow or detected sibling overlap; the extra 320px Summary check also has no overflow. Measured CLS is 0 on initial Summary load and on the controlled loading-to-result transition. Text contrast measured 6.07:1, status 3.81:1 and focus 3.81:1 in the reported sample. The evidence includes some compact 10–11px monospace labels on mobile; those remain secondary to 14–16px page and finding text. CSS viewport emulation is not browser zoom or text enlargement.
+
+## Priority and snippet honesty
+
+Impact conditions are stored in `enrichment.json`; `proof.js` has one generic condition evaluator and no per-check impact branches. Browser-rendered test variations confirm missing title/description as high, the observed one-character title as medium, `noindex` as blocking, `nofollow` alone as low, and malformed JSON-LD as medium. The noindex test uses controlled response-header metadata. It does not claim an actual indexing decision. Missing optional JSON-LD is not presented as a broken-feature action.
+
+Snippets preserve provenance. An observed H1 can seed a clearly labelled editable title template when the title is missing. Description and H1 placeholders are editable templates, not invented page copy. A missing canonical draft uses the returned final URL and says to confirm the preferred URL. An image-alt suggestion uses the supplementary local source note and warns that decorative images can correctly have empty alt. The noindex pattern asks the owner to confirm intent; it does not recommend removal. No snippet promises rankings or indexation.
 
 ## Tradeoffs, weak spots, and unverified items
 
-- The original test pages are unusually short. Their observed copy makes some anatomy rows sparse; the proof preserves that instead of filling them with invented DOM content.
-- The Basic summary at mobile width is the weakest view: its five ranked review rows push the page X-ray below the first viewport. Showing those first actions is the intentional reading order, but a future review may choose to surface a compact anatomy entry before the list.
-- The analyzer returns image counts, not each image's source or line. Only the weak input has a supplementary source note generated from the original test HTML. That detail is explicitly described as unavailable in the current analysis contract.
-- The analyzer does not expose page landmarks or a footer. The scan explicitly says those are not returned and does not draw a fabricated footer.
-- The optional target-keyword field has no checking behavior. Its purpose and limitation are stated beside it; the field only carries local form input and sends nothing.
-- Preview surfaces can feel sparse when social metadata is absent. The empty image treatment is intentional and evidence-led.
-- Small mono labels and status tags are secondary. Body copy is 16px; code/evidence is 14px. At the narrowest inspected width, finding evidence wraps instead of scrolling sideways.
-- The word “fixture” appears in the Basic page's actual title, description, and H1. Those text nodes are marked as observed source data, not authored interface labels. No interface label uses the prohibited terms.
-- A small logo-covering identifier is not needed to distinguish the report: the page-structure X-ray and the adjacent ordered observations make the audit purpose visible. Subpages keep the compact score and page identity above the returned fields.
-- The screenshots and browser checks use Playwright's bundled Chromium and CSS viewports. No genuine browser-zoom or text-enlargement test is claimed. A manual screen-reader review and production accessibility acceptance are still open.
-- This is a static proof only. Production API behavior, account-free access, quotas, backend limits, page-fetch safety, and public deployment are not implemented or verified here.
+- The X-ray is intentionally a schematic grouping of API fields; the engine does not return DOM positions or header/footer landmarks. The footer is never marked as passed or failed.
+- The desktop Summary specimen is still taller than the first viewport. Its top establishes the page shape, while all first three priority actions remain visible; the rest is available by scrolling.
+- The mobile Summary intentionally limits evidence/action previews to compact lines so two priority actions and the anatomy entry fit together. Full observations and fix detail remain available from inspection.
+- The input pages are short, so some regions are sparse. The proof keeps those absences instead of adding invented content.
+- All 27 final Chromium captures were opened and inspected at their native dimensions. The banned cream-and-serif, blue/gradient, three-card and emoji patterns are absent. The weakest visual spots remain the desktop Summary's specimen extending below the capture and compact 10–11px monospace labels; mobile Summary also shortens some longer action copy to keep two priorities and the anatomy entry together. No control is clipped, and specialist-page mobile captures show each page's primary job before the anatomy disclosure.
+- Social previews are sparse when metadata is absent. Empty imagery and missing values remain explicit.
+- The score and check statuses are byte-for-byte unchanged engine outputs at version 1.0. Enrichment affects presentation priority only.
+- Automated browser checks use Playwright-bundled Chromium and CSS viewport changes. No actual 200% browser zoom, text-enlargement/reflow or manual screen-reader review is claimed.
+- This remains an offline static design proof. It does not validate production API behavior, anonymous quotas, account-free access, crawl safety, or deployment.

@@ -3,14 +3,246 @@
   "browserEngine": "Playwright-bundled Chromium",
   "profile": "Playwright disposable in-memory browser context; no existing user profile used",
   "viewportTests": "CSS viewport changes only; not browser zoom",
-  "baseOrigin": "http://127.0.0.1:58574",
-  "requestCount": 897,
+  "baseOrigin": "http://127.0.0.1:50725",
+  "requestCount": 1068,
   "hosts": [
-    "127.0.0.1:58574"
+    "127.0.0.1:50725"
   ],
   "externalHostCount": 0,
   "unexpectedRequests": 0,
   "consoleErrors": [],
+  "checks": [
+    {
+      "name": "offline analyzer data",
+      "status": "PASS",
+      "detail": "{\"audit-weak.json\":{\"score\":55,\"checks\":23,\"statuses\":{\"pass\":8,\"warning\":11,\"fail\":3,\"not_applicable\":1},\"enrichment\":23},\"audit-basic.json\":{\"score\":84,\"checks\":23,\"statuses\":{\"pass\":14,\"warning\":7,\"not_applicable\":2},\"enrichment\":23},\"audit-noindex-test.json\":{\"score\":50,\"checks\":23,\"statuses\":{\"pass\":7,\"fail\":4,\"warning\":11,\"not_applicable\":1},\"enrichment\":23}}"
+    },
+    {
+      "name": "R1-10 engine output hashes unchanged",
+      "status": "PASS",
+      "detail": "{\"audit-weak.json\":\"6b5ab639b111c52f581fa15c7a778a62fd08043b70812630a5b5bf9eb676acea\",\"audit-basic.json\":\"374f9a081d34770534de68051402d6b4c6b871a60b2c0acc6e7d018ee9504a2d\",\"audit-noindex-test.json\":\"018e54337646fc047177c1ab64c9198e19f7f3710d07f1a6cb79d63c48dff89c\"}"
+    },
+    {
+      "name": "analysis-shaped anatomy",
+      "status": "PASS",
+      "detail": "8 anatomy regions differ across analyses; 23/23 check IDs map to a region"
+    },
+    {
+      "name": "simulated noindex comparison renders",
+      "status": "PASS",
+      "detail": "{\"sample\":\"noindex\",\"score\":\"50\",\"blockingBanner\":true,\"recoveryState\":false,\"simulatedContext\":true,\"observedDirective\":\"Detected directives: noindex.\"}"
+    },
+    {
+      "name": "tablet URL field width",
+      "status": "PASS",
+      "detail": "377px at 768px viewport"
+    },
+    {
+      "name": "tablet subpage anatomy width",
+      "status": "PASS",
+      "detail": "707px at 768px viewport"
+    },
+    {
+      "name": "mobile hostname line integrity",
+      "status": "PASS",
+      "detail": "example.test occupies 1 line(s) at 390px and 1 at 320px"
+    },
+    {
+      "name": "summary content bound",
+      "status": "PASS",
+      "detail": "5 prioritized fixes; 97 explanatory words"
+    },
+    {
+      "name": "single score caveat",
+      "status": "PASS",
+      "detail": "1 score-help panel(s) on summary"
+    },
+    {
+      "name": "needs-review order",
+      "status": "PASS",
+      "detail": "meta_description → h1_structure → title → image_alt → html_lang"
+    },
+    {
+      "name": "single score-help affordance",
+      "status": "PASS",
+      "detail": "1 help affordance opens the one native details panel"
+    },
+    {
+      "name": "semantic landmarks and names",
+      "status": "PASS",
+      "detail": "{\"mainCount\":1,\"h1Count\":1,\"navLabel\":\"Report views\",\"unnamedButtons\":0,\"visuallyUnnamedButtons\":0}"
+    },
+    {
+      "name": "no browser credential surface",
+      "status": "PASS",
+      "detail": "0 credential-style inputs; 0 browser bearer-code matches"
+    },
+    {
+      "name": "motion properties and reduced motion",
+      "status": "PASS",
+      "detail": "animated properties opacity,transform; reduced animation 1e-05s"
+    },
+    {
+      "name": "R1-1 desktop summary viewport",
+      "status": "PASS",
+      "detail": "{\"verdict\":{\"top\":268,\"bottom\":306,\"width\":1325,\"height\":38,\"visible\":true},\"xray\":{\"top\":420,\"bottom\":1099,\"width\":476,\"height\":679,\"visible\":true},\"priorities\":[{\"top\":354,\"bottom\":515,\"width\":564,\"height\":161,\"visible\":true},{\"top\":515,\"bottom\":676,\"width\":564,\"height\":161,\"visible\":true},{\"top\":676,\"bottom\":837,\"width\":564,\"height\":161,\"visible\":true}]}"
+    },
+    {
+      "name": "R1-2 mobile summary viewport",
+      "status": "PASS",
+      "detail": "{\"verdict\":{\"top\":239,\"bottom\":265,\"width\":352,\"height\":26,\"visible\":true},\"priorities\":[{\"top\":380,\"bottom\":506,\"width\":352,\"height\":126,\"visible\":true},{\"top\":506,\"bottom\":632,\"width\":352,\"height\":126,\"visible\":true}],\"anatomyEntry\":{\"top\":295,\"bottom\":360,\"width\":352,\"height\":65,\"visible\":true}}"
+    },
+    {
+      "name": "R1-3/4/5 specialist-first mobile pages",
+      "status": "PASS",
+      "detail": "{\"on-page\":{\"heading\":\"On-page\",\"top\":179,\"bottom\":369,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"On-page\"},\"previews\":{\"heading\":\"Previews\",\"top\":179,\"bottom\":318,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"Previews\"},\"fix-list\":{\"heading\":\"Fix list\",\"top\":216,\"bottom\":524,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":true,\"expectedHeading\":\"Fix list\"}}"
+    },
+    {
+      "name": "R1-6 Summary copy actions are direct",
+      "status": "PASS",
+      "detail": "5 visible action button(s); no navigation or disclosure required"
+    },
+    {
+      "name": "R1-8 one score-help affordance and panel",
+      "status": "PASS",
+      "detail": "{\"summary\":{\"triggers\":1,\"panels\":1},\"on-page\":{\"triggers\":1,\"panels\":1},\"previews\":{\"triggers\":1,\"panels\":1},\"fix-list\":{\"triggers\":1,\"panels\":1}}"
+    },
+    {
+      "name": "R1-7 data-shaped schematic differs by page",
+      "status": "PASS",
+      "detail": "{\"weak\":{\"h1\":\"No H1 returned\",\"imageSlots\":1,\"linksPresent\":true,\"footerUnassessed\":true,\"schemaOutsideBody\":true},\"basic\":{\"h1\":\"Basic fixture\",\"imageSlots\":0,\"linksPresent\":false,\"footerUnassessed\":true,\"schemaOutsideBody\":true}}"
+    },
+    {
+      "name": "optional absent structured data is not a broken-feature action",
+      "status": "PASS",
+      "detail": "Basic analysis has no JSON-LD block; no fix item is presented for adding optional markup"
+    },
+    {
+      "name": "impact rules use current analysis conditions",
+      "status": "PASS",
+      "detail": "[{\"case\":\"short title remains medium\",\"expected\":\"medium\",\"actual\":\"medium\"},{\"case\":\"missing title is high\",\"expected\":\"high\",\"actual\":\"high\"},{\"case\":\"missing description is high\",\"expected\":\"high\",\"actual\":\"high\"},{\"case\":\"nofollow alone is not blocking\",\"expected\":\"low\",\"actual\":\"low\"},{\"case\":\"malformed JSON-LD is medium\",\"expected\":\"medium\",\"actual\":\"medium\"},{\"case\":\"noindex is blocking\",\"expected\":\"blocking\",\"actual\":\"blocking\"}]"
+    },
+    {
+      "name": "R1-9 generic impact and effort rules",
+      "status": "PASS",
+      "detail": "check-specific renderer branches none; all 23 checks carry enrichment impact/effort metadata"
+    },
+    {
+      "name": "Summary copy works without opening another view",
+      "status": "PASS",
+      "detail": "Direct action reports success only after the clipboard operation succeeds; copied value is not logged"
+    },
+    {
+      "name": "mouse bidirectional selection",
+      "status": "PASS",
+      "detail": "Finding click highlights its anatomy; anatomy click opens the mapped observation and moves focus"
+    },
+    {
+      "name": "Tab and Shift+Tab order",
+      "status": "PASS",
+      "detail": "Shift+Tab and Tab move between adjacent report navigation links"
+    },
+    {
+      "name": "keyboard navigation activation",
+      "status": "PASS",
+      "detail": "Tab reached On-page after 4 steps; Enter opened the route"
+    },
+    {
+      "name": "keyboard finding activation",
+      "status": "PASS",
+      "detail": "Tab reached a finding after 21 steps; Enter selected it; focus outline 3px"
+    },
+    {
+      "name": "keyboard anatomy activation",
+      "status": "PASS",
+      "detail": "Tab reached anatomy after 14 further steps; Space opened the mapped finding and focused its heading"
+    },
+    {
+      "name": "copy success",
+      "status": "PASS",
+      "detail": "success feedback true; source pattern present true; value not logged"
+    },
+    {
+      "name": "copy denial recovery",
+      "status": "PASS",
+      "detail": "page target found true; context ID available true; override applied true; permission state denied; command error none; recovery guidance shown true"
+    },
+    {
+      "name": "URL form Enter activation",
+      "status": "PASS",
+      "detail": "Enter opened the selected local analysis without making an outbound request"
+    },
+    {
+      "name": "arbitrary URL limitation",
+      "status": "PASS",
+      "detail": "Context stays in history state, no URL query payload and no browser request is made"
+    },
+    {
+      "name": "browser Back and Forward",
+      "status": "PASS",
+      "detail": "Back → summary; Forward → on-page"
+    },
+    {
+      "name": "direct state URLs and reload",
+      "status": "PASS",
+      "detail": "7/7 supported state URLs reloaded without losing the route"
+    },
+    {
+      "name": "missing analysis recovery",
+      "status": "PASS",
+      "detail": "Missing sample shows a recovery message and does not substitute another analysis"
+    },
+    {
+      "name": "malformed analysis recovery",
+      "status": "PASS",
+      "detail": "Malformed contract renders a bounded recovery state"
+    },
+    {
+      "name": "source text is not interpreted as HTML",
+      "status": "PASS",
+      "detail": "Hostile-looking title remains text; 0 injected elements"
+    },
+    {
+      "name": "text contrast",
+      "status": "PASS",
+      "detail": "6.07:1 minimum observed; sample {\"ratio\":6.07117079937313,\"text\":\"No H1 returned\",\"fontPx\":11}"
+    },
+    {
+      "name": "status and focus contrast",
+      "status": "PASS",
+      "detail": "3.81:1 status; 3.81:1 focus; help target 1; Tab steps 8"
+    },
+    {
+      "name": "seven-state taste coverage",
+      "status": "PASS",
+      "detail": "7/7 required state sections found in TASTE.md"
+    },
+    {
+      "name": "screenshot set",
+      "status": "PASS",
+      "detail": "27/27 exact state-size captures saved under docs/design/s1-a/screenshots/"
+    },
+    {
+      "name": "request isolation",
+      "status": "PASS",
+      "detail": "1068 requests; 1 host(s); no unexpected destination"
+    },
+    {
+      "name": "browser console",
+      "status": "PASS",
+      "detail": "0 uncaught console/page errors"
+    },
+    {
+      "name": "responsive reflow",
+      "status": "PASS",
+      "detail": "37 layout cases; no horizontal overflow or sibling overlap"
+    },
+    {
+      "name": "cumulative layout shift",
+      "status": "PASS",
+      "detail": "initial 0; loading→result 0; sources none"
+    }
+  ],
   "reports": [
     {
       "viewportWidth": 1440,
@@ -62,7 +294,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "weak",
       "viewport": "1440x900"
@@ -73,7 +305,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "weak",
       "viewport": "1024x768"
@@ -84,7 +316,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "weak",
       "viewport": "768x1024"
@@ -95,7 +327,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 10,
       "state": "summary",
       "sample": "weak",
       "viewport": "390x844"
@@ -106,7 +338,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 17,
+      "evidenceFontPx": 14,
       "state": "on-page",
       "sample": "weak",
       "viewport": "1440x900"
@@ -117,7 +349,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 17,
+      "evidenceFontPx": 14,
       "state": "on-page",
       "sample": "weak",
       "viewport": "1024x768"
@@ -128,7 +360,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 17,
+      "evidenceFontPx": 14,
       "state": "on-page",
       "sample": "weak",
       "viewport": "768x1024"
@@ -139,7 +371,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 17,
+      "evidenceFontPx": 12,
       "state": "on-page",
       "sample": "weak",
       "viewport": "390x844"
@@ -194,7 +426,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 14,
+      "evidenceFontPx": 13,
       "state": "fix-list",
       "sample": "weak",
       "viewport": "1440x900"
@@ -205,7 +437,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 14,
+      "evidenceFontPx": 13,
       "state": "fix-list",
       "sample": "weak",
       "viewport": "1024x768"
@@ -216,7 +448,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 14,
+      "evidenceFontPx": 13,
       "state": "fix-list",
       "sample": "weak",
       "viewport": "768x1024"
@@ -227,7 +459,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 14,
+      "evidenceFontPx": 11,
       "state": "fix-list",
       "sample": "weak",
       "viewport": "390x844"
@@ -326,7 +558,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "basic",
       "viewport": "1440x900"
@@ -337,7 +569,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "basic",
       "viewport": "1024x768"
@@ -348,7 +580,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "basic",
       "viewport": "768x1024"
@@ -359,7 +591,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 10,
       "state": "summary",
       "sample": "basic",
       "viewport": "390x844"
@@ -370,7 +602,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "noindex",
       "viewport": "1440x900"
@@ -381,7 +613,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "noindex",
       "viewport": "1024x768"
@@ -392,7 +624,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 11,
       "state": "summary",
       "sample": "noindex",
       "viewport": "768x1024"
@@ -403,7 +635,7 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 13,
+      "evidenceFontPx": 10,
       "state": "summary",
       "sample": "noindex",
       "viewport": "390x844"
@@ -415,7 +647,7 @@
     "overflow": false,
     "overlaps": 0,
     "bodyFontPx": 16,
-    "evidenceFontPx": 13,
+    "evidenceFontPx": 10,
     "state": "summary",
     "sample": "weak",
     "viewport": "320x844"
@@ -426,6 +658,235 @@
     "320": 1,
     "390": 1
   },
+  "analyzerCounts": {
+    "audit-weak.json": {
+      "score": 55,
+      "checks": 23,
+      "statuses": {
+        "pass": 8,
+        "warning": 11,
+        "fail": 3,
+        "not_applicable": 1
+      },
+      "enrichment": 23
+    },
+    "audit-basic.json": {
+      "score": 84,
+      "checks": 23,
+      "statuses": {
+        "pass": 14,
+        "warning": 7,
+        "not_applicable": 2
+      },
+      "enrichment": 23
+    },
+    "audit-noindex-test.json": {
+      "score": 50,
+      "checks": 23,
+      "statuses": {
+        "pass": 7,
+        "fail": 4,
+        "warning": 11,
+        "not_applicable": 1
+      },
+      "enrichment": 23
+    }
+  },
+  "rawOutputHashes": {
+    "audit-weak.json": "6b5ab639b111c52f581fa15c7a778a62fd08043b70812630a5b5bf9eb676acea",
+    "audit-basic.json": "374f9a081d34770534de68051402d6b4c6b871a60b2c0acc6e7d018ee9504a2d",
+    "audit-noindex-test.json": "018e54337646fc047177c1ab64c9198e19f7f3710d07f1a6cb79d63c48dff89c"
+  },
+  "desktopBounds": {
+    "verdict": {
+      "top": 268,
+      "bottom": 306,
+      "width": 1325,
+      "height": 38,
+      "visible": true
+    },
+    "xray": {
+      "top": 420,
+      "bottom": 1099,
+      "width": 476,
+      "height": 679,
+      "visible": true
+    },
+    "priorities": [
+      {
+        "top": 354,
+        "bottom": 515,
+        "width": 564,
+        "height": 161,
+        "visible": true
+      },
+      {
+        "top": 515,
+        "bottom": 676,
+        "width": 564,
+        "height": 161,
+        "visible": true
+      },
+      {
+        "top": 676,
+        "bottom": 837,
+        "width": 564,
+        "height": 161,
+        "visible": true
+      }
+    ]
+  },
+  "mobileSummaryBounds": {
+    "verdict": {
+      "top": 239,
+      "bottom": 265,
+      "width": 352,
+      "height": 26,
+      "visible": true
+    },
+    "priorities": [
+      {
+        "top": 380,
+        "bottom": 506,
+        "width": 352,
+        "height": 126,
+        "visible": true
+      },
+      {
+        "top": 506,
+        "bottom": 632,
+        "width": 352,
+        "height": 126,
+        "visible": true
+      }
+    ],
+    "anatomyEntry": {
+      "top": 295,
+      "bottom": 360,
+      "width": 352,
+      "height": 65,
+      "visible": true
+    }
+  },
+  "specialistBounds": {
+    "on-page": {
+      "heading": "On-page",
+      "top": 179,
+      "bottom": 369,
+      "visible": true,
+      "structureLabel": "Inspect page structure",
+      "structureOpen": false,
+      "directAction": false,
+      "expectedHeading": "On-page"
+    },
+    "previews": {
+      "heading": "Previews",
+      "top": 179,
+      "bottom": 318,
+      "visible": true,
+      "structureLabel": "Inspect page structure",
+      "structureOpen": false,
+      "directAction": false,
+      "expectedHeading": "Previews"
+    },
+    "fix-list": {
+      "heading": "Fix list",
+      "top": 216,
+      "bottom": 524,
+      "visible": true,
+      "structureLabel": "Inspect page structure",
+      "structureOpen": false,
+      "directAction": true,
+      "expectedHeading": "Fix list"
+    }
+  },
+  "scoreHelpCounts": {
+    "summary": {
+      "triggers": 1,
+      "panels": 1
+    },
+    "on-page": {
+      "triggers": 1,
+      "panels": 1
+    },
+    "previews": {
+      "triggers": 1,
+      "panels": 1
+    },
+    "fix-list": {
+      "triggers": 1,
+      "panels": 1
+    }
+  },
+  "weakShape": {
+    "h1": "No H1 returned",
+    "imageSlots": 1,
+    "linksPresent": true,
+    "footerUnassessed": true,
+    "schemaOutsideBody": true
+  },
+  "basicShape": {
+    "h1": "Basic fixture",
+    "imageSlots": 0,
+    "linksPresent": false,
+    "footerUnassessed": true,
+    "schemaOutsideBody": true
+  },
+  "summaryCopyButtons": [
+    {
+      "visible": true,
+      "label": "Copy editable template"
+    },
+    {
+      "visible": true,
+      "label": "Copy editable template"
+    },
+    {
+      "visible": true,
+      "label": "Copy editable template"
+    },
+    {
+      "visible": true,
+      "label": "Copy editable template"
+    },
+    {
+      "visible": true,
+      "label": "Copy editable template"
+    }
+  ],
+  "impactResults": [
+    {
+      "case": "short title remains medium",
+      "expected": "medium",
+      "actual": "medium"
+    },
+    {
+      "case": "missing title is high",
+      "expected": "high",
+      "actual": "high"
+    },
+    {
+      "case": "missing description is high",
+      "expected": "high",
+      "actual": "high"
+    },
+    {
+      "case": "nofollow alone is not blocking",
+      "expected": "low",
+      "actual": "low"
+    },
+    {
+      "case": "malformed JSON-LD is medium",
+      "expected": "medium",
+      "actual": "medium"
+    },
+    {
+      "case": "noindex is blocking",
+      "expected": "blocking",
+      "actual": "blocking"
+    }
+  ],
+  "impactRuleSource": true,
   "cls": {
     "supported": true,
     "initial": 0,
@@ -439,12 +900,12 @@
   "anatomyDifferences": [
     "title",
     "description",
-    "canonical",
     "h1",
     "headings",
     "body",
+    "images",
     "links",
-    "images"
+    "canonical"
   ],
   "priorityIds": [
     "meta_description",
@@ -455,32 +916,33 @@
   ],
   "priorityCount": 5,
   "contrast": {
-    "minTextRatio": 6.096869214440414,
+    "minTextRatio": 6.07117079937313,
     "minTextSample": {
-      "ratio": 6.096869214440414,
-      "text": "On-page",
-      "fontPx": 14
+      "ratio": 6.07117079937313,
+      "text": "No H1 returned",
+      "fontPx": 11
     },
     "minStatusRatio": 3.8068087226950227,
     "statusSamples": {
       "labels": 5,
-      "dots": 12
+      "dots": 11
     },
     "focusRatio": 3.8068087226950227,
-    "focusedElement": "a",
+    "focusedElement": "summary",
     "focusOutlineStyle": "solid"
   },
   "reloadStates": 7,
   "missingRecovery": true,
   "keyboardPass": true,
   "keyboardActions": 3,
+  "mouseSelectionPass": true,
   "requestResponse": 200,
   "sourceNotes": "Supplementary source inspection for this offline proof only. SEOAnalysis does not return per-element attributes or line numbers.",
   "tasteStates": 7,
   "manualVisualReview": true,
   "mappedChecks": 23,
   "unmappedChecks": 0,
-  "summaryWords": 36,
+  "summaryWords": 97,
   "credentialInputs": 0,
   "bearerMatches": 0,
   "animatedProperties": [
@@ -655,183 +1117,6 @@
       "relativePath": "docs/design/s1-a/screenshots/s1-a-summary-noindex-390x844.png",
       "query": "?state=summary&sample=noindex",
       "viewport": "390x844"
-    }
-  ],
-  "checks": [
-    {
-      "name": "offline analyzer data",
-      "status": "PASS",
-      "detail": "{\"audit-weak.json\":{\"score\":55,\"checks\":23,\"statuses\":{\"pass\":8,\"warning\":11,\"fail\":3,\"not_applicable\":1},\"enrichment\":23},\"audit-basic.json\":{\"score\":84,\"checks\":23,\"statuses\":{\"pass\":14,\"warning\":7,\"not_applicable\":2},\"enrichment\":23},\"audit-noindex-test.json\":{\"score\":50,\"checks\":23,\"statuses\":{\"pass\":7,\"fail\":4,\"warning\":11,\"not_applicable\":1},\"enrichment\":23}}"
-    },
-    {
-      "name": "analysis-shaped anatomy",
-      "status": "PASS",
-      "detail": "8 anatomy regions differ across analyses; 23/23 check IDs map to a region"
-    },
-    {
-      "name": "simulated noindex comparison renders",
-      "status": "PASS",
-      "detail": "{\"sample\":\"noindex\",\"score\":\"50\",\"blockingBanner\":true,\"recoveryState\":false,\"simulatedContext\":true,\"observedDirective\":\"Detected directives: noindex.\"}"
-    },
-    {
-      "name": "tablet URL field width",
-      "status": "PASS",
-      "detail": "377px at 768px viewport"
-    },
-    {
-      "name": "tablet subpage anatomy width",
-      "status": "PASS",
-      "detail": "707px at 768px viewport"
-    },
-    {
-      "name": "mobile hostname line integrity",
-      "status": "PASS",
-      "detail": "example.test occupies 1 line(s) at 390px and 1 at 320px"
-    },
-    {
-      "name": "summary content bound",
-      "status": "PASS",
-      "detail": "5 prioritized fixes; 36 explanatory words"
-    },
-    {
-      "name": "single score caveat",
-      "status": "PASS",
-      "detail": "1 score-help panel(s) on summary"
-    },
-    {
-      "name": "needs-review order",
-      "status": "PASS",
-      "detail": "meta_description → h1_structure → title → image_alt → html_lang"
-    },
-    {
-      "name": "score help link",
-      "status": "PASS",
-      "detail": "Score note link opens the single native details panel"
-    },
-    {
-      "name": "semantic landmarks and names",
-      "status": "PASS",
-      "detail": "{\"mainCount\":1,\"h1Count\":1,\"navLabel\":\"Report views\",\"unnamedButtons\":0,\"visuallyUnnamedButtons\":0}"
-    },
-    {
-      "name": "no browser credential surface",
-      "status": "PASS",
-      "detail": "0 credential-style inputs; 0 browser bearer-code matches"
-    },
-    {
-      "name": "motion properties and reduced motion",
-      "status": "PASS",
-      "detail": "animated properties opacity,transform; reduced animation 1e-05s"
-    },
-    {
-      "name": "mouse bidirectional selection",
-      "status": "PASS",
-      "detail": "Finding click highlights its anatomy; anatomy click opens the mapped observation and moves focus"
-    },
-    {
-      "name": "Tab and Shift+Tab order",
-      "status": "PASS",
-      "detail": "Shift+Tab and Tab move between adjacent report navigation links"
-    },
-    {
-      "name": "keyboard navigation activation",
-      "status": "PASS",
-      "detail": "Tab reached On-page after 4 steps; Enter opened the route"
-    },
-    {
-      "name": "keyboard finding activation",
-      "status": "PASS",
-      "detail": "Tab reached a finding after 24 steps; Enter selected it; focus outline 3px"
-    },
-    {
-      "name": "keyboard anatomy activation",
-      "status": "PASS",
-      "detail": "Tab reached anatomy after 20 further steps; Space opened the mapped finding and focused its heading"
-    },
-    {
-      "name": "copy success",
-      "status": "PASS",
-      "detail": "success feedback true; source pattern present true; value not logged"
-    },
-    {
-      "name": "copy denial recovery",
-      "status": "PASS",
-      "detail": "page target found true; context ID available true; override applied true; permission state denied; command error none; recovery guidance shown true"
-    },
-    {
-      "name": "URL form Enter activation",
-      "status": "PASS",
-      "detail": "Enter opened the selected local analysis without making an outbound request"
-    },
-    {
-      "name": "arbitrary URL limitation",
-      "status": "PASS",
-      "detail": "Context stays in history state, no URL query payload and no browser request is made"
-    },
-    {
-      "name": "browser Back and Forward",
-      "status": "PASS",
-      "detail": "Back → summary; Forward → on-page"
-    },
-    {
-      "name": "direct state URLs and reload",
-      "status": "PASS",
-      "detail": "7/7 supported state URLs reloaded without losing the route"
-    },
-    {
-      "name": "missing analysis recovery",
-      "status": "PASS",
-      "detail": "Missing sample shows a recovery message and does not substitute another analysis"
-    },
-    {
-      "name": "malformed analysis recovery",
-      "status": "PASS",
-      "detail": "Malformed contract renders a bounded recovery state"
-    },
-    {
-      "name": "source text is not interpreted as HTML",
-      "status": "PASS",
-      "detail": "Hostile-looking title remains text; 0 injected elements"
-    },
-    {
-      "name": "text contrast",
-      "status": "PASS",
-      "detail": "6.10:1 minimum observed; sample {\"ratio\":6.096869214440414,\"text\":\"On-page\",\"fontPx\":14}"
-    },
-    {
-      "name": "status and focus contrast",
-      "status": "PASS",
-      "detail": "3.81:1 status; 3.81:1 visible focus after 8 Tab steps"
-    },
-    {
-      "name": "seven-state taste coverage",
-      "status": "PASS",
-      "detail": "7/7 required state sections found in TASTE.md"
-    },
-    {
-      "name": "screenshot set",
-      "status": "PASS",
-      "detail": "27/27 exact state-size captures saved under docs/design/s1-a/screenshots/"
-    },
-    {
-      "name": "request isolation",
-      "status": "PASS",
-      "detail": "897 requests; 1 host(s); no unexpected destination"
-    },
-    {
-      "name": "browser console",
-      "status": "PASS",
-      "detail": "0 uncaught console/page errors"
-    },
-    {
-      "name": "responsive reflow",
-      "status": "PASS",
-      "detail": "37 layout cases; no horizontal overflow or sibling overlap"
-    },
-    {
-      "name": "cumulative layout shift",
-      "status": "PASS",
-      "detail": "initial 0; loading→result 0; sources none"
     }
   ]
 }

@@ -18,7 +18,8 @@ const CATEGORY_LABELS = {
   html_signals: "HTML signals",
 };
 const PARTS = [
-  { id: "document", label: "Document", checkIds: ["retrieval_success", "http_status", "https", "content_type", "redirects", "fetch_duration", "robots_directives", "html_lang", "viewport", "charset"] },
+  { id: "document", label: "Document", checkIds: ["retrieval_success", "http_status", "https", "content_type", "redirects", "fetch_duration", "html_lang", "viewport", "charset"] },
+  { id: "robots", label: "Robots", checkIds: ["robots_directives"] },
   { id: "title", label: "Title", checkIds: ["title"] },
   { id: "description", label: "Description", checkIds: ["meta_description"] },
   { id: "canonical", label: "Canonical", checkIds: ["canonical"] },
@@ -183,18 +184,40 @@ async function loadData(sample) {
 
 function checkById(analysis, id) { return analysis.checks.find((check) => check.id === id) || null; }
 
+function readRulePath(context, path) {
+  return path.split(".").reduce((value, key) => value?.[key], context);
+}
+
+function conditionMatches(condition, context) {
+  if (Array.isArray(condition.all)) return condition.all.every((item) => conditionMatches(item, context));
+  if (Array.isArray(condition.any)) return condition.any.some((item) => conditionMatches(item, context));
+  const actual = readRulePath(context, condition.path);
+  switch (condition.operator) {
+    case "equals": return actual === condition.value;
+    case "in": return Array.isArray(condition.value) && condition.value.includes(actual);
+    case "greater_than": return typeof actual === "number" && actual > condition.value;
+    case "contains_ci": {
+      const values = Array.isArray(actual) ? actual : [actual];
+      return values.some((value) => String(value ?? "").toLowerCase().includes(String(condition.value).toLowerCase()));
+    }
+    case "empty": return actual === null || actual === undefined || actual === "";
+    default: return false;
+  }
+}
+
+function ruleApplies(rule, context) {
+  return Boolean(rule?.when) && conditionMatches(rule.when, context);
+}
+
 function enriched(check, analysis, enrichment) {
   const entry = enrichment.checks[check.id];
+  const context = { analysis, check };
   let impact = entry.impact;
-  if (check.id === "robots_directives" && check.status !== "pass") {
-    const directives = [...(analysis.metadata.robots_directives || []), analysis.fetch.x_robots_tag || ""].join(" ").toLowerCase();
-    impact = directives.includes("noindex") ? "blocking" : directives.includes("nofollow") ? "low" : "medium";
+  for (const rule of entry.impact_rules || []) {
+    if (ruleApplies(rule, context)) { impact = rule.impact; break; }
   }
-  if (check.id === "title" && !analysis.metadata.title) impact = "high";
-  if (check.id === "meta_description" && !analysis.metadata.description) impact = "high";
-  if (check.id === "redirects" && analysis.fetch.redirect_count > 2) impact = "high";
-  if (check.id === "json_ld" && analysis.structured_data.malformed_blocks > 0) impact = "medium";
-  return { ...entry, impact, actionable: entry.actionable_statuses.includes(check.status) };
+  const ignored = (entry.ignore_when || []).some((rule) => ruleApplies(rule, context));
+  return { ...entry, impact, actionable: entry.actionable_statuses.includes(check.status) && !ignored };
 }
 
 function prioritizedChecks(analysis, enrichment) {
@@ -218,10 +241,43 @@ function pagePath(value) {
   try { return `${new URL(value).pathname}${new URL(value).search}` || "/"; } catch { return value; }
 }
 
+function scoreHelpPanel() {
+  const help = make("details", "score-help", null, { id: "score-help", dataset: { scoreCaveat: "true" } });
+  append(help,
+    make("summary", "", "How to read the score", { dataset: { ui: "true", scoreHelpTrigger: "true" } }),
+    make("p", "", "This deterministic v1.0 heuristic describes returned HTML and fetch signals. It does not predict rankings, measure traffic, or confirm index state.", { dataset: { ui: "true", summaryCopy: "true" } }));
+  return help;
+}
+
+function makeAnatomyEntry(analysis) {
+  const button = make("button", "anatomy-entry", null, {
+    type: "button",
+    "aria-label": "Open the schematic page X-ray",
+    dataset: { ui: "true", anatomyEntry: "true" },
+  });
+  const preview = make("span", "entry-specimen", null, { "aria-hidden": "true" });
+  append(preview,
+    make("i", "entry-header"),
+    make("i", `entry-h1${analysis.headings.h1.length ? " is-observed" : " is-missing"}`),
+    make("i", "entry-copy"),
+    analysis.images.total > 0 ? make("i", "entry-image") : null,
+    make("i", "entry-footer"));
+  append(button, preview, make("span", "entry-label", "Open page X-ray", { dataset: { ui: "true" } }), make("span", "entry-count", `${analysis.checks.length} signals`, { dataset: { ui: "true" } }));
+  button.addEventListener("click", () => {
+    const heading = $("#anatomy-heading");
+    heading?.scrollIntoView({ block: "start" });
+    heading?.focus({ preventScroll: true });
+  });
+  return button;
+}
+
 function reportHead(route, analysis, enrichment) {
   const head = make("section", "report-head", null, { "aria-labelledby": "report-title" });
   const reportKicker = make("div", "report-kicker");
-  append(reportKicker, make("p", "eyebrow", "Document inspection", { dataset: { ui: "true" } }), make("span", "small-label", "·", { "aria-hidden": "true" }), make("span", "small-label", `Analysis ${route.sample === "noindex" ? "weak · simulated response-header condition" : route.sample}`, { dataset: { ui: "true" } }));
+  append(reportKicker,
+    make("p", "eyebrow", "Page inspection", { dataset: { ui: "true" } }),
+    make("span", "small-label", "·", { "aria-hidden": "true" }),
+    make("span", "small-label", route.sample === "noindex" ? "Test condition · X-Robots-Tag" : "Local analysis output", { dataset: { ui: "true" } }));
   const identity = make("div", "report-identity");
   const titleBox = make("div", "report-title");
   const title = make("h1", "", pageHost(analysis.final_url), { id: "report-title", dataset: { observed: "true" } });
@@ -230,35 +286,26 @@ function reportHead(route, analysis, enrichment) {
   const scoreBox = make("div", "report-score");
   const scoreValue = make("span", "score-value", "0", { "data-score-target": analysis.deterministic_score.overall_score, "aria-label": `${analysis.deterministic_score.overall_score} out of 100`, "aria-live": "off" });
   append(scoreBox, scoreValue, make("span", "score-caption", `HEURISTIC · v${analysis.deterministic_score.version}`, { dataset: { ui: "true" } }));
+  scoreBox.append(scoreHelpPanel());
   append(identity, titleBox, scoreBox);
   const scores = counts(analysis);
   const failed = scores.fail || 0;
   const warnings = scores.warning || 0;
-  const blocking = analysis.checks.some((check) => check.id === "robots_directives" && check.status !== "pass" && enriched(check, analysis, enrichment).impact === "blocking")
-    || analysis.checks.some((check) => check.status === "fail" && enriched(check, analysis, enrichment).impact === "blocking");
-  const verdict = make("p", "verdict-line", blocking ? "Noindex directive detected" : failed ? `${failed} checks failed` : warnings ? `${warnings} checks need review` : "No open checks need review");
+  const blockingItem = prioritizedChecks(analysis, enrichment).find((item) => item.entry.impact === "blocking");
+  const verdict = make("p", "verdict-line", blockingItem ? "Blocking observation" : failed ? `${failed} checks failed` : warnings ? `${warnings} checks need review` : "No open checks need review", { id: "report-verdict" });
   const sub = make("p", "verdict-sub", `${failed} failed · ${warnings} warnings · ${analysis.checks.length} checks returned`, { dataset: { ui: "true", summaryCopy: "true" } });
-  const help = make("details", "score-help", null, { id: "score-help", dataset: { scoreCaveat: "true" } });
-  const summary = make("summary", "", "About the score", { dataset: { ui: "true" } });
-  const caveat = make("p", "", "This is the deterministic v1.0 heuristic for observed HTML and fetch signals. It is not a ranking prediction and does not measure traffic or confirm index status.", { dataset: { ui: "true", summaryCopy: "true" } });
-  append(help, summary, caveat);
-  const scoreLink = make("a", "score-help-link", "Score note", { href: "#score-help", dataset: { ui: "true" } });
-  scoreLink.addEventListener("click", (event) => {
-    event.preventDefault();
-    help.open = true;
-    summary.focus();
-    help.scrollIntoView({ block: "nearest" });
-  });
-  scoreBox.append(scoreLink);
   append(head, reportKicker, identity, verdict, sub);
-  if (blocking) {
+  if (blockingItem) {
     const banner = make("div", "blocking-banner", null, { role: "status", "aria-live": "polite" });
     const content = make("div");
-    append(content, make("strong", "", "Noindex directive detected", { dataset: { ui: "true" } }), make("p", "data-observed", analysis.checks.find((check) => check.id === "robots_directives")?.evidence.observed || "", { dataset: { observed: "true" } }), make("p", "", "Confirm the page owner's intent before changing the response header. This observation does not establish search-engine index state.", { dataset: { ui: "true", summaryCopy: "true" } }));
+    append(content,
+      make("strong", "", blockingItem.entry.finding, { dataset: { ui: "true" } }),
+      make("p", "data-observed", blockingItem.check.evidence.observed, { dataset: { observed: "true" } }),
+      make("p", "", blockingItem.entry.action, { dataset: { ui: "true", summaryCopy: "true" } }));
     banner.append(content);
     head.append(banner);
   }
-  head.append(help);
+  head.append(makeAnatomyEntry(analysis));
   return head;
 }
 
@@ -304,16 +351,16 @@ function statusWord(status) {
 }
 
 function makeAnatomy(route, analysis, enrichment, sourceNotes, compact = false) {
-  const section = make("section", compact ? "anatomy-section anatomy-compact" : "anatomy-section", null, { "aria-labelledby": compact ? "anatomy-heading-compact" : "anatomy-heading" });
+  const headingId = compact ? "anatomy-heading-compact" : "anatomy-heading";
+  const section = make("section", compact ? "anatomy-section anatomy-compact" : "anatomy-section", null, { "aria-labelledby": headingId, id: compact ? "anatomy-compact" : "anatomy-summary" });
   const heading = make("div", "section-heading");
-  append(heading, make("h2", "", "Page anatomy", { id: compact ? "anatomy-heading-compact" : "anatomy-heading", dataset: { ui: "true" } }), make("span", "small-label", "Observed structure", { dataset: { ui: "true" } }));
-  const frame = make("div", "anatomy-frame");
-  const ruler = make("div", "scan-ruler");
-  append(ruler, make("span", "", "Returned HTML signals", { dataset: { ui: "true" } }), make("span", "", "source order", { dataset: { ui: "true" } }));
-  const body = make("div", "scan-body");
-  const onPart = (partId, checkId, label, value, status, { missing = false, classes = "" } = {}) => {
+  append(heading,
+    make("h2", "", "Page X-ray", { id: headingId, tabindex: "-1", dataset: { ui: "true" } }),
+    make("span", "small-label", "Schematic · not DOM geometry", { dataset: { ui: "true" } }));
+
+  const onPart = (parent, partId, checkId, label, value, status, { missing = false, classes = "", checkIds = null } = {}) => {
     const part = PARTS.find((item) => item.id === partId);
-    const partCheckIds = part?.checkIds || [checkId];
+    const partCheckIds = checkIds || part?.checkIds || [checkId];
     const openChecks = partCheckIds.map((id) => checkById(analysis, id)).filter((check) => check && (check.status === "fail" || check.status === "warning"));
     const rankedForPart = prioritizedChecks(analysis, enrichment).filter((item) => partCheckIds.includes(item.check.id));
     const primaryCheckId = rankedForPart[0]?.check.id || checkId;
@@ -325,14 +372,16 @@ function makeAnatomy(route, analysis, enrichment, sourceNotes, compact = false) 
       "data-check-ids": partCheckIds.join(","),
       "data-status": status,
       "aria-pressed": String(partCheckIds.includes(selectedCheckId)),
-      "aria-label": `${label}: ${value}. ${statusWord(status)}. Open observation.`,
+      "aria-label": `${label}: ${value}. ${statusWord(status)}. Open observed evidence.`,
       dataset: { ui: "true" },
     });
-    const tag = make("span", "part-tag", label, { dataset: { ui: "true" } });
-    const text = make("span", `part-value${missing ? " is-missing" : ""} data-observed`, value, { dataset: { observed: "true" } });
-    const mark = make("span", "scan-mark", null);
-    append(mark, make("i", "status-dot", null, { "aria-hidden": "true" }), make("span", "status-word", statusWord(status), { dataset: { ui: "true" } }));
-    append(button, tag, text, mark);
+    const mark = make("span", "scan-mark");
+    mark.append(make("i", "status-dot", null, { "aria-hidden": "true" }));
+    mark.append(make("span", "status-word", statusWord(status), { dataset: { ui: "true" } }));
+    append(button,
+      make("span", "part-tag", label, { dataset: { ui: "true" } }),
+      make("span", `part-value${missing ? " is-missing" : ""} data-observed`, value, { dataset: { observed: "true" } }),
+      mark);
     button.addEventListener("click", () => selectFinding(primaryCheckId, { focusDetail: true, detailRoot: section }));
     region.append(button);
     if (openChecks.length > 1) {
@@ -350,45 +399,111 @@ function makeAnatomy(route, analysis, enrichment, sourceNotes, compact = false) 
       append(related, summary, list);
       region.append(related);
     }
-    body.append(region);
+    parent.append(region);
   };
-  const documentPart = PARTS.find((part) => part.id === "document");
-  onPart("document", "https", "PAGE", partValue("document", analysis, sourceNotes), partStatus(documentPart, analysis));
-  const fields = [
-    ["title", "title", analysis.metadata.title],
-    ["description", "description", analysis.metadata.description],
-    ["canonical", "canonical", analysis.metadata.canonical],
-    ["h1", "h1", analysis.headings.h1.join(" · ")],
-  ];
-  for (const [partId, label, value] of fields) {
-    const part = PARTS.find((item) => item.id === partId);
-    const check = checkById(analysis, part.checkIds[0]);
-    onPart(partId, check.id, label.toUpperCase(), value || `No ${label === "h1" ? "H1 values" : `${label} value`} returned`, check.status, { missing: !value });
-  }
-  const headingPart = PARTS.find((part) => part.id === "headings");
-  const headingCheck = checkById(analysis, "heading_hierarchy");
-  onPart("headings", headingCheck.id, "H2 / H3", partValue("headings", analysis, sourceNotes), headingCheck.status, { missing: !analysis.headings.h2.length && !analysis.headings.h3.length, classes: "scan-subheadings" });
-  const bodyPart = PARTS.find((part) => part.id === "body");
-  const bodyCheck = checkById(analysis, "visible_text");
-  onPart("body", bodyCheck.id, "BODY", partValue("body", analysis, sourceNotes), bodyCheck.status, { classes: "scan-children" });
-  const linksPart = PARTS.find((part) => part.id === "links");
-  const linkCheck = checkById(analysis, "anchor_text") || checkById(analysis, "internal_links");
-  onPart("links", linkCheck.id, "LINKS", partValue("links", analysis, sourceNotes), partStatus(linksPart, analysis), { classes: "scan-children" });
-  const imagePart = PARTS.find((part) => part.id === "images");
-  const imageCheck = checkById(analysis, "image_alt");
-  onPart("images", imageCheck.id, "IMAGES", partValue("images", analysis, sourceNotes), imageCheck.status, { missing: analysis.images.total === 0 });
-  const schemaPart = PARTS.find((part) => part.id === "structured_data");
-  const schemaCheck = checkById(analysis, "json_ld");
-  onPart("structured_data", schemaCheck.id, "JSON-LD", partValue("structured_data", analysis, sourceNotes), schemaCheck.status, { classes: "scan-children" });
-  const socialPart = PARTS.find((part) => part.id === "social_metadata");
-  const socialCheck = checkById(analysis, "open_graph") || checkById(analysis, "twitter_metadata");
-  onPart("social_metadata", socialCheck.id, "SHARING", partValue("social_metadata", analysis, sourceNotes), partStatus(socialPart, analysis), { classes: "scan-children" });
 
-  const footnote = make("p", "anatomy-footnote", "No footer or DOM-location data is returned by the analyzer contract.", { dataset: { ui: "true" } });
+  const passiveSignal = (parent, partId, checkIds, label, value, status, note) => {
+    const signal = make("p", "metadata-observation", null, { "data-part-id": partId, "data-check-ids": checkIds.join(","), "data-status": status });
+    append(signal,
+      make("span", "part-tag", label, { dataset: { ui: "true" } }),
+      make("span", "metadata-value data-observed", value, { dataset: { observed: "true" } }),
+      make("span", "metadata-note", note, { dataset: { ui: "true" } }));
+    parent.append(signal);
+  };
+
+  const map = make("div", "anatomy-map");
+  const specimen = make("div", "page-xray", null, { role: "group", "aria-label": "Schematic page structure", dataset: { xray: "true" } });
+  const chrome = make("div", "xray-browser-bar", null, { "aria-hidden": "true" });
+  append(chrome, make("i", ""), make("i", ""), make("i", ""), make("span", "", "PAGE SPECIMEN"));
+  const headZone = make("section", "xray-head-zone", null, { "aria-label": "Observed page title and description metadata" });
+  append(headZone, make("p", "xray-zone-label", "HEAD · METADATA", { dataset: { ui: "true" } }));
+  const headSignals = make("div", "xray-head-signals");
+  const titleCheck = checkById(analysis, "title");
+  const descriptionCheck = checkById(analysis, "meta_description");
+  onPart(headSignals, "title", titleCheck.id, "Page title", analysis.metadata.title || "No title value returned", titleCheck.status, { missing: !analysis.metadata.title });
+  onPart(headSignals, "description", descriptionCheck.id, "Description", analysis.metadata.description || "No description value returned", descriptionCheck.status, { missing: !analysis.metadata.description });
+  headZone.append(headSignals);
+
+  const documentBody = make("div", "xray-document-body");
+  const siteHeader = make("div", "xray-site-header", null, { "aria-label": "Header position not assessed; the analyzer does not return header landmarks", dataset: { assessment: "unassessed" } });
+  append(siteHeader,
+    make("span", "xray-unassessed-label", "Header · not returned", { dataset: { ui: "true" } }),
+    make("i", "xray-header-mark", null, { "aria-hidden": "true" }));
+  documentBody.append(siteHeader);
+
+  const h1Check = checkById(analysis, "h1_structure");
+  onPart(documentBody, "h1", h1Check.id, "Primary heading · H1", analysis.headings.h1.join(" · ") || "No H1 returned", h1Check.status, { missing: analysis.headings.h1.length === 0, classes: "xray-block xray-h1" });
+  const contentRegion = make("section", "xray-content-region", null, { "aria-label": "Observed heading and text structure" });
+  const headingCheck = checkById(analysis, "heading_hierarchy");
+  onPart(contentRegion, "headings", headingCheck.id, "Subheadings · H2 / H3", partValue("headings", analysis, sourceNotes), headingCheck.status, { missing: !analysis.headings.h2.length && !analysis.headings.h3.length, classes: "xray-block xray-subheadings" });
+  const textCheck = checkById(analysis, "visible_text");
+  onPart(contentRegion, "body", textCheck.id, "Text area", `${analysis.lexical_signals.visible_word_count} visible words · copy not returned`, textCheck.status, { classes: "xray-block xray-body-copy" });
+  const abstractText = make("span", "xray-text-lines", null, { "aria-hidden": "true" });
+  append(abstractText, make("i", ""), make("i", ""), make("i", ""));
+  contentRegion.append(abstractText);
+  documentBody.append(contentRegion);
+
+  if (analysis.images.total > 0) {
+    const imageCheck = checkById(analysis, "image_alt");
+    const imageGroup = make("div", "xray-image-group");
+    onPart(imageGroup, "images", imageCheck.id, "Image area", `${analysis.images.total} image(s) observed · aggregate count`, imageCheck.status, { classes: "xray-block xray-images" });
+    const slots = make("div", "xray-image-slots", null, { "aria-hidden": "true" });
+    for (let index = 0; index < Math.min(analysis.images.total, 3); index += 1) slots.append(make("i", "xray-image-slot"));
+    if (analysis.images.total > 3) slots.append(make("span", "xray-more-images", `+${analysis.images.total - 3}`));
+    imageGroup.append(slots);
+    documentBody.append(imageGroup);
+  }
+
+  if (analysis.links.total > 0) {
+    const linksCheckIds = PARTS.find((part) => part.id === "links").checkIds;
+    const linksStatus = partStatus(PARTS.find((part) => part.id === "links"), analysis);
+    onPart(documentBody, "links", "anchor_text", "Link area", `${analysis.links.total} link(s) observed · individual labels not returned`, linksStatus, { classes: "xray-block xray-links", checkIds: linksCheckIds });
+  }
+  const footerZone = make("div", "xray-footer", null, { dataset: { assessment: "unassessed" }, "aria-label": "Footer position not assessed; the analyzer does not return footer landmarks" });
+  append(footerZone, make("span", "xray-unassessed-label", "Footer position · not assessed", { dataset: { ui: "true" } }), make("i", "xray-footer-mark", null, { "aria-hidden": "true" }));
+  documentBody.append(footerZone);
+  append(specimen, chrome, headZone, documentBody);
+
+  const signals = make("aside", "metadata-inspection", null, { "aria-label": "Head and response metadata signals" });
+  append(signals,
+    make("p", "xray-zone-label", "HEAD + RESPONSE SIGNALS", { dataset: { ui: "true" } }));
+  const fetchPart = PARTS.find((part) => part.id === "document");
+  onPart(signals, "document", "https", "Response", partValue("document", analysis, sourceNotes), partStatus(fetchPart, analysis), { classes: "metadata-signal" });
+  const robotsCheck = checkById(analysis, "robots_directives");
+  const directiveValues = [...(analysis.metadata.robots_directives || []), analysis.fetch.x_robots_tag || ""].filter(Boolean);
+  onPart(signals, "robots", robotsCheck.id, "Robots directive", directiveValues.join(" · ") || "No directive returned", robotsCheck.status, { missing: directiveValues.length === 0, classes: "metadata-signal" });
+  const canonicalCheck = checkById(analysis, "canonical");
+  onPart(signals, "canonical", canonicalCheck.id, "Canonical", analysis.metadata.canonical || "No canonical value returned", canonicalCheck.status, { missing: !analysis.metadata.canonical, classes: "metadata-signal" });
+
+  const schemaCheck = checkById(analysis, "json_ld");
+  if (analysis.structured_data.block_count === 0 && analysis.structured_data.malformed_blocks === 0) {
+    passiveSignal(signals, "structured_data", [schemaCheck.id], "Structured data", "No JSON-LD block returned", schemaCheck.status, "Optional · no addition suggested");
+  } else {
+    onPart(signals, "structured_data", schemaCheck.id, "Structured data", partValue("structured_data", analysis, sourceNotes), schemaCheck.status, { classes: "metadata-signal" });
+  }
+
+  const socialPart = PARTS.find((part) => part.id === "social_metadata");
+  const socialCheckIds = socialPart.checkIds;
+  const socialValuesPresent = Object.entries(analysis.social_metadata).some(([key, value]) => (key.startsWith("og_") || key.startsWith("twitter_")) && Boolean(value));
+  if (!socialValuesPresent) {
+    passiveSignal(signals, "social_metadata", socialCheckIds, "Sharing metadata", partValue("social_metadata", analysis, sourceNotes), partStatus(socialPart, analysis), "No share fields returned · optional");
+  } else {
+    const socialCheck = checkById(analysis, "open_graph") || checkById(analysis, "twitter_metadata");
+    onPart(signals, "social_metadata", socialCheck.id, "Sharing metadata", partValue("social_metadata", analysis, sourceNotes), partStatus(socialPart, analysis), { classes: "metadata-signal", checkIds: socialCheckIds });
+  }
+
+  const linkChecks = PARTS.find((part) => part.id === "links");
+  if (analysis.links.total === 0) passiveSignal(signals, "links", linkChecks.checkIds, "Link signals", "No links observed", partStatus(linkChecks, analysis), "No body link area is drawn");
+  const imageCheck = checkById(analysis, "image_alt");
+  if (analysis.images.total === 0) passiveSignal(signals, "images", [imageCheck.id], "Image signal", "No image elements returned", imageCheck.status, "No image area is drawn");
+
+  const frame = make("div", "anatomy-frame");
+  append(map, specimen, signals);
+  frame.append(map);
   const detail = make("div", "inspection-detail", null, { "aria-live": "polite", "aria-atomic": "true", id: compact ? "inspection-detail-compact" : "inspection-detail" });
   if (selectedCheckId && checkById(analysis, selectedCheckId)) fillInspectionDetail(detail, selectedCheckId, analysis, enrichment, sourceNotes);
-  else detail.append(make("p", "", "Select a marked region to inspect its returned observation.", { dataset: { ui: "true" } }));
-  append(frame, ruler, body);
+  else detail.append(make("p", "", "Select a marked observation to inspect its returned evidence.", { dataset: { ui: "true" } }));
+  const footnote = make("p", "anatomy-footnote", "Schematic grouping from returned fields; element positions, header landmarks and footer content were not returned.", { dataset: { ui: "true" } });
   append(section, heading, frame, footnote, detail);
   return section;
 }
@@ -446,9 +561,9 @@ function fillInspectionDetail(panel, checkId, analysis, enrichment, sourceNotes)
     const wrap = make("div", "snippet-wrap");
     const head = make("div", "snippet-head");
     const code = make("pre", "", snippet.value, { class: "data-observed", dataset: { observed: "true" } });
-    const copy = make("button", "copy-button", "Copy pattern", { type: "button", dataset: { copyValue: "true" } });
+    const copy = make("button", "copy-button", snippet.review ? "Copy editable template" : "Copy fix", { type: "button", dataset: { copyValue: "true" } });
     copy.addEventListener("click", () => copySnippet(snippet.value, copy));
-    append(head, make("span", "evidence-label", "EDITABLE PATTERN", { dataset: { ui: "true" } }), copy);
+    append(head, make("span", "evidence-label", snippet.review ? "REVIEW REQUIRED · EDITABLE TEMPLATE" : "COPYABLE FIX", { dataset: { ui: "true" } }), copy);
     const feedback = make("p", "copy-feedback", "", { "aria-live": "polite", "aria-atomic": "true" });
     append(wrap, head, code);
     if (snippet.review) wrap.append(make("p", "review-note", snippet.note, { dataset: { ui: "true" } }));
@@ -464,14 +579,14 @@ function fillInspectionDetail(panel, checkId, analysis, enrichment, sourceNotes)
 }
 
 async function copySnippet(value, button) {
-  const parent = button.closest(".snippet-wrap");
-  const feedback = $(".copy-feedback", parent);
+  const parent = button.closest(".snippet-wrap, .priority-actions");
+  const feedback = $(".copy-feedback, .priority-copy-feedback", parent);
   feedback.classList.remove("is-error");
   feedback.textContent = "";
   try {
     if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
     await navigator.clipboard.writeText(value);
-    if (button.isConnected) feedback.textContent = "Pattern copied.";
+    if (button.isConnected) feedback.textContent = "Copied.";
   } catch {
     if (button.isConnected) {
       feedback.textContent = "Copy was not permitted. Select the pattern and copy it manually.";
@@ -533,6 +648,8 @@ function buildPriorityList(analysis, enrichment, maxCount = 5) {
     const li = make("li", "priority-row");
     const check = item.check;
     const entry = item.entry;
+    li.dataset.checkId = check.id;
+    const top = make("div", "priority-top");
     const button = make("button", "priority-button", null, {
       type: "button",
       id: `finding-${check.id}`,
@@ -542,21 +659,47 @@ function buildPriorityList(analysis, enrichment, maxCount = 5) {
       "aria-label": `${index + 1}. ${entry.impact} impact. ${entry.finding}. ${check.evidence.observed}`,
     });
     const number = make("span", "priority-number", String(index + 1).padStart(2, "0"), { "aria-hidden": "true" });
-    const content = make("span", "finding-content");
     const title = make("span", "finding-title", entry.finding, { dataset: { ui: "true" } });
-    const evidence = make("span", "finding-evidence data-observed", check.evidence.observed, { dataset: { observed: "true" } });
+    append(button, number, title);
+    const evidence = make("p", "finding-evidence data-observed", check.evidence.observed, { dataset: { observed: "true" } });
+    const action = make("p", "priority-action", entry.action, { dataset: { ui: "true", summaryCopy: "true" } });
     const meta = make("span", "priority-meta");
-    append(meta, make("span", "impact-tag", entry.impact, { "data-impact": entry.impact, dataset: { ui: "true" } }), make("span", "status-label", statusWord(check.status), { "data-status": check.status, dataset: { ui: "true" } }));
-    append(content, title, evidence, meta);
-    append(button, number, content);
+    append(meta,
+      make("span", "status-label", statusWord(check.status), { "data-status": check.status, dataset: { ui: "true" } }),
+      make("span", "effort-label", `${entry.effort} effort`, { dataset: { ui: "true" } }));
     button.addEventListener("click", () => selectFinding(check.id));
-    li.append(button);
+    top.append(button, make("span", "impact-tag", entry.impact, { "data-impact": entry.impact, dataset: { ui: "true" } }));
+    const actions = make("div", "priority-actions");
+    const snippet = snippetFor(check, analysis, enrichment, currentSourceNotes);
+    if (snippet) {
+      const copy = make("button", "priority-copy-button", snippet.review ? "Copy editable template" : "Copy fix", {
+        type: "button",
+        "data-check-id": check.id,
+        "aria-label": `${snippet.review ? "Copy editable template" : "Copy fix"} for ${entry.finding}`,
+      });
+      copy.addEventListener("click", () => copySnippet(snippet.value, copy));
+      actions.append(copy);
+    } else {
+      const review = make("button", "priority-review-button", "Review fix", { type: "button", "data-check-id": check.id });
+      review.addEventListener("click", () => reviewFinding(check.id));
+      actions.append(review);
+    }
+    actions.append(make("p", "priority-copy-feedback", "", { "aria-live": "polite", "aria-atomic": "true" }));
+    append(li, top, evidence, action, meta, actions);
     list.append(li);
   }
   if (!ranked.length) list.append(make("li", "empty-list", "No actionable non-passing checks were returned."));
-  const note = make("p", "section-footnote", "Impact and effort are design-only review cues; the analyzer's status and score are unchanged.", { dataset: { ui: "true" } });
+  const note = make("p", "section-footnote", "Order is a design-only review cue, not business severity. The score and check statuses are unchanged.", { dataset: { ui: "true", summaryCopy: "true" } });
   append(section, list, note);
   return section;
+}
+
+function reviewFinding(checkId) {
+  const structure = $(".structure-disclosure");
+  if (structure) structure.open = true;
+  const anatomy = $(".anatomy-section");
+  selectFinding(checkId, { focusDetail: true, detailRoot: anatomy || document });
+  anatomy?.scrollIntoView({ block: "nearest" });
 }
 
 function buildSummary(route, analysis, enrichment, notes) {
@@ -567,18 +710,21 @@ function buildSummary(route, analysis, enrichment, notes) {
   append(grid, anatomy, priorities, categoryRows(analysis));
   const announce = make("p", "live-region", "", { id: "selection-announcement", role: "status", "aria-live": "polite", "aria-atomic": "true" });
   const state = make("div", "state-bar", null, { role: "note" });
-  append(state, make("i", "status-dot", null, { "aria-hidden": "true" }), make("span", "", "Offline design proof · no website request was made.", { dataset: { ui: "true" } }));
+  append(state, make("i", "status-dot", null, { "aria-hidden": "true" }), make("span", "", "Static analysis output · no website request was made.", { dataset: { ui: "true" } }));
   append(main, reportHead(route, analysis, enrichment), grid, state, announce);
   return main;
 }
 
-function scoreSide(analysis) {
-  const section = make("section", "subpage-side", null, { "aria-label": "Analysis context" });
-  append(section,
-    make("h2", "", "Review context", { dataset: { ui: "true" } }),
-    make("p", "", `Score ${analysis.deterministic_score.overall_score}/100 · heuristic v${analysis.deterministic_score.version}`, { dataset: { ui: "true" } }),
-    make("p", "", "Score notes appear once above.", { dataset: { ui: "true" } }),
-    make("p", "data-observed", `${analysis.checks.length} checks · ${analysis.fetch.status_code} response · ${analysis.fetch.redirect_count} redirects`, { dataset: { observed: "true" } }));
+function scoreSide(route, analysis, enrichment, notes) {
+  const section = make("aside", "subpage-side", null, { "aria-label": "Analysis context and page structure" });
+  const scoreContext = make("section", "score-context", null, { "aria-label": "Heuristic score" });
+  append(scoreContext,
+    make("p", "small-label", "HEURISTIC SCORE", { dataset: { ui: "true" } }),
+    make("p", "score-context-value", `${analysis.deterministic_score.overall_score}/100 · v${analysis.deterministic_score.version}`, { dataset: { observed: "true" } }),
+    scoreHelpPanel());
+  const structure = make("details", "structure-disclosure", null, { open: window.matchMedia("(min-width: 901px)").matches });
+  append(structure, make("summary", "", "Inspect page structure", { dataset: { ui: "true" } }), makeAnatomy(route, analysis, enrichment, notes, true));
+  append(section, scoreContext, structure);
   return section;
 }
 
@@ -592,32 +738,38 @@ function buildCheckRows(analysis, enrichment, relevantIds = null) {
     append(text,
       make("strong", "", entry.finding, { dataset: { ui: "true" } }),
       make("span", "finding-evidence data-observed", check.evidence.observed, { dataset: { observed: "true" } }));
-    const button = make("button", "", "Inspect in anatomy", { type: "button", "data-check-id": check.id, dataset: { ui: "true" } });
-    button.addEventListener("click", () => navigate("summary", currentSample, { checkId: check.id }));
+    const button = make("button", "inspect-structure-button", "Inspect page structure", { type: "button", "data-check-id": check.id, dataset: { ui: "true" } });
+    button.addEventListener("click", () => reviewFinding(check.id));
     append(row, text, button);
     rows.append(row);
   }
   return rows;
 }
 
-function pageHeaderForSubstate(route, analysis, enrichment) {
-  return reportHead(route, analysis, enrichment);
+function pageHeaderForSubstate(route, analysis, title) {
+  const heading = make("header", "specialist-heading", null, { "aria-labelledby": "specialist-title" });
+  append(heading,
+    make("p", "eyebrow", route.sample === "noindex" ? "Page inspection · test condition" : "Page inspection · local analysis", { dataset: { ui: "true" } }),
+    make("h1", "", title, { id: "specialist-title", dataset: { ui: "true" } }),
+    make("p", "specialist-url data-observed", analysis.final_url, { dataset: { observed: "true" } }));
+  return heading;
 }
 
 function buildOnPage(route, analysis, enrichment, notes) {
-  const main = make("main");
+  const main = make("main", "specialist-page");
   const layout = make("div", "subpage-layout");
   const content = make("div", "subpage-main");
-  const metadata = make("section", "data-block");
+  const metadata = make("section", "data-block onpage-primary-values");
   append(metadata,
-    make("h2", "", "Page metadata", { dataset: { ui: "true" } }),
-    make("p", "small-label", `Approx. ${analysis.lexical_signals.visible_word_count} visible words · returned count`, { dataset: { observed: "true" } }));
+    make("h2", "", "Title and description", { dataset: { ui: "true" } }),
+    make("p", "small-label", `Observed page metadata · ${analysis.lexical_signals.visible_word_count} visible words reported`, { dataset: { observed: "true" } }));
   const title = make("p", `observed-value${analysis.metadata.title ? "" : " is-empty"} data-observed`, analysis.metadata.title || "No title value returned.", { dataset: { observed: "true" } });
   const description = make("p", `observed-value${analysis.metadata.description ? "" : " is-empty"} data-observed`, analysis.metadata.description || "No description value returned.", { dataset: { observed: "true" } });
   append(metadata, make("h3", "eyebrow", "TITLE", { dataset: { ui: "true" } }), title, make("h3", "eyebrow", "META DESCRIPTION", { dataset: { ui: "true" } }), description);
+  metadata.append(buildCheckRows(analysis, enrichment, ["title", "meta_description"]));
   content.append(metadata);
   const headings = make("section", "data-block");
-  headings.append(make("h2", "", "Heading values", { dataset: { ui: "true" } }));
+  headings.append(make("h2", "", "Headings observed", { dataset: { ui: "true" } }));
   let headingIndex = 0;
   for (const level of ["h1", "h2", "h3"]) {
     for (const value of analysis.headings[level]) {
@@ -636,10 +788,9 @@ function buildOnPage(route, analysis, enrichment, notes) {
   const canonical = make("section", "data-block");
   append(canonical, make("h2", "", "Canonical value", { dataset: { ui: "true" } }), make("p", `observed-value${analysis.metadata.canonical ? "" : " is-empty"} data-observed`, analysis.metadata.canonical || "No canonical URL returned.", { dataset: { observed: "true" } }), buildCheckRows(analysis, enrichment, ["canonical"]));
   content.append(canonical);
-  const aside = scoreSide(analysis);
-  aside.prepend(makeAnatomy(route, analysis, enrichment, notes, true));
+  const aside = scoreSide(route, analysis, enrichment, notes);
   append(layout, content, aside);
-  append(main, pageHeaderForSubstate(route, analysis, enrichment), layout);
+  append(main, pageHeaderForSubstate(route, analysis, "On-page"), layout);
   return main;
 }
 
@@ -659,7 +810,7 @@ function previewItem(title, label, values, finalUrl, imageUrl = null, search = f
 }
 
 function buildPreviews(route, analysis, enrichment, notes) {
-  const main = make("main");
+  const main = make("main", "specialist-page");
   const layout = make("div", "subpage-layout");
   const content = make("div", "subpage-main");
   const previewList = make("div", "preview-list");
@@ -670,19 +821,18 @@ function buildPreviews(route, analysis, enrichment, notes) {
   previewList.append(previewItem("X card sketch", "X VALUES · PAGE METADATA FALLBACK", { title: social.twitter_title || metadata.title, titleMissing: "No X or page title returned", description: social.twitter_description || metadata.description, descriptionMissing: "No X or page description returned" }, analysis.final_url, social.twitter_image));
   previewList.append(previewItem("LinkedIn share", "OPEN GRAPH VALUES", { title: social.og_title, titleMissing: "No Open Graph title returned", description: social.og_description, descriptionMissing: "No Open Graph description returned" }, analysis.final_url, social.og_image));
   content.append(previewList);
-  const aside = scoreSide(analysis);
-  aside.prepend(makeAnatomy(route, analysis, enrichment, notes, true));
+  const aside = scoreSide(route, analysis, enrichment, notes);
   append(layout, content, aside);
-  append(main, pageHeaderForSubstate(route, analysis, enrichment), layout);
+  append(main, pageHeaderForSubstate(route, analysis, "Previews"), layout);
   return main;
 }
 
 function buildFixList(route, analysis, enrichment, notes) {
-  const main = make("main");
+  const main = make("main", "specialist-page");
   const layout = make("div", "subpage-layout");
   const content = make("div", "subpage-main");
   const ranked = prioritizedChecks(analysis, enrichment);
-  content.append(make("p", "", `${ranked.length} actionable non-passing checks · sorted by design-only impact, effort, then analyzer order.`, { dataset: { ui: "true" } }));
+  content.append(make("p", "fix-list-intro", `${ranked.length} open findings · ordered by design-only impact, effort, then source order.`, { dataset: { ui: "true" } }));
   if (!ranked.length) content.append(make("p", "empty-list", "No actionable non-passing checks were returned."));
   for (const { check, entry } of ranked) {
     const item = make("article", "fix-item", null, { id: `fix-${check.id}` });
@@ -693,17 +843,16 @@ function buildFixList(route, analysis, enrichment, notes) {
     append(item,
       header,
       make("p", "finding-evidence data-observed", check.evidence.observed, { dataset: { observed: "true" } }),
-      make("p", "", entry.action, { dataset: { ui: "true" } }),
+      make("p", "fix-action", entry.action, { dataset: { ui: "true" } }),
       make("p", "", `Effort · ${entry.effort}`, { dataset: { ui: "true" } }),
       buildCheckRows(analysis, enrichment, [check.id]));
     const snippet = snippetFor(check, analysis, enrichment, notes);
     if (snippet) item.append(snippetBlock(snippet.value, snippet.note, snippet.review));
     content.append(item);
   }
-  const aside = scoreSide(analysis);
-  aside.prepend(makeAnatomy(route, analysis, enrichment, notes, true));
+  const aside = scoreSide(route, analysis, enrichment, notes);
   append(layout, content, aside);
-  append(main, pageHeaderForSubstate(route, analysis, enrichment), layout);
+  append(main, pageHeaderForSubstate(route, analysis, "Fix list"), layout);
   return main;
 }
 
@@ -711,9 +860,9 @@ function snippetBlock(value, note, review) {
   const wrap = make("div", "snippet-wrap fix-actions");
   const head = make("div", "snippet-head");
   const pre = make("pre", "data-observed", value, { dataset: { observed: "true" } });
-  const copy = make("button", "copy-button", "Copy pattern", { type: "button" });
+  const copy = make("button", "copy-button", review ? "Copy editable template" : "Copy fix", { type: "button" });
   copy.addEventListener("click", () => copySnippet(value, copy));
-  append(head, make("span", "evidence-label", "EDITABLE PATTERN", { dataset: { ui: "true" } }), copy);
+  append(head, make("span", "evidence-label", review ? "REVIEW REQUIRED · EDITABLE TEMPLATE" : "COPYABLE FIX", { dataset: { ui: "true" } }), copy);
   append(wrap, head, pre, make("p", review ? "review-note" : "", note, { dataset: { ui: "true" } }), make("p", "copy-feedback", "", { "aria-live": "polite" }));
   return wrap;
 }
@@ -871,7 +1020,9 @@ async function render() {
       shell.append(buildFooter());
       scoreAnimation();
       if (route.checkId && checkById(currentAnalysis, route.checkId)) {
-        selectFinding(route.checkId, { focusDetail: true });
+        const structure = $(".structure-disclosure");
+        if (structure) structure.open = true;
+        selectFinding(route.checkId, { focusDetail: true, detailRoot: $(".anatomy-section") || document });
       }
       attachNavigation();
     } catch {

@@ -1,0 +1,21 @@
+# S1-A R1 before/after review
+
+The “before” captures are the rejected S1-A proof at commit `939700dcda80b58705b872cacd10f272189fe57c`. The “after” captures are new Playwright Chromium captures from the R1 working tree at the same viewport. Both are unretouched viewport screenshots.
+
+| View | Before · rejected proof | After · R1 |
+|---|---|---|
+| Desktop Summary · 1440×900 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-1440x900.png) | [After](../screenshots/s1-a-summary-1440x900.png) |
+| Mobile Summary · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-390x844.png) | [After](../screenshots/s1-a-summary-390x844.png) |
+| Mobile On-page · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-on-page-390x844.png) | [After](../screenshots/s1-a-on-page-390x844.png) |
+| Mobile Previews · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-previews-390x844.png) | [After](../screenshots/s1-a-previews-390x844.png) |
+| Mobile Fix list · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png) | [After](../screenshots/s1-a-fix-list-390x844.png) |
+
+## What changed
+
+- **Desktop Summary:** Before, the large report header consumed the upper viewport and the anatomy presented repeated field-labelled rows; the top-five list had no direct copy action. After, the specimen shows a browser/document frame with head metadata, an H1 region, inset content, and conditional image/link areas. The first three priority actions fit by y=837 alongside the specimen, which begins at y=420. The specimen continues below the screenshot edge, so the full anatomy still requires scrolling.
+- **Mobile Summary:** Before, the page presented the score and finding list without a visible anatomy affordance. After, the verdict is at y=239–265, the page-X-ray entry at y=295–360, and the first two actions end at y=506 and y=632 in a 390×844 viewport. Those actions expose evidence, impact, an action, and a direct copy/review button.
+- **Mobile On-page:** Before, the shared report header and anatomy preceded the actual page fields. After, the distinct On-page heading is followed by the returned title and description, then heading observations. The first content block fits from y=179 to y=369; the schematic is a collapsed “Inspect page structure” disclosure below the task content.
+- **Mobile Previews:** Before, the repeated report anatomy delayed the preview. After, the metadata-based search preview is first and visible from y=179 to y=318; social surfaces follow in a single column. Missing social images remain empty rather than fabricated.
+- **Mobile Fix list:** Before, the shared anatomy dominated the screen before users reached open findings. After, the first actionable finding and its action are visible under a specific Fix list heading. The first item also distinguishes an editable template from verified source copy.
+
+The page specimen is schematic, not a DOM reconstruction. Its title and description use returned metadata, its H1 uses returned heading text or a dashed missing slot, image slots follow the aggregate image count, and a link region appears only when links are present. Header/footer landmarks remain labelled unassessed. JSON-LD and social metadata are outside the body silhouette. The weak/basic comparison changes both observed text and shape: weak shows no returned H1, one image slot and a link area; basic shows its returned H1, no image slot and no link area.

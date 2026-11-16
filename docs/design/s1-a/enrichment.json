@@ -1,29 +1,410 @@
 {
   "schema": "s1-a-check-enrichment-1",
-  "note": "Design-only presentation guidance. It never changes SEOAnalysis scores or statuses.",
+  "note": "Design-only impact, effort, priority, and presentation guidance. Generic rules read SEOAnalysis fields; scores and statuses are never changed.",
   "checks": {
-    "retrieval_success": {"impact":"blocking","effort":"moderate","anatomy":"document","actionable_statuses":["fail"],"finding":"The document could not be retrieved","action":"Check whether the page is reachable and returns an HTML document.","snippet":null,"snippet_reason":"No server response details are available to form a safe change."},
-    "http_status": {"impact":"blocking","effort":"moderate","anatomy":"document","actionable_statuses":["fail"],"finding":"The response status needs attention","action":"Review the response status and the page route before changing redirects or server rules.","snippet":null,"snippet_reason":"A server-side status correction cannot be inferred from the status alone."},
-    "https": {"impact":"high","effort":"moderate","anatomy":"document","actionable_statuses":["fail"],"finding":"The final page does not use HTTPS","action":"Review the final URL and configure secure transport at the hosting layer.","snippet":null,"snippet_reason":"Transport configuration is server-specific; an HTML snippet would not fix it."},
-    "content_type": {"impact":"medium","effort":"moderate","anatomy":"document","actionable_statuses":["fail"],"finding":"The response is not identified as supported HTML","action":"Review the response content type and serve an HTML document where appropriate.","snippet":null,"snippet_reason":"The correct response header depends on the server and document type."},
-    "redirects": {"impact":"low","effort":"moderate","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"The redirect path may be longer than needed","action":"Check whether each redirect is necessary and update links to the final destination.","snippet":null,"snippet_reason":"Redirect rules cannot be safely generated from the count alone."},
-    "fetch_duration": {"impact":"low","effort":"heavy","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"The observed fetch duration needs review","action":"Investigate server and network behavior with production performance tooling.","snippet":null,"snippet_reason":"A single static HTML change cannot determine or correct fetch duration."},
-    "robots_directives": {"impact":"low","effort":"quick","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"A robots directive needs review","action":"Confirm that the observed directive matches the page owner's intent before changing it.","snippet":null,"snippet_reason":"Directive changes can affect crawl behavior and require owner review."},
-    "title": {"impact":"medium","effort":"quick","anatomy":"title","actionable_statuses":["warning","fail"],"finding":"The title text needs review","action":"Write one accurate title that reflects the verified page content.","snippet":"<title>[Write a title based on verified page content]</title>","snippet_reason":"The placeholder is editable and is not verified page copy.","review_required":true},
-    "meta_description": {"impact":"medium","effort":"quick","anatomy":"description","actionable_statuses":["warning","fail"],"finding":"The description text needs review","action":"Write a concise, accurate description using only confirmed page information.","snippet":"<meta name=\"description\" content=\"[Write an accurate summary of this page]\">","snippet_reason":"The placeholder is editable and is not verified page copy.","review_required":true},
-    "canonical": {"impact":"medium","effort":"moderate","anatomy":"canonical","actionable_statuses":["warning","fail"],"finding":"The canonical URL needs review","action":"Confirm the intended canonical destination with the site owner before changing it.","snippet":null,"snippet_reason":"The actual target can only be drafted from final_url when a canonical is missing; the owner must confirm it.","review_required":true},
-    "h1_structure": {"impact":"high","effort":"quick","anatomy":"h1","actionable_statuses":["warning","fail"],"finding":"The primary heading structure needs review","action":"Add one clear H1 that describes the actual page content.","snippet":"<h1>[Write a primary heading from verified page content]</h1>","snippet_reason":"No source heading is available to safely reuse.","review_required":true},
-    "heading_hierarchy": {"impact":"medium","effort":"moderate","anatomy":"headings","actionable_statuses":["warning","fail"],"finding":"The heading sequence needs review","action":"Review the observed heading levels and use a logical outline.","snippet":null,"snippet_reason":"The correct outline depends on the full page content and structure."},
-    "visible_text": {"impact":"medium","effort":"heavy","anatomy":"body","actionable_statuses":["warning","fail"],"finding":"The observed visible-text count is a prompt for review","action":"Check whether the page explains its purpose clearly; word count alone does not establish quality.","snippet":null,"snippet_reason":"The analyzer returns a count, not enough page copy to draft content."},
-    "internal_links": {"impact":"medium","effort":"moderate","anatomy":"links","actionable_statuses":["warning","fail"],"finding":"The link count may warrant review","action":"Add useful links only where they help people navigate related content.","snippet":null,"snippet_reason":"Destination URLs cannot be invented from link counts."},
-    "anchor_text": {"impact":"low","effort":"quick","anatomy":"links","actionable_statuses":["warning","fail"],"finding":"One or more link labels need review","action":"Give each link a clear label that describes its destination or purpose.","snippet":null,"snippet_reason":"The analyzer does not return individual link markup or destinations."},
-    "link_relationships": {"impact":"low","effort":"moderate","anatomy":"links","actionable_statuses":["warning","fail"],"finding":"Link relationship attributes need contextual review","action":"Use relationship attributes only when they match the link's purpose and sponsorship.","snippet":null,"snippet_reason":"Individual links and their context are not returned."},
-    "image_alt": {"impact":"medium","effort":"quick","anatomy":"images","actionable_statuses":["warning","fail"],"finding":"Image alternative text needs review","action":"Describe informative images; keep empty alt text when an image is genuinely decorative.","snippet":null,"snippet_reason":"The analysis returns aggregate counts. The offline source note supplies one source path only for this static proof.","review_required":true},
-    "json_ld": {"impact":"low","effort":"heavy","anatomy":"structured_data","actionable_statuses":["warning","fail"],"finding":"Structured data needs review","action":"Inspect each structured-data block and validate intended values separately.","snippet":null,"snippet_reason":"No type or property values are returned when no block is present; a schema cannot be safely invented."},
-    "open_graph": {"impact":"low","effort":"quick","anatomy":"social_metadata","actionable_statuses":["warning","fail"],"finding":"Open Graph preview fields need review","action":"Use verified page title and description values for sharing metadata.","snippet":null,"snippet_reason":"The analyzer does not provide enough verified copy for absent fields."},
-    "twitter_metadata": {"impact":"low","effort":"quick","anatomy":"social_metadata","actionable_statuses":["warning","fail"],"finding":"Social preview fields need review","action":"Use verified page title and description values for social metadata.","snippet":null,"snippet_reason":"The analyzer does not provide enough verified copy for absent fields."},
-    "html_lang": {"impact":"medium","effort":"quick","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"The document language declaration needs review","action":"Declare the primary language when it is known.","snippet":"<html lang=\"[known-language-code]\">","snippet_reason":"The correct language must be confirmed by the page owner.","review_required":true},
-    "viewport": {"impact":"medium","effort":"quick","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"The viewport declaration needs review","action":"Use a viewport declaration appropriate for the page's responsive layout.","snippet":"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">","snippet_reason":"The static pattern needs review in the context of the actual site."},
-    "charset": {"impact":"low","effort":"quick","anatomy":"document","actionable_statuses":["warning","fail"],"finding":"The character-encoding declaration needs review","action":"Declare the document encoding used by the page.","snippet":"<meta charset=\"[document-encoding]\">","snippet_reason":"The correct encoding must match the served document.","review_required":true}
+    "retrieval_success": {
+      "impact": "blocking",
+      "effort": "moderate",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "fail"
+      ],
+      "finding": "The document could not be retrieved",
+      "action": "Check whether the page is reachable and returns an HTML document.",
+      "snippet": null,
+      "snippet_reason": "No server response details are available to form a safe change."
+    },
+    "http_status": {
+      "impact": "blocking",
+      "effort": "moderate",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "fail"
+      ],
+      "finding": "The response status needs attention",
+      "action": "Review the response status and the page route before changing redirects or server rules.",
+      "snippet": null,
+      "snippet_reason": "A server-side status correction cannot be inferred from the status alone."
+    },
+    "https": {
+      "impact": "high",
+      "effort": "moderate",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "fail"
+      ],
+      "finding": "The final page does not use HTTPS",
+      "action": "Review the final URL and configure secure transport at the hosting layer.",
+      "snippet": null,
+      "snippet_reason": "Transport configuration is server-specific; an HTML snippet would not fix it."
+    },
+    "content_type": {
+      "impact": "medium",
+      "effort": "moderate",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "fail"
+      ],
+      "finding": "The response is not identified as supported HTML",
+      "action": "Review the response content type and serve an HTML document where appropriate.",
+      "snippet": null,
+      "snippet_reason": "The correct response header depends on the server and document type."
+    },
+    "redirects": {
+      "impact": "low",
+      "effort": "moderate",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The redirect path may be longer than needed",
+      "action": "Check whether each redirect is necessary and update links to the final destination.",
+      "snippet": null,
+      "snippet_reason": "Redirect rules cannot be safely generated from the count alone.",
+      "impact_rules": [
+        {
+          "when": {
+            "path": "analysis.fetch.redirect_count",
+            "operator": "greater_than",
+            "value": 2
+          },
+          "impact": "high"
+        }
+      ]
+    },
+    "fetch_duration": {
+      "impact": "low",
+      "effort": "heavy",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The observed fetch duration needs review",
+      "action": "Investigate server and network behavior with production performance tooling.",
+      "snippet": null,
+      "snippet_reason": "A single static HTML change cannot determine or correct fetch duration."
+    },
+    "robots_directives": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "A robots directive needs review",
+      "action": "Confirm that the observed directive matches the page owner's intent before changing it.",
+      "snippet": null,
+      "snippet_reason": "Directive changes can affect crawl behavior and require owner review.",
+      "impact_rules": [
+        {
+          "when": {
+            "any": [
+              {
+                "path": "analysis.metadata.robots_directives",
+                "operator": "contains_ci",
+                "value": "noindex"
+              },
+              {
+                "path": "analysis.fetch.x_robots_tag",
+                "operator": "contains_ci",
+                "value": "noindex"
+              }
+            ]
+          },
+          "impact": "blocking"
+        },
+        {
+          "when": {
+            "any": [
+              {
+                "path": "analysis.metadata.robots_directives",
+                "operator": "contains_ci",
+                "value": "nofollow"
+              },
+              {
+                "path": "analysis.fetch.x_robots_tag",
+                "operator": "contains_ci",
+                "value": "nofollow"
+              }
+            ]
+          },
+          "impact": "low"
+        }
+      ]
+    },
+    "title": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "title",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The title text needs review",
+      "action": "Write one accurate title that reflects the verified page content.",
+      "snippet": "<title>[Write a title based on verified page content]</title>",
+      "snippet_reason": "The placeholder is editable and is not verified page copy.",
+      "review_required": true,
+      "impact_rules": [
+        {
+          "when": {
+            "path": "analysis.metadata.title",
+            "operator": "empty"
+          },
+          "impact": "high"
+        }
+      ]
+    },
+    "meta_description": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "description",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The description text needs review",
+      "action": "Write a concise, accurate description using only confirmed page information.",
+      "snippet": "<meta name=\"description\" content=\"[Write an accurate summary of this page]\">",
+      "snippet_reason": "The placeholder is editable and is not verified page copy.",
+      "review_required": true,
+      "impact_rules": [
+        {
+          "when": {
+            "path": "analysis.metadata.description",
+            "operator": "empty"
+          },
+          "impact": "high"
+        }
+      ]
+    },
+    "canonical": {
+      "impact": "medium",
+      "effort": "moderate",
+      "anatomy": "canonical",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The canonical URL needs review",
+      "action": "Confirm the intended canonical destination with the site owner before changing it.",
+      "snippet": null,
+      "snippet_reason": "The actual target can only be drafted from final_url when a canonical is missing; the owner must confirm it.",
+      "review_required": true,
+      "impact_rules": [
+        {
+          "when": {
+            "path": "analysis.metadata.canonical_relationship",
+            "operator": "equals",
+            "value": "malformed"
+          },
+          "impact": "high"
+        }
+      ]
+    },
+    "h1_structure": {
+      "impact": "high",
+      "effort": "quick",
+      "anatomy": "h1",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The primary heading structure needs review",
+      "action": "Add one clear H1 that describes the actual page content.",
+      "snippet": "<h1>[Write a primary heading from verified page content]</h1>",
+      "snippet_reason": "No source heading is available to safely reuse.",
+      "review_required": true
+    },
+    "heading_hierarchy": {
+      "impact": "medium",
+      "effort": "moderate",
+      "anatomy": "headings",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The heading sequence needs review",
+      "action": "Review the observed heading levels and use a logical outline.",
+      "snippet": null,
+      "snippet_reason": "The correct outline depends on the full page content and structure."
+    },
+    "visible_text": {
+      "impact": "medium",
+      "effort": "heavy",
+      "anatomy": "body",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The observed visible-text count is a prompt for review",
+      "action": "Check whether the page explains its purpose clearly; word count alone does not establish quality.",
+      "snippet": null,
+      "snippet_reason": "The analyzer returns a count, not enough page copy to draft content."
+    },
+    "internal_links": {
+      "impact": "medium",
+      "effort": "moderate",
+      "anatomy": "links",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The link count may warrant review",
+      "action": "Add useful links only where they help people navigate related content.",
+      "snippet": null,
+      "snippet_reason": "Destination URLs cannot be invented from link counts."
+    },
+    "anchor_text": {
+      "impact": "low",
+      "effort": "quick",
+      "anatomy": "links",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "One or more link labels need review",
+      "action": "Give each link a clear label that describes its destination or purpose.",
+      "snippet": null,
+      "snippet_reason": "The analyzer does not return individual link markup or destinations."
+    },
+    "link_relationships": {
+      "impact": "low",
+      "effort": "moderate",
+      "anatomy": "links",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "Link relationship attributes need contextual review",
+      "action": "Use relationship attributes only when they match the link's purpose and sponsorship.",
+      "snippet": null,
+      "snippet_reason": "Individual links and their context are not returned."
+    },
+    "image_alt": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "images",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "Image alternative text needs review",
+      "action": "Describe informative images; keep empty alt text when an image is genuinely decorative.",
+      "snippet": null,
+      "snippet_reason": "The analysis returns aggregate counts. The offline source note supplies one source path only for this static proof.",
+      "review_required": true
+    },
+    "json_ld": {
+      "impact": "low",
+      "effort": "heavy",
+      "anatomy": "structured_data",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "Structured data needs review",
+      "action": "Inspect each structured-data block and validate intended values separately.",
+      "snippet": null,
+      "snippet_reason": "No type or property values are returned when no block is present; a schema cannot be safely invented.",
+      "impact_rules": [
+        {
+          "when": {
+            "path": "analysis.structured_data.malformed_blocks",
+            "operator": "greater_than",
+            "value": 0
+          },
+          "impact": "medium"
+        }
+      ],
+      "ignore_when": [
+        {
+          "when": {
+            "all": [
+              {
+                "path": "analysis.structured_data.block_count",
+                "operator": "equals",
+                "value": 0
+              },
+              {
+                "path": "analysis.structured_data.malformed_blocks",
+                "operator": "equals",
+                "value": 0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "open_graph": {
+      "impact": "low",
+      "effort": "quick",
+      "anatomy": "social_metadata",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "Open Graph preview fields need review",
+      "action": "Use verified page title and description values for sharing metadata.",
+      "snippet": null,
+      "snippet_reason": "The analyzer does not provide enough verified copy for absent fields."
+    },
+    "twitter_metadata": {
+      "impact": "low",
+      "effort": "quick",
+      "anatomy": "social_metadata",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "Social preview fields need review",
+      "action": "Use verified page title and description values for social metadata.",
+      "snippet": null,
+      "snippet_reason": "The analyzer does not provide enough verified copy for absent fields."
+    },
+    "html_lang": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The document language declaration needs review",
+      "action": "Declare the primary language when it is known.",
+      "snippet": "<html lang=\"[known-language-code]\">",
+      "snippet_reason": "The correct language must be confirmed by the page owner.",
+      "review_required": true
+    },
+    "viewport": {
+      "impact": "medium",
+      "effort": "quick",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The viewport declaration needs review",
+      "action": "Use a viewport declaration appropriate for the page's responsive layout.",
+      "snippet": "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+      "snippet_reason": "The static pattern needs review in the context of the actual site."
+    },
+    "charset": {
+      "impact": "low",
+      "effort": "quick",
+      "anatomy": "document",
+      "actionable_statuses": [
+        "warning",
+        "fail"
+      ],
+      "finding": "The character-encoding declaration needs review",
+      "action": "Declare the document encoding used by the page.",
+      "snippet": "<meta charset=\"[document-encoding]\">",
+      "snippet_reason": "The correct encoding must match the served document.",
+      "review_required": true
+    }
   }
 }

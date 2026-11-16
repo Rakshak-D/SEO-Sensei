@@ -762,3 +762,280 @@ a { color: inherit; }
     scroll-behavior: auto !important;
   }
 }
+
+/* S1-A R1: draw a page-shaped specimen and keep each specialist page task-first. */
+.report-head { padding: 17px 0 12px; }
+.report-identity { align-items: center; gap: 22px; padding: 7px 0 12px; }
+.report-title h1 { font-size: clamp(34px, 4vw, 54px); }
+.report-url { margin-top: 6px; font-size: 12px; }
+.report-score { flex-basis: 112px; padding-left: 15px; }
+.score-value { min-width: 80px; font-size: 48px; }
+.score-caption { margin-top: 3px; }
+.score-help { margin-top: 5px; font-size: 12px; }
+.score-help summary { min-height: 32px; color: var(--action-dark); }
+.score-help p { margin-top: 2px; }
+.verdict-line { margin-top: 12px; font-size: clamp(24px, 2.7vw, 34px); }
+.verdict-sub { margin-top: 4px; font-size: 13px; }
+.blocking-banner { margin-top: 12px; padding: 11px 13px; }
+.blocking-banner p { font-size: 13px; }
+.anatomy-entry { display: none; }
+
+.report-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+  grid-template-areas: "anatomy priorities" "categories categories";
+  align-items: start;
+  gap: 26px 42px;
+  padding-top: 12px;
+}
+.report-grid > .anatomy-section { grid-area: anatomy; }
+.report-grid > .priority-section { grid-area: priorities; }
+.report-grid > .category-section { grid-area: categories; }
+.report-grid .section-heading { margin-bottom: 12px; padding-bottom: 8px; }
+.report-grid .section-heading h2 { font-size: 21px; }
+.anatomy-frame { min-height: 0; padding: 13px; border-color: var(--rule); }
+.anatomy-map { display: grid; grid-template-columns: minmax(0, 1fr) minmax(165px, .42fr); align-items: start; gap: 14px; }
+.page-xray { min-width: 0; padding: 0 12px 12px; border: 1px solid var(--rule-strong); background: #fff; }
+.xray-browser-bar { height: 27px; display: flex; align-items: center; gap: 5px; margin: 0 -12px 11px; padding: 0 10px; background: var(--ink); }
+.xray-browser-bar i { width: 5px; height: 5px; border-radius: 50%; background: #fafaf7; opacity: .72; }
+.xray-browser-bar span { margin-left: auto; color: #fff; font: 9px/1 var(--mono); letter-spacing: .08em; }
+.xray-zone-label { margin: 0 0 6px; color: var(--muted); font: 600 9px/1.3 var(--mono); letter-spacing: .08em; }
+.xray-head-zone { padding-bottom: 9px; border-bottom: 1px solid var(--rule-strong); }
+.xray-head-signals { display: grid; gap: 6px; }
+.xray-head-signals .scan-part { min-height: 0; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; padding: 6px 8px; border: 1px solid var(--rule); }
+.xray-head-signals .part-tag { grid-column: 1 / -1; font-size: 8px; }
+.xray-head-signals .part-value { font-size: 12px; }
+.xray-head-signals .scan-mark { grid-column: 2; grid-row: 2; }
+.xray-head-signals .status-word { font-size: 8px; }
+.xray-document-body { display: grid; gap: 8px; padding-top: 9px; }
+.xray-site-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; padding: 4px 7px; border: 1px dashed var(--rule-strong); color: var(--muted); }
+.xray-unassessed-label { font: 9px/1.35 var(--mono); }
+.xray-header-mark { width: 34%; height: 5px; background: repeating-linear-gradient(90deg, var(--rule-strong) 0 18px, transparent 18px 22px); opacity: .65; }
+.scan-part.xray-block { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; padding: 7px 8px; border: 1px solid var(--rule); }
+.scan-part.xray-block .part-tag { grid-column: 1 / -1; font-size: 8px; }
+.scan-part.xray-block .part-value { font-size: 12px; }
+.scan-part.xray-block .scan-mark { grid-column: 2; grid-row: 2; }
+.scan-part.xray-h1 { min-height: 56px; border-left: 3px solid var(--ink); }
+.scan-part.xray-h1 .part-value { font: 700 16px/1.18 var(--ui); letter-spacing: -.035em; }
+.scan-part.xray-h1 .part-value.is-missing { border: 1px dashed var(--fail); background: #fff8f5; color: var(--muted); font: 11px/1.4 var(--mono); }
+.xray-content-region { display: grid; gap: 7px; padding: 8px; border: 1px solid var(--rule); background: #f7f6f2; }
+.scan-part.xray-subheadings { background: #fff; }
+.scan-part.xray-body-copy { grid-template-columns: minmax(0, 1fr); background: #fff; }
+.scan-part.xray-body-copy .scan-mark { grid-column: auto; grid-row: auto; }
+.xray-text-lines { display: grid; gap: 4px; padding: 0 8px 4px; }
+.xray-text-lines i { display: block; width: 96%; height: 4px; background: #d8d6ce; }
+.xray-text-lines i:nth-child(2) { width: 83%; }
+.xray-text-lines i:nth-child(3) { width: 67%; }
+.xray-image-group { display: grid; gap: 6px; }
+.xray-image-slots { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 8px; }
+.xray-image-slot { width: 35px; height: 30px; border: 1px solid var(--rule-strong); background: linear-gradient(145deg, transparent 47%, var(--rule) 48% 51%, transparent 52%); }
+.xray-links { min-height: 34px; border-left: 3px solid var(--action-dark) !important; }
+.xray-footer { display: flex; align-items: center; justify-content: space-between; min-height: 27px; padding: 5px 8px; border-top: 1px dashed var(--rule-strong); }
+.xray-footer-mark { width: 30%; height: 4px; background: var(--rule); }
+.metadata-inspection { min-width: 0; display: grid; gap: 5px; align-content: start; padding-left: 11px; border-left: 1px solid var(--rule); }
+.metadata-inspection > .xray-zone-label { margin: 2px 0 4px; }
+.metadata-inspection .scan-part { min-height: 0; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 6px; padding: 5px 0; border-bottom: 1px solid var(--rule); }
+.metadata-inspection .part-tag { grid-column: 1 / -1; font-size: 8px; }
+.metadata-inspection .part-value { font-size: 11px; }
+.metadata-inspection .scan-mark { grid-column: 2; grid-row: 2; }
+.metadata-inspection .status-word { font-size: 8px; }
+.metadata-observation { min-width: 0; display: grid; gap: 3px; padding: 5px 0; border-bottom: 1px solid var(--rule); }
+.metadata-observation .part-tag { font-size: 8px; }
+.metadata-value { overflow-wrap: anywhere; font: 11px/1.4 var(--mono); }
+.metadata-note { color: var(--muted); font-size: 10px; }
+.inspection-detail { min-height: 150px; margin-top: 12px; padding-top: 10px; }
+.inspection-detail h3 { font-size: 17px; }
+.anatomy-footnote { margin-top: 9px; font-size: 11px; }
+.priority-list { border-top: 1px solid var(--rule); }
+.priority-row { padding: 8px 0 9px; }
+.priority-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.priority-button { min-height: 38px; grid-template-columns: 24px minmax(0, 1fr); align-items: start; gap: 8px; padding: 1px 0 3px; }
+.priority-number { padding-top: 2px; font-size: 12px; }
+.finding-title { font-size: 15px; }
+.priority-top > .impact-tag { flex: 0 0 auto; }
+.finding-evidence { margin: 4px 0 0 32px; font-size: 11px; line-height: 1.35; }
+.priority-action { margin: 4px 0 0 32px; color: #39362f; font-size: 12px; line-height: 1.35; }
+.priority-meta { margin: 5px 0 0 32px; gap: 8px; }
+.priority-actions { display: flex; align-items: center; gap: 8px; min-height: 34px; margin: 3px 0 0 32px; }
+.priority-copy-button, .priority-review-button { min-height: 32px; padding: 0 9px; border: 1px solid var(--rule-strong); background: #fff; cursor: pointer; font-size: 11px; font-weight: 700; }
+.priority-copy-button:hover, .priority-review-button:hover { border-color: var(--action-dark); }
+.priority-copy-feedback { min-height: 18px; margin: 0 !important; color: var(--pass) !important; font-size: 11px !important; }
+.priority-copy-feedback.is-error { color: var(--fail) !important; }
+.priority-row:has([data-impact="blocking"]) { border-left: 3px solid var(--action); padding-left: 9px; }
+.category-list { gap: 14px 25px; }
+.category-top { margin-bottom: 5px; }
+.state-bar { margin-top: 15px; }
+
+.anatomy-entry { width: 100%; min-height: 54px; align-items: center; gap: 12px; margin-top: 10px; padding: 7px 10px; border: 1px solid var(--rule-strong); background: #fff; text-align: left; cursor: pointer; }
+.entry-specimen { width: 43px; min-width: 43px; display: grid; gap: 3px; padding: 4px; border: 1px solid var(--rule); }
+.entry-specimen i { display: block; height: 4px; background: #bdbab1; }
+.entry-specimen .entry-h1 { width: 70%; height: 7px; background: var(--ink); }
+.entry-specimen .entry-h1.is-missing { border: 1px dashed var(--fail); background: transparent; }
+.entry-specimen .entry-image { width: 13px; height: 10px; border: 1px solid var(--rule-strong); background: transparent; }
+.entry-specimen .entry-footer { width: 80%; height: 2px; background: var(--rule-strong); }
+.entry-label { font-weight: 700; }
+.entry-count { margin-left: auto; color: var(--muted); font: 10px/1.3 var(--mono); }
+
+.specialist-heading { padding: 14px 0 10px; border-bottom: 1px solid var(--rule-strong); }
+.specialist-heading .eyebrow { font-size: 10px; }
+.specialist-heading h1 { margin: 3px 0 2px; font-size: clamp(29px, 3vw, 40px); line-height: 1; letter-spacing: -.055em; }
+.specialist-url { margin: 3px 0 0; color: var(--muted); font: 11px/1.4 var(--mono); overflow-wrap: anywhere; }
+.subpage-layout { grid-template-columns: minmax(0, 1fr) minmax(245px, .34fr); align-items: start; gap: clamp(28px, 5vw, 70px); padding-top: 15px; }
+.subpage-main { order: 1; }
+.subpage-side { order: 2; padding-top: 8px; }
+.score-context { padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
+.score-context .small-label { margin: 0; }
+.score-context-value { margin: 2px 0 0 !important; font: 700 21px/1.2 var(--ui) !important; letter-spacing: -.04em; }
+.structure-disclosure { margin-top: 10px; }
+.structure-disclosure > summary { min-height: 40px; display: flex; align-items: center; color: var(--action-dark); cursor: pointer; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.anatomy-compact { margin-top: 9px; }
+.anatomy-compact > .section-heading { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 2px 10px; }
+.anatomy-compact > .section-heading h2 { white-space: nowrap; font-size: 18px; }
+.anatomy-compact > .section-heading .small-label { white-space: normal; font-size: 9px; }
+.anatomy-compact .anatomy-frame { padding: 8px; }
+.anatomy-compact .anatomy-map { grid-template-columns: minmax(0, 1fr); }
+.anatomy-compact .metadata-inspection { padding: 8px 0 0; border-top: 1px solid var(--rule); border-left: 0; }
+.anatomy-compact .inspection-detail { min-height: 100px; }
+.data-block { margin-bottom: 17px; padding-bottom: 13px; }
+.data-block h2 { font-size: 19px; }
+.onpage-primary-values { padding: 12px 0 14px; border-top: 2px solid var(--ink); }
+.onpage-primary-values h2 { margin-bottom: 4px; }
+.onpage-primary-values .eyebrow { margin-top: 11px; }
+.onpage-primary-values .observed-value { margin-top: 4px; padding: 9px 11px; font: 14px/1.45 var(--mono); }
+.subcheck { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 7px 0; }
+.subcheck p { display: grid; gap: 4px; font-size: 13px; }
+.subcheck .finding-evidence { margin: 0; font-size: 11px; }
+.subcheck button { min-height: 38px; }
+.preview-list { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+.preview-item { padding-bottom: 12px; }
+.preview-item h2 { margin-bottom: 5px; font-size: 15px; }
+.preview-meta { margin-bottom: 4px; }
+.preview-search { min-height: 0; padding: 8px 0; }
+.preview-search .preview-title { margin: 0; font-size: 18px; }
+.preview-search .preview-url { margin: 3px 0; font-size: 11px; }
+.preview-search .preview-description { margin: 0; font-size: 13px; }
+.preview-disclosure { margin-top: 4px; }
+.fix-list-intro { margin: 0 0 7px; color: var(--muted); font-size: 12px; }
+.fix-item { padding: 12px 0; }
+.fix-item h3 { margin: 4px 0; font-size: 18px; }
+.fix-item p { font-size: 13px; }
+.preview-search .preview-title { color: var(--ink); }
+.impact-tag[data-impact="medium"] { color: var(--neutral); }
+.review-note { position: relative; color: #34312c !important; font-size: 12px !important; font-weight: 600; }
+.review-note::before { width: 6px; height: 6px; display: inline-block; margin: 0 6px 1px 0; border-radius: 50%; background: var(--warning); content: ""; }
+
+@media (max-width: 1100px) {
+  .anatomy-map { grid-template-columns: minmax(0, 1fr); }
+  .metadata-inspection { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 0 0; border-top: 1px solid var(--rule); border-left: 0; }
+  .metadata-inspection > .xray-zone-label { grid-column: 1 / -1; }
+  .report-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "priorities" "anatomy" "categories"; gap: 20px; }
+  .report-grid > .anatomy-section { order: 2; }
+  .report-grid > .priority-section { order: 1; }
+  .report-grid > .category-section { order: 3; }
+  .report-grid .anatomy-map { grid-template-columns: minmax(0, 1fr) minmax(180px, .42fr); }
+  .report-grid .metadata-inspection { grid-template-columns: minmax(0, 1fr); padding: 0 0 0 10px; border-top: 0; border-left: 1px solid var(--rule); }
+  .report-grid .metadata-inspection > .xray-zone-label { grid-column: auto; }
+  .priority-row { padding: 7px 0; }
+  .priority-button { min-height: 34px; }
+}
+
+@media (max-width: 900px) {
+  .subpage-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .subpage-main { order: 1; }
+  .subpage-side { order: 2; padding: 9px 0; border-top: 1px solid var(--rule); border-bottom: 0; }
+  .structure-disclosure:not([open]) .anatomy-compact { display: none; }
+  .specialist-heading { padding-top: 10px; }
+}
+
+@media (max-width: 650px) {
+  :root { --gutter: 19px; }
+  .report-head { padding-top: 10px; }
+  .report-kicker { gap: 7px; font-size: 10px; }
+  .report-identity { gap: 9px; padding: 5px 0 8px; }
+  .report-title h1 { font-size: clamp(27px, 8.2vw, 35px); line-height: 1; }
+  .report-url { margin-top: 4px; font-size: 10px; }
+  .report-score { flex-basis: 78px; padding-left: 8px; }
+  .score-value { min-width: 0; font-size: 34px; }
+  .score-caption { font-size: 8px; }
+  .score-help { font-size: 11px; }
+  .score-help summary { min-height: 30px; font-size: 11px; }
+  .verdict-line { margin-top: 8px; font-size: 23px; }
+  .verdict-sub { margin-top: 3px; font-size: 11px; }
+  .anatomy-entry { display: flex; }
+  .report-grid { gap: 10px; padding-top: 7px; }
+  .report-grid .section-heading { margin-bottom: 5px; }
+  .report-grid .section-heading h2 { font-size: 18px; }
+  .report-grid .section-heading .small-label { font-size: 9px; }
+  .priority-row { padding: 5px 0 6px; }
+  .priority-button { min-height: 31px; grid-template-columns: 20px minmax(0, 1fr); gap: 7px; padding: 0 0 2px; }
+  .priority-number { font-size: 11px; }
+  .finding-title { font-size: 14px; line-height: 1.2; }
+  .priority-top > .impact-tag { min-height: 20px; padding: 1px 5px; font-size: 8px; }
+  .finding-evidence { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; margin-left: 27px; font-size: 10px; }
+  .priority-action { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; margin: 3px 0 0 27px; font-size: 11px; }
+  .priority-meta { margin: 3px 0 0 27px; gap: 7px; }
+  .priority-meta .effort-label { display: none; }
+  .priority-actions { min-height: 31px; margin: 2px 0 0 27px; }
+  .priority-copy-button, .priority-review-button { min-height: 30px; font-size: 10px; }
+  .priority-copy-feedback { min-height: 16px; font-size: 10px !important; }
+  .report-grid .anatomy-frame { padding: 8px; }
+  .report-grid .anatomy-map { grid-template-columns: minmax(0, 1fr); }
+  .report-grid .metadata-inspection { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 7px 0 0; border-top: 1px solid var(--rule); border-left: 0; }
+  .report-grid .metadata-inspection > .xray-zone-label { grid-column: 1 / -1; }
+  .report-grid .metadata-inspection .part-value { font-size: 10px; }
+  .report-grid .metadata-inspection .status-word { display: inline; font-size: 8px; }
+  .report-grid .page-xray { padding: 0 9px 9px; }
+  .report-grid .xray-browser-bar { margin-right: -9px; margin-left: -9px; }
+  .report-grid .xray-head-signals { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .report-grid .scan-part.xray-h1 .part-value { font-size: 15px; }
+  .report-grid .priority-section { order: 1; }
+  .report-grid .anatomy-section { order: 2; }
+  .report-grid .category-section { order: 3; }
+  .specialist-heading { padding: 8px 0 7px; }
+  .specialist-heading h1 { font-size: 29px; }
+  .specialist-heading .eyebrow { font-size: 9px; }
+  .specialist-url { font-size: 10px; }
+  .subpage-layout { padding-top: 8px; gap: 5px; }
+  .subpage-side { padding: 7px 0; }
+  .score-context { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-bottom: 3px; border: 0; }
+  .score-context-value { font-size: 15px !important; }
+  .score-context .score-help { flex-basis: 100%; margin-top: 0; }
+  .score-context .score-help summary { min-height: 28px; }
+  .structure-disclosure { margin-top: 0; }
+  .structure-disclosure > summary { min-height: 38px; }
+  .onpage-primary-values { padding: 8px 0 10px; }
+  .onpage-primary-values h2 { font-size: 17px; }
+  .onpage-primary-values .small-label { font-size: 9px; }
+  .onpage-primary-values .eyebrow { margin-top: 7px; }
+  .onpage-primary-values .observed-value { padding: 7px 9px; font-size: 12px; }
+  .onpage-primary-values .subcheck { display: none; }
+  .data-block { margin-bottom: 12px; padding-bottom: 9px; }
+  .data-block h2 { margin-bottom: 7px; font-size: 17px; }
+  .heading-line { padding: 7px 0; font-size: 13px; }
+  .preview-list { gap: 8px; }
+  .preview-item { padding-bottom: 8px; }
+  .preview-item h2 { margin-bottom: 2px; font-size: 14px; }
+  .preview-meta { margin-bottom: 2px; font-size: 9px; }
+  .preview-search .preview-title { font-size: 16px; }
+  .preview-search .preview-url { font-size: 10px; }
+  .preview-search .preview-description { font-size: 12px; line-height: 1.35; }
+  .preview-disclosure { font-size: 10px; }
+  .fix-list-intro { margin: 0 0 4px; font-size: 11px; }
+  .fix-item { padding: 8px 0; }
+  .fix-item h3 { font-size: 16px; }
+  .fix-item > .finding-evidence { margin: 3px 0; font-size: 11px; }
+  .fix-item p { margin: 4px 0; font-size: 12px; }
+  .fix-item .subcheck { display: none; }
+  .fix-item .snippet-wrap pre { padding: 8px; font-size: 11px; }
+  .site-footer { margin-top: 24px; }
+}
+
+@media (max-width: 365px) {
+  :root { --gutter: 15px; }
+  .anatomy-entry { min-height: 48px; }
+  .entry-specimen { width: 38px; min-width: 38px; }
+  .entry-label { font-size: 13px; }
+  .entry-count { font-size: 9px; }
+  .finding-title { font-size: 13px; }
+  .priority-action { font-size: 10px; }
+  .impact-tag { max-width: none; white-space: nowrap; }
+}

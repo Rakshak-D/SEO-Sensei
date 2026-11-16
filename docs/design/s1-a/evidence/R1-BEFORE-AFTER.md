@@ -4,11 +4,11 @@ The “before” captures are the rejected S1-A proof at commit `939700dcda80b58
 
 | View | Before · rejected proof | After · R1 |
 |---|---|---|
-| Desktop Summary · 1440×900 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-1440x900.png) | [After](../screenshots/s1-a-summary-1440x900.png) |
-| Mobile Summary · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-390x844.png) | [After](../screenshots/s1-a-summary-390x844.png) |
-| Mobile On-page · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-on-page-390x844.png) | [After](../screenshots/s1-a-on-page-390x844.png) |
-| Mobile Previews · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-previews-390x844.png) | [After](../screenshots/s1-a-previews-390x844.png) |
-| Mobile Fix list · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png) | [After](../screenshots/s1-a-fix-list-390x844.png) |
+| Desktop Summary · 1440×900 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-1440x900.png) | [After · R1](https://github.com/Rakshak-D/SEO-Sensei/blob/fa93aa8220617d3f74fb34b6e01d6472f240613d/docs/design/s1-a/screenshots/s1-a-summary-1440x900.png) |
+| Mobile Summary · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-summary-390x844.png) | [After · R1](https://github.com/Rakshak-D/SEO-Sensei/blob/fa93aa8220617d3f74fb34b6e01d6472f240613d/docs/design/s1-a/screenshots/s1-a-summary-390x844.png) |
+| Mobile On-page · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-on-page-390x844.png) | [After · R1](https://github.com/Rakshak-D/SEO-Sensei/blob/fa93aa8220617d3f74fb34b6e01d6472f240613d/docs/design/s1-a/screenshots/s1-a-on-page-390x844.png) |
+| Mobile Previews · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-previews-390x844.png) | [After · R1](https://github.com/Rakshak-D/SEO-Sensei/blob/fa93aa8220617d3f74fb34b6e01d6472f240613d/docs/design/s1-a/screenshots/s1-a-previews-390x844.png) |
+| Mobile Fix list · 390×844 | [Before](https://github.com/Rakshak-D/SEO-Sensei/blob/939700dcda80b58705b872cacd10f272189fe57c/docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png) | [After · R1](https://github.com/Rakshak-D/SEO-Sensei/blob/fa93aa8220617d3f74fb34b6e01d6472f240613d/docs/design/s1-a/screenshots/s1-a-fix-list-390x844.png) |
 
 ## What changed
 
@@ -19,3 +19,5 @@ The “before” captures are the rejected S1-A proof at commit `939700dcda80b58
 - **Mobile Fix list:** Before, the shared anatomy dominated the screen before users reached open findings. After, the first actionable finding and its action are visible under a specific Fix list heading. The first item also distinguishes an editable template from verified source copy.
 
 The page specimen is schematic, not a DOM reconstruction. Its title and description use returned metadata, its H1 uses returned heading text or a dashed missing slot, image slots follow the aggregate image count, and a link region appears only when links are present. Header/footer landmarks remain labelled unassessed. JSON-LD and social metadata are outside the body silhouette. The weak/basic comparison changes both observed text and shape: weak shows no returned H1, one image slot and a link area; basic shows its returned H1, no image slot and no link area.
+
+This file preserves the R1 comparison as historical evidence. R2 replaces the local R1 image paths with links to the R1 commit so the superseded screenshots can be removed without losing access to that review. The current R2 capture set is indexed in the S1-A README and evidence/screenshot-index.json.

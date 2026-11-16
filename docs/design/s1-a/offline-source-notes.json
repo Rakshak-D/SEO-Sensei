@@ -14,6 +14,24 @@
     "basic": {
       "source_path": "tests/fixtures/basic.html",
       "images": []
+    },
+    "northstar": {
+      "source_path": "docs/design/s1-a/northstar-solar-r2.html",
+      "source_kind": "fictional local Northstar Solar page derived from web/public/fixtures/northstar-solar.html",
+      "edits": [
+        "Removed the existing robots noindex meta directive so this sample is not accidentally blocking.",
+        "Removed the meta description to create an actual missing-description finding.",
+        "Removed the html lang attribute to create an actual language-declaration finding.",
+        "Removed the informative image alt attribute to create an actual image-alt finding.",
+        "Added a practical paragraph about comparing household loads, roof conditions, equipment, warranties, and written estimates."
+      ],
+      "images": [
+        {
+          "src": "/images/solar-roof.webp",
+          "has_alt_attribute": false,
+          "line": 30
+        }
+      ]
     }
   }
 }

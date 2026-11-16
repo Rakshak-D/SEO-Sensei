@@ -47,3 +47,12 @@ Only immediate-child metadata in the existing Codex and operating-system tempora
 ## Verification limits
 
 This report records the actual workspace audit, not the contents of a previously supplied archive as a proxy for the workspace. Metadata is insufficient to determine whether the three external temporary files contain unique user-authored material; they remain untouched. The tool rejected the local deletion operation without exposing a more specific policy reason. No alternative deletion mechanism was attempted.
+
+## S1-A-R2 continuation
+
+- The design-proof work remained within the existing repository directory docs/design/s1-a/. No new worktree or external project-artifact directory was created.
+- R2's intentional new items are the Northstar offline input and engine output, three licensed font files, updated proof source/evidence, and the 14 named Chromium screenshots. They are review deliverables, not cache clutter.
+- The prior workspace report recorded a root archive named docs (2).zip. The R2 root listing, including hidden entries and ignored Git status, contained no ZIP file; this task did not delete, move, or otherwise manipulate that archive and did not attempt recovery or removal. The two previously identified S1-A bytecode files remain untouched under docs/design/s1-a/__pycache__/. The R2 task explicitly prohibited retrying their deletion, so no alternate shell, tool, or removal method was used.
+- The existing __pycache__ directory was preserved. Python generation and tests were run with bytecode writing disabled where supported; no new Python bytecode was intentionally created.
+- The 27 superseded, previously tracked s1-a-*.png captures were separately authorized for removal by S1-A-R2. Before removal, their exact paths were inventoried, all in-repository references were searched, README and screenshot-index links were updated, and this report's R1 history links were changed to the immutable R1 commit. The 14 R2 captures replace them as the current review set. No other screenshot or file was deleted.
+- External Codex, profile, and OS temporary locations were not re-audited for R2. The prior metadata-only exceptions above remain preserved; this continuation does not claim those paths were cleaned or re-inspected.

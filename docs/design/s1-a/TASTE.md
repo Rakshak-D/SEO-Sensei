@@ -1,4 +1,96 @@
-# S1-A R1 taste review
+# S1-A R2 final design taste review
+
+## R2 screen-by-screen review
+
+### Home
+
+- **SEO Sensei identity:** The page-address field is the main visual action, followed by named local page examples rather than generic feature tiles.
+- The compact page wordmark and direct “Check page” control lead into a report-oriented layout.
+- **Calmer than R1:** The single-column form and brief support sentence remove the extra explanatory density.
+- At 390px the 36px headline wraps to two lines; the 56px input and 44px actions remain comfortable.
+- **Removed generic patterns:** There is no three-card marketing grid, score gauge, or decorative AI artwork.
+- The optional keyword control is present but makes no claim of keyword analysis.
+
+### Summary
+
+- **SEO Sensei identity:** A real-data page-shaped preview shows the returned title, missing description, H1, text, image, and link structure.
+- Three action-first fixes sit beside the preview on desktop; the page identity and verdict explain what is being inspected.
+- **Calmer than R1:** The header is shorter and removes the previous extra word spacing; the page reads in ordinary sentence case.
+- Priority cards use 16px explanation copy and restrained severity marks rather than many compact labels.
+- **Removed generic patterns:** The full X-ray is no longer repeated in a rail; the Summary has only a small preview and one opening action.
+- The Summary is still the screen closest to a generic report dashboard: white priority sheets and a conventional score block are familiar patterns. The data-derived X-ray preview is its strongest distinct mark.
+
+### Fix list
+
+- **SEO Sensei identity:** Findings connect to inspectable page parts through “Show on page” and to concrete source evidence.
+- Group headings, one open row, and one collapsed row make the work list identifiable without a table of every check.
+- **Calmer than R1:** The mobile page starts with its own task heading and a short explanation, not a repeated report header or anatomy.
+- Count reconciliation appears once; severity and effort are short text badges with icons.
+- **Removed generic patterns:** There are no repeated full evidence blocks and no Copy button on every collapsed item.
+- The mobile count line remains the densest text component and wraps to three lines at 390px; it is useful reconciliation, but should be scanned as a summary rather than prose.
+
+### Page X-ray
+
+- **SEO Sensei identity:** Title and description occupy the top of a document-shaped specimen; H1, subheadings, body text, image, and links sit in distinct page regions.
+- The caption says this is a simplified drawing, and unassessed header/footer spaces remain dashed instead of being marked pass or fail.
+- **Calmer than R1:** Larger page regions replace the earlier sequence of diagnostic rows.
+- Metadata such as JSON-LD is kept outside the page silhouette, so the body drawing does not imply it is visible page content.
+- **Removed generic patterns:** The X-ray is a dedicated page, not a decorative diagram repeated beside every finding.
+- The layout is still schematic because the engine returns aggregate information, not DOM positions; the drawing must not be read as exact geometry.
+
+### On-page
+
+- **SEO Sensei identity:** The returned page title and description are the first evidence, followed by actual H1/H2 text and a word count.
+- A relevant description finding links directly back to its fix.
+- **Calmer than R1:** The page has a distinct “On-page content” heading and fewer shared report controls.
+- Four white sections separate title, description, headings, and content without enclosing each sentence in a border.
+- **Removed generic patterns:** The full X-ray and broad Summary priority list are not repeated here.
+- The four soft-shadow surfaces are still somewhat repetitive, though their content is distinct and in a useful reading order.
+
+### Previews
+
+- **SEO Sensei identity:** The search, Facebook, X, and LinkedIn treatments are built from returned metadata and show absent descriptions/images as absent.
+- An estimate note qualifies their appearance rather than promising the exact result on a third-party service.
+- **Calmer than R1:** Preview details are grouped by destination and use a compact shared page identity.
+- The first search treatment leads; the social treatments follow in a two-column desktop layout.
+- **Removed generic patterns:** No invented thumbnail art, gradient panels, or generic KPI cards appear.
+- Four platform surfaces remain the busiest page, and at 768px they need layout measurement even though no overflow or overlap was detected.
+
+### Loading
+
+- **SEO Sensei identity:** The four stages name page retrieval, HTML reading, deterministic checks, and report building.
+- The stage list reserves the report space rather than using a spinner or abstract progress gauge.
+- **Calmer than R1:** One stage is visibly active and the Cancel action is easy to locate.
+- Motion is limited to opacity/transform and is removed under reduced-motion preference.
+- **Removed generic patterns:** There is no circular progress meter, robot/AI illustration, or fake numerical percentage.
+- This is a controlled offline state, not evidence that a request or crawl ran.
+
+### Error
+
+- **SEO Sensei identity:** The four causes describe failures visitors can understand when a page cannot be checked.
+- Each cause gives a short explanation, a next step, Try again, and Back controls.
+- **Calmer than R1:** The state uses one heading, a short introduction, and a two-by-two layout instead of a large error hero.
+- The retry returns to a supported local sample because arbitrary URLs are not fetched in this proof.
+- **Removed generic patterns:** There are no fabricated URL-specific diagnostics or decorative warning illustrations.
+- The four recovery choices are dense at 1440×900 but remain separated and legible; production errors will need real server classifications.
+
+## Typography and spacing comparison
+
+Both required local font pairs were loaded on the same Summary at 1440×900 and 390×844. Pair A (Hanken Grotesk + JetBrains Mono) and Pair B (Schibsted Grotesk + IBM Plex Mono) had identical measured text bounds: title 1008×32.47px desktop and 358×30.16px mobile; body 593.5×22.39px desktop and 302×44.78px mobile. The display text was 28px/26px, body 16px, and code 13px/12px. Pair A was selected after direct visual comparison: Hanken reads more open and friendly at those identical dimensions, while Schibsted feels firmer. All fonts and licence notices are bundled.
+
+The CSS display tracking is no tighter than -0.02em. Browser Range measurements found a minimum visible adjacent-word gap of 0.2441em (4.2344px) across 75 tested pairs. Smallest rendered text is 12px. The browser suite found minimum ordinary text contrast 6.6588:1 and minimum severity-badge contrast 6.4060:1. No palette change was necessary.
+
+## Critical limits
+
+- **Weakest remaining screen:** Summary still uses conventional report cards and score placement; the small X-ray preview differentiates it, but the overall layout is not entirely unique.
+- **Most crowded component:** The Fix list’s multi-part count line, especially on 390px where it wraps to three lines.
+- **Smallest actual text:** 12px monospace evidence on mobile X-ray/URL elements; this meets the explicit minimum but is the least comfortable size.
+- **Accessibility weaknesses:** Automated keyboard and focus checks pass. Actual 200% browser zoom/text enlargement and manual screen-reader review were not performed; desktop and mobile visual review cannot replace them.
+- **Unavailable product work:** Live guest analysis, public abuse controls, Technical, Links and images, Structured data, Speed, History, persistent re-check history, and production error recovery are outside this proof.
+
+The remainder of this file preserves the earlier R1 taste notes as historical context. Their 27-capture measurements describe R1 and are not R2 evidence.
+
+## Historical R1 taste review
 
 ## Design decisions
 

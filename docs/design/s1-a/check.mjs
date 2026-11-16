@@ -7,53 +7,54 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
-const pagePath = "/docs/design/s1-a/proof-static-not-the-product.html";
-const screenshotDir = path.join(here, "screenshots");
 const evidenceDir = path.join(here, "evidence");
+const screenshotDir = path.join(here, "screenshots");
 const require = createRequire(path.join(root, "web", "package.json"));
 const { chromium } = require("playwright");
-const viewports = [
-  { label: "1440x900", width: 1440, height: 900 },
-  { label: "768x1024", width: 768, height: 1024 },
-  { label: "390x844", width: 390, height: 844 },
-];
+const checks = [];
+const requestHosts = new Set();
+let requestCount = 0;
+let externalRequestCount = 0;
+let consoleErrorCount = 0;
+let pageErrorCount = 0;
+let activeStage = "initialization";
+let activeInteraction = "none";
+let server;
+let browser;
+let context;
+let baseUrl;
+
+const views = ["home", "summary", "fix-list", "xray", "on-page", "previews", "loading", "error"];
+const reportViews = new Set(["summary", "fix-list", "xray", "on-page", "previews"]);
 const layoutViewports = [
   { label: "1440x900", width: 1440, height: 900 },
   { label: "1024x768", width: 1024, height: 768 },
   { label: "768x1024", width: 768, height: 1024 },
   { label: "390x844", width: 390, height: 844 },
 ];
-const states = ["home", "summary", "on-page", "previews", "fix-list", "loading", "error"];
-const checks = [];
-const layoutMetrics = [];
-const consoleErrors = [];
-const requestHosts = new Set();
-let requestCount = 0;
-let unexpectedRequests = 0;
-let server;
-let browser;
-let context;
-let baseUrl;
-let activeStage = "initialization";
+const rawHashes = {
+  "audit-weak.json": "6b5ab639b111c52f581fa15c7a778a62fd08043b70812630a5b5bf9eb676acea",
+  "audit-basic.json": "374f9a081d34770534de68051402d6b4c6b871a60b2c0acc6e7d018ee9504a2d",
+  "audit-noindex-test.json": "018e54337646fc047177c1ab64c9198e19f7f3710d07f1a6cb79d63c48dff89c",
+};
 
-function check(name, pass, detail) {
-  recordCheck(name, pass ? "PASS" : "FAIL", detail);
+function record(name, passed, detail, status = null) {
+  const result = { name, status: status || (passed ? "PASS" : "FAIL"), detail };
+  checks.push(result);
+  console.log(result.status + " " + name + ": " + detail);
+  return result;
 }
 
-function recordCheck(name, status, detail) {
-  checks.push({ name, status, detail });
-  console.log(`${status} ${name}: ${detail}`);
-}
-
-function mimeFor(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
+function mimeFor(file) {
+  const ext = path.extname(file).toLowerCase();
   return ({
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
     ".mjs": "text/javascript; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
+    ".json": "application/json",
     ".ttf": "font/ttf",
+    ".png": "image/png",
   })[ext] || "application/octet-stream";
 }
 
@@ -61,9 +62,10 @@ async function startServer() {
   server = http.createServer(async (request, response) => {
     const parsed = new URL(request.url || "/", "http://127.0.0.1");
     let pathname;
-    try { pathname = decodeURIComponent(parsed.pathname); } catch { response.writeHead(400).end(); return; }
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (!filePath.startsWith(`${root}${path.sep}`) && filePath !== root) { response.writeHead(403).end(); return; }
+    try { pathname = decodeURIComponent(parsed.pathname); }
+    catch { response.writeHead(400).end(); return; }
+    const filePath = path.resolve(root, "." + pathname);
+    if (!filePath.startsWith(root + path.sep)) { response.writeHead(403).end(); return; }
     try {
       const content = await fs.readFile(filePath);
       response.writeHead(200, {
@@ -81,1051 +83,1075 @@ async function startServer() {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
   });
-  const address = server.address();
-  baseUrl = `http://127.0.0.1:${address.port}`;
+  baseUrl = "http://127.0.0.1:" + server.address().port;
 }
 
-async function setupPage() {
-  context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await context.addInitScript(() => {
-    window.__layoutShifts = [];
-    try {
-      new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          if (!entry.hadRecentInput) window.__layoutShifts.push(entry.value);
-        }
-      }).observe({ type: "layout-shift", buffered: true });
-    } catch { /* LayoutShift API is not exposed by every browser build. */ }
-  });
-  monitorContext(context);
-  const page = await context.newPage();
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push("console error"); });
-  page.on("pageerror", (error) => { consoleErrors.push(error.name || "page error"); });
-  return page;
+function routeUrl(state, sample = null, extra = {}) {
+  const query = new URLSearchParams({ state });
+  if (sample) query.set("sample", sample);
+  for (const [key, value] of Object.entries(extra)) if (value) query.set(key, value);
+  return baseUrl + "/docs/design/s1-a/proof-static-not-the-product.html?" + query.toString();
 }
 
-function monitorContext(browserContext) {
-  browserContext.on("request", (request) => {
+function watchContext(activeContext) {
+  activeContext.on("request", (request) => {
     requestCount += 1;
-    try {
-      const parsed = new URL(request.url());
-      requestHosts.add(parsed.host);
-      if (parsed.hostname !== "127.0.0.1" && parsed.hostname !== "localhost") unexpectedRequests += 1;
-    } catch { unexpectedRequests += 1; }
+    const url = new URL(request.url());
+    requestHosts.add(url.host);
+    if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") externalRequestCount += 1;
   });
-  browserContext.route("**/*", (route) => {
+  activeContext.route("**/*", (route) => {
     const url = new URL(route.request().url());
     if (url.hostname === "127.0.0.1" || url.hostname === "localhost") return route.continue();
+    externalRequestCount += 1;
     return route.abort();
   });
 }
 
-function viewUrl(state, sample = null, extra = {}) {
-  const params = new URLSearchParams({ state });
-  if (sample) params.set("sample", sample);
-  for (const [key, value] of Object.entries(extra)) if (value) params.set(key, value);
-  return `${baseUrl}${pagePath}?${params.toString()}`;
+async function newPage(viewport = { width: 1440, height: 900 }) {
+  context = await browser.newContext({ viewport, deviceScaleFactor: 1, reducedMotion: "no-preference" });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
+  watchContext(context);
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    window.__r2LayoutShifts = [];
+    try {
+      const observer = new PerformanceObserver((entries) => {
+        for (const entry of entries.getEntries()) if (!entry.hadRecentInput) window.__r2LayoutShifts.push(entry.value);
+      });
+      observer.observe({ type: "layout-shift", buffered: true });
+    } catch { window.__r2LayoutShifts = null; }
+  });
+  page.setDefaultTimeout(5000);
+  page.on("console", (message) => { if (message.type() === "error") consoleErrorCount += 1; });
+  page.on("pageerror", () => { pageErrorCount += 1; });
+  return page;
 }
 
-async function openPage(page, state, sample = null, extra = {}) {
-  await page.goto(viewUrl(state, sample, extra), { waitUntil: "networkidle" });
+async function open(page, state, sample = null, extra = {}, viewport = null) {
+  if (viewport) await page.setViewportSize(viewport);
+  await page.goto(routeUrl(state, sample, extra), { waitUntil: "networkidle" });
+  const expected = reportViews.has(state) && sample ? state : (reportViews.has(state) ? "missing" : state);
+  await page.waitForFunction((requested) => {
+    const current = document.querySelector(".view")?.dataset.state;
+    return current === requested || current === "missing";
+  }, expected);
   await page.evaluate(() => document.fonts.ready);
-  if (state === "summary" || state === "on-page" || state === "previews" || state === "fix-list") {
-    await page.waitForFunction(() => {
-      const score = document.querySelector("[data-score-target]");
-      return !score || score.textContent === score.dataset.scoreTarget;
-    });
-  }
 }
 
-async function inspectLayout(page, state, sample, viewport) {
-  await page.setViewportSize({ width: viewport.width, height: viewport.height });
-  await openPage(page, state, sample);
-  const result = await page.evaluate(() => {
-    const doc = document.documentElement;
-    const body = document.body;
-    const rects = [...document.querySelectorAll(".masthead, .report-head, .report-grid, .subpage-layout, .loading-grid, .blocking-banner, .site-footer, .priority-button, .scan-part, .preview-item, .fix-item")]
-      .filter((element) => element.getClientRects().length)
-      .map((element) => ({ element, rect: element.getBoundingClientRect() }));
-    const evidenceNodes = [...document.querySelectorAll(".report-url, .specialist-url, .scan-part .part-value, .metadata-value, .finding-evidence, .priority-action, .observed-value, .preview-search .preview-url, .snippet-wrap pre")]
-      .filter((element) => element.getClientRects().length);
-    const evidenceFontSizes = evidenceNodes.map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
-    const microLabelNodes = [...document.querySelectorAll(".report-kicker, .score-caption, .score-help summary, .report-grid .section-heading .small-label, .part-tag, .scan-ruler, .xray-zone-label, .xray-browser-bar span, .xray-unassessed-label, .metadata-inspection .status-word, .status-label, .impact-tag, .priority-number, .priority-copy-button, .priority-review-button, .priority-copy-feedback, .metadata-note, .anatomy-footnote, .preview-meta, .preview-disclosure, .preview-image-missing, .entry-count, .specialist-heading .eyebrow, .onpage-primary-values .small-label, .fix-list-intro")]
-      .filter((element) => element.getClientRects().length);
-    const microLabelFontSizes = microLabelNodes.map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
-    const clippedEvidence = evidenceNodes.filter((element) => {
-      const style = getComputedStyle(element);
-      const lineClamped = style.webkitLineClamp && style.webkitLineClamp !== "none" && style.webkitLineClamp !== "0";
-      const clippedByOverflow = (style.overflow === "hidden" || style.overflowY === "hidden" || style.overflowX === "hidden")
-        && (element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1);
-      return Boolean(lineClamped || clippedByOverflow || style.textOverflow === "ellipsis");
+async function readJson(name) {
+  return JSON.parse(await fs.readFile(path.join(here, name), "utf8"));
+}
+
+function hash(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+async function inspectAnalysisData() {
+  const names = ["audit-weak.json", "audit-basic.json", "audit-noindex-test.json"];
+  const analyses = {};
+  const actualHashes = {};
+  for (const name of names) {
+    const bytes = await fs.readFile(path.join(here, name));
+    actualHashes[name] = hash(bytes);
+    analyses[name] = JSON.parse(bytes.toString("utf8"));
+  }
+  const enrichment = await readJson("enrichment.json");
+  const northstar = await readJson("audit-northstar.json");
+  const mapped = Object.keys(enrichment.checks || {}).length;
+  const counts = (analysis) => analysis.checks.reduce((result, check) => {
+    result[check.status] = (result[check.status] || 0) + 1;
+    return result;
+  }, {});
+  const readPath = (object, value) => value.split(".").reduce((current, key) => current?.[key], object);
+  const matches = (rule, context) => {
+    if (Array.isArray(rule.all)) return rule.all.every((item) => matches(item, context));
+    if (Array.isArray(rule.any)) return rule.any.some((item) => matches(item, context));
+    const actual = readPath(context, rule.path);
+    if (rule.operator === "equals") return actual === rule.value;
+    if (rule.operator === "in") return Array.isArray(rule.value) && rule.value.includes(actual);
+    if (rule.operator === "greater_than") return typeof actual === "number" && actual > rule.value;
+    if (rule.operator === "empty") return actual === "" || actual == null || (Array.isArray(actual) && actual.length === 0);
+    if (rule.operator === "contains_ci") return (Array.isArray(actual) ? actual : [actual]).some((value) => String(value || "").toLowerCase().includes(String(rule.value).toLowerCase()));
+    return false;
+  };
+  const actionableNorthstar = northstar.checks.filter((check) => {
+    const entry = enrichment.checks[check.id];
+    const context = { analysis: northstar, check };
+    return entry && entry.actionable_statuses.includes(check.status) && !(entry.ignore_when || []).some((rule) => matches(rule.when, context));
+  });
+  const inputs = { ...analyses, "audit-northstar.json": northstar };
+  const actionability = Object.fromEntries(Object.entries(inputs).map(([name, analysis]) => {
+    const rows = analysis.checks.map((check) => {
+      const entry = enrichment.checks[check.id];
+      const context = { analysis, check };
+      const excluded = (entry.ignore_when || []).find((rule) => matches(rule.when, context));
+      const actionable = entry.actionable_statuses.includes(check.status) && !excluded;
+      return { check, entry, actionable, exclusion: excluded?.reason || entry.exclusion_reason || "No action rule is defined for this returned check." };
     });
-    let overlaps = 0;
-    for (let i = 0; i < rects.length; i += 1) {
-      for (let j = i + 1; j < rects.length; j += 1) {
-        const a = rects[i].element;
-        const b = rects[j].element;
-        if (a.contains(b) || b.contains(a)) continue;
-        const x = Math.min(rects[i].rect.right, rects[j].rect.right) - Math.max(rects[i].rect.left, rects[j].rect.left);
-        const y = Math.min(rects[i].rect.bottom, rects[j].rect.bottom) - Math.max(rects[i].rect.top, rects[j].rect.top);
-        if (x > 1 && y > 1) overlaps += 1;
+    return [name, {
+      raw: counts(analysis),
+      actionable: rows.filter((row) => row.actionable).length,
+      exclusions: rows.filter((row) => ["warning", "fail"].includes(row.check.status) && !row.actionable).map((row) => ({ id: row.check.id, reason: row.exclusion })),
+      notApplicable: rows.filter((row) => row.check.status === "not_applicable").map((row) => ({ id: row.check.id, reason: row.exclusion })),
+    }];
+  }));
+  const results = {
+    analyses,
+    northstar,
+    enrichment,
+    rawHashes: actualHashes,
+    statusTotals: Object.fromEntries(Object.entries(analyses).map(([name, item]) => [name, counts(item)])),
+    actionability,
+    northstarPasses: northstar.checks.filter((check) => check.status === "pass").length,
+      northstarActionable: actionableNorthstar.length,
+      northstarExclusions: northstar.checks.filter((check) => {
+        const entry = enrichment.checks[check.id];
+        const context = { analysis: northstar, check };
+        return (check.status === "warning" || check.status === "fail") && (!entry.actionable_statuses.includes(check.status) || (entry.ignore_when || []).some((rule) => matches(rule.when, context)));
+      }).map((check) => ({ id: check.id, reason: enrichment.checks[check.id].ignore_when?.find((rule) => matches(rule.when, { analysis: northstar, check }))?.reason || enrichment.checks[check.id].exclusion_reason })),
+    mappedChecks: mapped,
+  };
+  record("unchanged deterministic v1.0 outputs", Object.entries(rawHashes).every(([name, expected]) => actualHashes[name] === expected),
+    JSON.stringify({ scores: names.map((name) => analyses[name].deterministic_score.overall_score), checks: names.map((name) => analyses[name].checks.length), sha256Match: Object.entries(rawHashes).every(([name, expected]) => actualHashes[name] === expected) }));
+  record("Northstar sample comes from generated engine output", northstar.deterministic_score?.version === "1.0" && northstar.checks?.length === 23,
+    JSON.stringify({ score: northstar.deterministic_score?.overall_score, checks: northstar.checks?.length, passes: results.northstarPasses, actionable: results.northstarActionable }));
+  record("all engine checks have enrichment", mapped === 23 && analyses["audit-weak.json"].checks.every((item) => enrichment.checks[item.id]),
+    mapped + " enrichment rules for 23 engine checks");
+  record("Northstar has 3–5 real actions and at least 9 passes", results.northstarActionable >= 3 && results.northstarActionable <= 5 && results.northstarPasses >= 9,
+    results.northstarActionable + " actionable; " + results.northstarPasses + " pass");
+  const weakCounts = results.actionability["audit-weak.json"];
+  record("raw and actionable weak-page counts reconcile with explicit exclusions", weakCounts.raw.fail + weakCounts.raw.warning === weakCounts.actionable + weakCounts.exclusions.length && weakCounts.notApplicable.length > 0,
+    JSON.stringify({ rawFails: weakCounts.raw.fail, rawWarnings: weakCounts.raw.warning, actionable: weakCounts.actionable, exclusions: weakCounts.exclusions, notApplicable: weakCounts.notApplicable }));
+  return results;
+}
+
+async function inspectTextAndContrast(page) {
+  return page.evaluate(() => {
+    const visible = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+    const parse = (value) => {
+      const match = value.match(/rgba?\(([^)]+)\)/);
+      if (!match) return null;
+      const parts = match[1].split(",").map((part) => Number.parseFloat(part.trim()));
+      return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
+    };
+    const blend = (front, back) => {
+      if (!front || front.a >= 0.999) return front || back;
+      if (!back) back = { r: 250, g: 250, b: 247, a: 1 };
+      const a = front.a;
+      return { r: front.r * a + back.r * (1 - a), g: front.g * a + back.g * (1 - a), b: front.b * a + back.b * (1 - a), a: 1 };
+    };
+    const luminance = (c) => {
+      const values = [c.r, c.g, c.b].map((v) => v / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const ratio = (a, b) => { const x = luminance(a); const y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const nodes = [...document.querySelectorAll("body *")].filter((el) => visible(el) && el.children.length === 0 && el.textContent.trim());
+    const textPairs = [];
+    for (const el of nodes) {
+      let bg = null;
+      let current = el;
+      while (current && !bg) {
+        const color = parse(getComputedStyle(current).backgroundColor);
+        if (color && color.a > 0.01) bg = blend(color, bg);
+        current = current.parentElement;
+      }
+      bg ||= { r: 250, g: 250, b: 247, a: 1 };
+      const foreground = parse(getComputedStyle(el).color);
+      if (foreground) textPairs.push({ selector: el.className?.baseVal || el.className || el.localName, px: parseFloat(getComputedStyle(el).fontSize), ratio: ratio(blend(foreground, bg), bg), text: el.textContent.trim().slice(0, 64) });
+    }
+    const monospace = [];
+    for (const el of nodes) {
+      const family = getComputedStyle(el).fontFamily.toLowerCase();
+      if (/mono|courier/.test(family) && !el.closest("[data-role=code]")) monospace.push(el.className?.baseVal || el.className || el.localName);
+    }
+    const spacing = [...document.querySelectorAll(".display, .home-title, .verdict, .page-heading, .section-head h2, .priority-title, .xray-h1-region .xray-region-value")].filter(visible).map((el) => {
+      const style = getComputedStyle(el);
+      const size = parseFloat(style.fontSize);
+      const word = parseFloat(style.wordSpacing);
+      const words = [];
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const matcher = /\S+/g;
+        let match;
+        while ((match = matcher.exec(node.textContent))) {
+          const range = document.createRange();
+          range.setStart(node, match.index);
+          range.setEnd(node, match.index + match[0].length);
+          const rect = range.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) words.push({ word: match[0], left: rect.left, right: rect.right, top: rect.top });
+        }
+      }
+      const gaps = [];
+      for (let index = 1; index < words.length; index += 1) {
+        const before = words[index - 1];
+        const after = words[index];
+        if (Math.abs(before.top - after.top) <= 2 && after.left >= before.right) {
+          gaps.push({ between: before.word + " / " + after.word, gapPx: after.left - before.right, fontPx: size, gapEm: (after.left - before.right) / size });
+        }
+      }
+      return {
+        selector: el.className?.baseVal || el.className || el.localName,
+        letterPx: parseFloat(style.letterSpacing) || 0,
+        fontPx: size,
+        wordSpacingPx: word,
+        wordSpacingEm: word / size,
+        minVisibleWordGapPx: gaps.length ? Math.min(...gaps.map((item) => item.gapPx)) : null,
+        minVisibleWordGapEm: gaps.length ? Math.min(...gaps.map((item) => item.gapEm)) : null,
+        measuredWordPairs: gaps.length,
+      };
+    });
+      const interactive = [...document.querySelectorAll("button, a, input, summary, [role=button]")].filter(visible).map((el) => {
+      const rect = el.getBoundingClientRect();
+      return { tag: el.tagName, label: el.getAttribute("aria-label") || el.textContent.trim().slice(0, 32), className: String(el.className?.baseVal || el.className || ""), width: rect.width, height: rect.height, radius: Math.min(...getComputedStyle(el).borderRadius.split(" ").map((v) => parseFloat(v) || 0)) };
+    });
+    const severityBadges = [...document.querySelectorAll(".severity-badge")].filter(visible).map((el) => ({
+      label: el.textContent.trim(),
+      icon: Boolean(el.querySelector("svg.severity-icon")),
+      className: el.className,
+    }));
+      const anchors = [...document.querySelectorAll("a")].filter(visible).map((a) => ({
+      text: a.textContent.trim(),
+      parent: a.closest("p") ? "sentence" : a.closest("nav") ? "navigation" : "other",
+      className: a.className,
+      underlined: getComputedStyle(a).textDecorationLine.includes("underline"),
+        buttonStyled: a.classList.contains("nav-link") || a.classList.contains("button-link") || a.classList.contains("tab-link") || a.classList.contains("example-chip"),
+    }));
+    const isSignalColor = (value) => {
+      const color = parse(value);
+      return color && color.a > .01 && color.r >= 130 && color.r > color.g * 1.35 && color.r > color.b * 1.35;
+    };
+    const redElements = [...document.querySelectorAll("body *")].filter(visible).map((el) => {
+      const style = getComputedStyle(el);
+      const usesSignal = [style.color, style.backgroundColor, style.borderColor, style.borderLeftColor, style.outlineColor].some(isSignalColor);
+      if (!usesSignal) return null;
+      const allowed = Boolean(el.closest(".brand-mark, .wordmark, .sidebar-brand, .badge--blocking, .badge--high, .xray-region, .mini-h1, .xray-hover-note"))
+        || (el.classList.contains("verdict") && el.dataset.severity === "blocking");
+      return { className: el.className?.baseVal || el.className || el.localName, allowed };
+    }).filter(Boolean);
+    const cardSelector = ".card,.priority-card,.xray-card,.panel-card,.preview-card,.content-sheet,.error-cause,.xray-finding-detail,.snippet-panel";
+    const cards = [...document.querySelectorAll(cardSelector)];
+    const nestedCards = cards.filter((el) => el.parentElement?.closest(cardSelector));
+    return {
+      minTextPx: textPairs.length ? Math.min(...textPairs.map((item) => item.px)) : null,
+      bodyFontPx: parseFloat(getComputedStyle(document.body).fontSize),
+      bodyText: [...document.querySelectorAll(".home-support,.page-subtitle,.priority-reason,.fix-row-subtitle,.finding-reason,.finding-evidence,.finding-action,.observed-copy,.preview-result-description,.error-explanation,.error-next,.xray-preview>p,.score-info-panel p")]
+        .filter(visible).map((el) => ({ className: el.className, px: parseFloat(getComputedStyle(el).fontSize) })),
+      minContrast: textPairs.length ? Math.min(...textPairs.map((item) => item.ratio)) : null,
+      contrastPairs: textPairs.filter((item) => item.ratio < 4.5),
+      smallText: textPairs.filter((item) => item.px < 12),
+      monospaceViolations: monospace,
+      spacing,
+      interactive,
+      anchorViolations: anchors.filter((item) => item.parent === "other" && !item.buttonStyled && !["wordmark", "sidebar-brand", "text-action"].some((name) => item.className.split(/\s+/).includes(name))),
+      standaloneUnderlines: anchors.filter((item) => item.underlined && item.parent !== "sentence" && item.parent !== "navigation"),
+      redElements,
+      signalViolations: redElements.filter((item) => !item.allowed),
+      nestedCards: nestedCards.length,
+      radiusViolations: interactive.filter((item) => item.radius < 8),
+      severityBadges,
+      invalidSeverityBadges: severityBadges.filter((item) => !["Blocking", "High", "Medium", "Low", "Passed"].includes(item.label) || !item.icon),
+    };
+  });
+}
+
+async function visibleMetrics(page, state, sample) {
+  return page.evaluate(({ state, sample }) => {
+    const rect = (selector) => {
+      const el = document.querySelector(selector);
+      if (!el || !el.getClientRects().length) return null;
+      const r = el.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height, top: r.top, bottom: r.bottom, visible: r.top >= 0 && r.bottom <= innerHeight };
+    };
+    const view = document.querySelector(".view");
+    const textFragments = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.textContent.trim()) continue;
+      const owner = node.parentElement;
+      if (!owner || owner.closest("[aria-hidden=true], [hidden], details:not([open])")) continue;
+      const style = getComputedStyle(owner);
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const text = node.textContent.trim().slice(0, 48);
+      for (const rect of range.getClientRects()) if (rect.width > 3 && rect.height > 3 && rect.bottom > 0 && rect.top < innerHeight) textFragments.push({ owner, rect, text });
+    }
+    const overlaps = [];
+    for (const fragment of textFragments) {
+      const { owner, rect } = fragment;
+      const samples = [0.25, 0.5, 0.75].map((fraction) => ({ x: rect.left + rect.width * fraction, y: rect.top + rect.height / 2 }));
+      for (const point of samples) {
+        if (point.y < 0 || point.y >= innerHeight || point.x < 0 || point.x >= innerWidth) continue;
+        const top = document.elementFromPoint(point.x, point.y);
+        if (!top || owner === top || owner.contains(top) || top.contains(owner) || top.closest(".mobile-tabs")) continue;
+        overlaps.push({ text: fragment.text, owner: owner.className?.baseVal || owner.className || owner.localName, coveredBy: top.className?.baseVal || top.className || top.localName, x: point.x, y: point.y });
+        break;
       }
     }
     return {
-      viewportWidth: innerWidth,
-      documentWidth: Math.max(doc.scrollWidth, body.scrollWidth),
-      overflow: Math.max(doc.scrollWidth, body.scrollWidth) > innerWidth,
-      overlaps,
-      bodyFontPx: Number.parseFloat(getComputedStyle(body).fontSize),
-      evidenceFontPx: Number.parseFloat(getComputedStyle(document.querySelector(".evidence-value, .finding-evidence, .observed-value") || body).fontSize),
-      technicalEvidenceFontPx: evidenceFontSizes.length ? Math.min(...evidenceFontSizes) : null,
-      technicalEvidenceDetails: evidenceNodes.map((element) => ({ className: element.className || element.localName, fontPx: Number.parseFloat(getComputedStyle(element).fontSize) })).filter((item) => item.fontPx < 13),
-      secondaryMicroLabelFontPx: microLabelFontSizes.length ? Math.min(...microLabelFontSizes) : null,
-      smallMicroLabelDetails: microLabelNodes.map((element) => ({ className: element.className || element.localName, fontPx: Number.parseFloat(getComputedStyle(element).fontSize) })).filter((item) => item.fontPx < 12),
-      clippedTechnicalEvidenceCount: clippedEvidence.length,
-      clippedTechnicalEvidenceSelectors: clippedEvidence.map((element) => element.className || element.localName),
-      state: document.querySelector(".site-shell")?.dataset.state,
-      sample: document.querySelector(".site-shell")?.dataset.sample,
+      state: view?.dataset.state,
+      sample: view?.dataset.sample,
+      viewport: innerWidth + "x" + innerHeight,
+      documentWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+      overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > innerWidth,
+      cls: Array.isArray(window.__r2LayoutShifts) ? window.__r2LayoutShifts.reduce((sum, value) => sum + value, 0) : null,
+      textOverlapCount: overlaps.length,
+      textOverlaps: overlaps.slice(0, 8),
+      sidebarWidth: rect(".desktop-sidebar")?.width ?? null,
+      verdict: rect(".verdict"),
+      score: rect(".summary-score"),
+      firstThreePriorities: [...document.querySelectorAll(".priority-card")].slice(0, 3).map((item) => {
+        const r = item.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, width: r.width, height: r.height, visible: r.top >= 0 && r.bottom <= innerHeight };
+      }),
+      homeTitle: rect(".home-title"),
+      primaryContent: rect(".page-primary-content"),
+      xrayPreview: rect(".xray-preview"),
+      xrayEntry: rect(".xray-entry"),
+      stateArgument: state,
+      sampleArgument: sample,
     };
+  }, { state, sample });
+}
+
+async function compareFonts(page) {
+  const comparisonCss =
+    "#app.font-test-a .proof-app,#app.font-test-a .proof-app *:not([data-role=code]){font-family:'Hanken Grotesk',sans-serif!important}" +
+    "#app.font-test-a [data-role=code]{font-family:'JetBrains Mono',monospace!important}" +
+    "#app.font-test-b .proof-app,#app.font-test-b .proof-app *:not([data-role=code]){font-family:'Schibsted Grotesk',sans-serif!important}" +
+    "#app.font-test-b [data-role=code]{font-family:'IBM Plex Mono',monospace!important}";
+  const measurements = {};
+  for (const viewport of [{ label: "1440x900", width: 1440, height: 900 }, { label: "390x844", width: 390, height: 844 }]) {
+    await open(page, "summary", "northstar", {}, viewport);
+    await page.addStyleTag({ content: comparisonCss });
+    measurements[viewport.label] = {};
+    for (const [key, cls, uiFamily, monoFamily] of [["A", "font-test-a", "Hanken Grotesk", "JetBrains Mono"], ["B", "font-test-b", "Schibsted Grotesk", "IBM Plex Mono"]]) {
+      await page.locator("#app").evaluate((el, value) => { el.classList.remove("font-test-a", "font-test-b"); el.classList.add(value); }, cls);
+      await page.evaluate(() => document.fonts.ready);
+      measurements[viewport.label][key] = await page.evaluate(({ uiFamily, monoFamily }) => {
+        const title = document.querySelector(".page-heading");
+        const headings = [...document.querySelectorAll(".priority-title, .page-heading")];
+        const body = document.querySelector(".priority-reason");
+        const mono = document.querySelector("[data-role=code]");
+        const rect = (el) => el ? { width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height } : null;
+        const cs = (el) => el ? { family: getComputedStyle(el).fontFamily, size: getComputedStyle(el).fontSize, lineHeight: getComputedStyle(el).lineHeight } : null;
+        return {
+          uiFontLoaded: document.fonts.check('16px "' + uiFamily + '"'),
+          monoFontLoaded: document.fonts.check('13px "' + monoFamily + '"'),
+          title: rect(title),
+          titleStyle: cs(title),
+          body: rect(body),
+          bodyStyle: cs(body),
+          monoStyle: cs(mono),
+          priorityHeights: headings.map((el) => el.getBoundingClientRect().height),
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: innerWidth,
+        };
+      }, { uiFamily, monoFamily });
+    }
+    await page.locator("#app").evaluate((el) => el.classList.remove("font-test-a", "font-test-b"));
+  }
+  return measurements;
+}
+
+async function inspectCountConsistency(page) {
+  const results = {};
+  for (const sample of ["northstar", "weak", "basic"]) {
+    const states = {};
+    for (const state of ["summary", "fix-list"]) {
+      await open(page, state, sample);
+      states[state] = await page.locator(".view").evaluate((view) => ({
+        rawOpen: Number(view.dataset.rawOpen),
+        actionable: Number(view.dataset.actionableTotal),
+        remaining: Number(view.dataset.remainingTotal),
+        passed: Number(view.dataset.passedTotal),
+        excluded: Number(view.dataset.excludedTotal),
+        notApplicable: Number(view.dataset.notApplicableTotal),
+        total: Number(view.dataset.rawTotal),
+        score: Number(view.dataset.score),
+        countSummary: document.querySelector("[data-count-summary]")?.textContent.trim() || "",
+        sidebarCount: Number(document.querySelector('.desktop-sidebar [data-page-id="fix-list"] .nav-count')?.textContent),
+        categoryPass: [...document.querySelectorAll(".category-total")].reduce((sum, item) => sum + Number(item.textContent.match(/^(\d+) of/)?.[1] || 0), 0),
+        categoryChecks: [...document.querySelectorAll(".category-total")].reduce((sum, item) => sum + Number(item.textContent.match(/of (\d+)/)?.[1] || 0), 0),
+        summaryTitles: [...document.querySelectorAll(".priority-title")].map((item) => item.textContent.trim()),
+        fixTitles: [...document.querySelectorAll(".fix-row-title")].map((item) => item.textContent.trim()),
+      }));
+    }
+    results[sample] = states;
+  }
+  return results;
+}
+
+async function inspectProofWordingAndFindings(page, data) {
+  const badFindingLanguage = /needs review|observation|returned|prompt for review|design-only|signals|specimen|schematic/i;
+  const findingIssues = [];
+  for (const [sample, analysis] of Object.entries({ ...data.dataset.analyses, northstar: data.dataset.northstar })) {
+    for (const check of analysis.checks) {
+      const entry = data.dataset.enrichment.checks[check.id];
+      const context = { analysis, check };
+      const copy = { title: entry.title, reason: entry.reason };
+      for (const rule of entry.copy_rules || []) {
+        const matches = (condition) => {
+          if (Array.isArray(condition.all)) return condition.all.every(matches);
+          if (Array.isArray(condition.any)) return condition.any.some(matches);
+          const value = condition.path.split(".").reduce((current, key) => current?.[key], context);
+          if (condition.operator === "equals") return value === condition.value;
+          if (condition.operator === "contains_ci") return (Array.isArray(value) ? value : [value]).some((item) => String(item ?? "").toLowerCase().includes(String(condition.value).toLowerCase()));
+          return false;
+        };
+        if (matches(rule.when)) { copy.title = rule.title || copy.title; copy.reason = rule.reason || copy.reason; break; }
+      }
+      if (badFindingLanguage.test(copy.title) || badFindingLanguage.test(copy.reason)) findingIssues.push(sample + ":" + check.id);
+    }
+  }
+  const grammarIssues = [];
+  for (const [sample, analysis] of Object.entries({ ...data.dataset.analyses, northstar: data.dataset.northstar })) {
+    await open(page, "fix-list", sample);
+    const ids = await page.locator(".fix-row").evaluateAll((rows) => rows.map((row) => row.dataset.checkId));
+    for (const id of ids) {
+      const row = page.locator('.fix-row[data-check-id="' + id + '"]');
+      if (await row.getAttribute("aria-expanded") !== "true") {
+        await row.locator(".fix-row-toggle").click();
+        await page.waitForSelector('.view[data-state="fix-list"]');
+        await page.waitForSelector('.fix-row[data-check-id="' + id + '"][aria-expanded="true"]');
+      }
+      const texts = await row.locator(".fix-row-title,.fix-row-subtitle,.fix-evidence,.fix-action,.snippet-note,.review-required").allTextContents();
+      const copy = texts.join(" ");
+      if (/\b1\s+characters\b|\w+\(s\)|\b1\s+H1 elements\b|\b(?:0|[2-9]\d*)\s+H1 element\b/i.test(copy)) grammarIssues.push(sample + ":" + id);
+    }
+  }
+  const visibleProofUse = [];
+  const pageAudits = [];
+  const viewsToCheck = [["home", null], ["summary", "northstar"], ["fix-list", "northstar"], ["xray", "northstar"], ["on-page", "northstar"], ["previews", "northstar"], ["loading", "northstar"], ["error", null]];
+  for (const [state, sample] of viewsToCheck) {
+    await open(page, state, sample);
+    const result = await page.evaluate(() => {
+      const strip = document.querySelector(".proof-strip");
+      const appText = document.querySelector(".proof-app")?.innerText || "";
+      const terms = /\b(?:design proof|static|local analysis|motion study|no live analysis|not checked in this proof)\b/gi;
+      const bannedLabels = /\b(?:illustrative|fixture|mocked|demo)\b/gi;
+      const visible = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+      const textNodes = [...document.querySelectorAll("body *")].filter((el) => visible(el) && el.children.length === 0 && el.textContent.trim());
+      const anchors = [...document.querySelectorAll("a")].filter(visible).map((a) => ({ className: a.className, outsideSentence: !a.closest("p") && !a.closest("nav"), buttonStyled: a.classList.contains("nav-link") || a.classList.contains("button-link") || a.classList.contains("tab-link") || a.classList.contains("example-chip") || ["wordmark", "sidebar-brand", "text-action"].some((name) => String(a.className).split(/\s+/).includes(name)), underlined: getComputedStyle(a).textDecorationLine.includes("underline") }));
+      const mono = textNodes.filter((el) => /mono|courier/i.test(getComputedStyle(el).fontFamily) && !el.closest("[data-role=code]")).map((el) => el.className?.baseVal || el.className || el.localName);
+      return {
+        stripCount: document.querySelectorAll(".proof-strip").length,
+        appTerms: appText.match(terms) || [],
+        bannedLabels: appText.match(bannedLabels) || [],
+        heuristicOutsidePopover: [...document.querySelectorAll("body *")].filter((el) => el.children.length === 0 && /heuristic/i.test(el.textContent || "") && !el.closest("[data-score-help-panel]")).length,
+        monoViolations: mono,
+        anchorViolations: anchors.filter((item) => item.outsideSentence && !item.buttonStyled),
+        standaloneUnderlines: anchors.filter((item) => item.underlined && item.outsideSentence && !item.buttonStyled),
+      };
+    });
+    const styleAudit = await inspectTextAndContrast(page);
+    pageAudits.push({
+      state,
+      monoViolations: result.monoViolations,
+      anchorViolations: result.anchorViolations,
+      standaloneUnderlines: result.standaloneUnderlines,
+      smallTextCount: styleAudit.smallText.length,
+      bodyTextViolations: styleAudit.bodyText.filter((item) => item.px < 16),
+      contrastFailures: styleAudit.contrastPairs.length,
+      radiusViolations: styleAudit.radiusViolations,
+      nestedCards: styleAudit.nestedCards,
+    });
+    if (result.stripCount !== 1 || result.appTerms.length || result.bannedLabels.length || result.heuristicOutsidePopover) visibleProofUse.push({ state, stripCount: result.stripCount, appTerms: result.appTerms, bannedLabels: result.bannedLabels, heuristicOutsidePopover: result.heuristicOutsidePopover });
+  }
+  return { findingIssues, grammarIssues, visibleProofUse, pageAudits };
+}
+
+async function inspectSignalStates(page) {
+  const cases = [];
+  for (const [state, sample, interaction] of [["summary", "weak", null], ["summary", "noindex", null], ["xray", "northstar", "hover"], ["xray", "northstar", "focus"]]) {
+    await open(page, state, sample);
+    if (interaction) {
+      const region = page.locator('[data-xray-region="description"]');
+      if (interaction === "hover") await region.hover();
+      else await region.focus();
+    }
+    const color = await inspectTextAndContrast(page);
+    cases.push({ state, sample, interaction, signalViolations: color.signalViolations, redUses: color.redElements, invalidSeverityBadges: color.invalidSeverityBadges, minContrast: color.minContrast });
+  }
+  return cases;
+}
+
+async function inspectMobileTargets(page) {
+  const results = [];
+  for (const state of views) {
+    const sample = ["summary", "fix-list", "xray", "on-page", "previews", "loading"].includes(state) ? "northstar" : null;
+    await open(page, state, sample, state === "error" ? { reason: "all" } : {}, { width: 390, height: 844 });
+    const targets = await page.evaluate(() => [...document.querySelectorAll("button,a,input,summary,[role=button]")]
+      .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden")
+      .map((el) => { const rect = el.getBoundingClientRect(); return { label: el.getAttribute("aria-label") || el.textContent.trim().slice(0, 28), width: rect.width, height: rect.height }; }));
+    results.push({ state, minimumWidth: Math.min(...targets.map((item) => item.width)), minimumHeight: Math.min(...targets.map((item) => item.height)), violations: targets.filter((item) => item.width < 44 || item.height < 44) });
+  }
+  await open(page, "summary", "northstar", {}, { width: 390, height: 844 });
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = await page.evaluate(() => [...document.querySelectorAll(".more-sheet button,.more-sheet a")]
+    .filter((el) => el.getClientRects().length > 0)
+    .map((el) => { const rect = el.getBoundingClientRect(); return { label: el.getAttribute("aria-label") || el.textContent.trim().slice(0, 28), width: rect.width, height: rect.height }; }));
+  results.push({ state: "more-sheet", minimumWidth: Math.min(...more.map((item) => item.width)), minimumHeight: Math.min(...more.map((item) => item.height)), violations: more.filter((item) => item.width < 44 || item.height < 44) });
+  return results;
+}
+
+async function testInteractions(page, data) {
+  const results = {};
+  activeInteraction = "summary-and-navigation";
+  await open(page, "summary", "northstar", {}, { width: 1440, height: 900 });
+  results.summaryState = await page.locator(".view").getAttribute("data-state");
+  results.scoreHelp = {
+    affordances: await page.locator("[data-score-help-trigger]").count(),
+    panels: await page.locator("[data-score-help-panel]").count(),
+    heuristicVisibleElsewhere: await page.evaluate(() => {
+      const matches = [...document.querySelectorAll("body *")].filter((el) => el.children.length === 0 && /heuristic/i.test(el.textContent));
+      return matches.filter((el) => !el.closest("[data-score-help-panel]")).length;
+    }),
+  };
+  results.summaryTitles = await page.locator(".priority-title").allTextContents();
+  results.summaryPriorityCount = await page.locator(".priority-card").count();
+  results.summaryExplainerWords = await page.evaluate(() => [...document.querySelectorAll(".verdict,.priority-title,.priority-reason,.summary-priorities h2,.section-count,.count-reconciliation")].map((item) => item.textContent.trim()).join(" ").split(/\s+/).filter(Boolean).length);
+  results.summaryCounts = await page.locator(".view").evaluate((el) => ({
+    rawOpen: el.dataset.rawOpen,
+    actionable: el.dataset.actionableTotal,
+    remaining: el.dataset.remainingTotal,
+    passed: el.dataset.passedTotal,
+    excluded: el.dataset.excludedTotal,
+    all: el.dataset.rawTotal,
+    score: document.querySelector("[data-score]")?.getAttribute("data-score"),
+  }));
+  results.navItems = await page.locator(".desktop-sidebar [data-page-id]").count();
+  results.unbuiltDisabled = await page.locator('.desktop-sidebar [aria-disabled="true"]').count();
+  results.disabledPrevented = await page.locator('.desktop-sidebar [aria-disabled="true"]').evaluateAll((items) => items.length === 5 && items.every((item) => item.disabled && !item.hasAttribute("href") && item.getAttribute("aria-disabled") === "true"));
+  results.builtRouteStates = [];
+  for (const state of ["summary", "fix-list", "xray", "on-page", "previews"]) {
+    await open(page, state, "northstar");
+    results.builtRouteStates.push(await page.locator(".view").getAttribute("data-state"));
+  }
+  results.builtRoutesValid = results.builtRouteStates.join("|") === "summary|fix-list|xray|on-page|previews";
+
+  await open(page, "summary", "northstar");
+  activeInteraction = "navigate-to-fix-list";
+  await page.locator('.desktop-sidebar [data-page-id="fix-list"]').click();
+  activeInteraction = "fix-list-actions";
+  await page.waitForSelector(".view[data-state=fix-list]");
+  await page.goBack();
+  await page.waitForSelector(".view[data-state=summary]");
+  results.browserBackState = await page.locator(".view").getAttribute("data-state");
+  await page.goForward();
+  await page.waitForSelector(".view[data-state=fix-list]");
+  results.browserForwardState = await page.locator(".view").getAttribute("data-state");
+  activeInteraction = "read-fix-list-counts";
+  activeInteraction = "fix-list-sidebar-count";
+  results.fixCountBadge = await page.locator('.desktop-sidebar [data-page-id="fix-list"] .nav-count').count()
+    ? await page.locator('.desktop-sidebar [data-page-id="fix-list"] .nav-count').innerText()
+    : null;
+  activeInteraction = "fix-list-score-identity";
+  const beforeScore = await page.locator("[data-score]").getAttribute("data-score");
+  activeInteraction = "fix-row-expansion";
+  const firstToggle = page.locator(".fix-row-toggle").first();
+  await firstToggle.click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  await page.waitForSelector('.fix-row[aria-expanded="true"]');
+  results.expansion = await page.locator(".fix-row-toggle").first().getAttribute("aria-expanded");
+  results.titleCopies = await page.locator(".fix-row-title").allTextContents();
+  results.expandedCount = await page.locator(".fix-row[aria-expanded=true]").count();
+  results.collapsedCount = await page.locator(".fix-row[aria-expanded=false]").count();
+  activeInteraction = "local-done-state";
+  const done = page.locator('.done-check[data-done-id="meta_description"]');
+  results.doneCountBefore = await page.locator(".done-check").evaluateAll((nodes) => nodes.filter((node) => node.checked).length);
+  await done.check();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  await page.waitForFunction(() => document.querySelector('.view[data-state="fix-list"]')?.dataset.remainingTotal === "4");
+  results.doneScoreUnchanged = (await page.locator("[data-score]").getAttribute("data-score")) === beforeScore;
+  results.localDoneCount = await page.locator(".done-check").evaluateAll((nodes) => nodes.filter((node) => node.checked).length);
+  results.doneCountSummary = await page.locator(".view").evaluate((el) => ({ actionable: el.dataset.actionableTotal, remaining: el.dataset.remainingTotal }));
+  results.doneCountText = await page.locator("[data-count-summary]").innerText();
+  results.doneNote = await page.locator(".done-note").innerText();
+  results.doneCountIsLocalOnly = results.doneCountBefore === 0 && results.localDoneCount === 1
+    && results.doneCountSummary.actionable === "5" && results.doneCountSummary.remaining === "4"
+    && results.doneCountText.includes("Marked done here: 1") && results.doneCountText.includes("Still open: 4")
+    && results.doneNote.includes("kept only in this open page session") && results.doneNote.includes("do not change the score")
+    && results.doneNote.includes("say the website was checked again") && results.doneScoreUnchanged;
+  results.doneLabel = await done.getAttribute("aria-label");
+  results.doneCheckboxState = await page.locator(".done-check").evaluateAll((nodes) => nodes.map((node) => ({ id: node.dataset.doneId, checked: node.checked, defaultChecked: node.defaultChecked })));
+  activeInteraction = "filter-test-weak-sample";
+  await open(page, "fix-list", "weak");
+  results.weakActionCount = await page.locator(".fix-row").count();
+  activeInteraction = "high-filter";
+  await page.getByRole("button", { name: "High", exact: true }).click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  results.highFilter = await page.locator(".fix-row").count();
+  activeInteraction = "all-filter";
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  activeInteraction = "quick-filter";
+  await page.getByRole("button", { name: "Quick wins", exact: true }).click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  results.quickFilter = await page.locator(".fix-row").count();
+
+  activeInteraction = "copy-action";
+  await open(page, "fix-list", "northstar");
+  await page.locator('.fix-row[data-check-id="meta_description"] .fix-row-toggle').click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  await page.waitForSelector('.fix-row[data-check-id="meta_description"][aria-expanded="true"] .copy-snippet');
+  const copy = page.locator('.fix-row[data-check-id="meta_description"] .fix-detail [data-copy-snippet]');
+  if (await copy.count()) {
+    await copy.click();
+    await page.waitForFunction(() => document.querySelector(".fix-detail .copy-feedback")?.textContent === "Copied.");
+    results.copyFeedback = await page.locator(".fix-detail .copy-feedback").first().innerText();
+    results.copyMatchesSnippet = await page.locator(".fix-detail .code-sample").first().evaluate(async (el) => (await navigator.clipboard.readText()) === el.textContent);
+  } else { results.copyFeedback = "No copyable snippet in first expanded finding"; results.copyMatchesSnippet = false; }
+
+  activeInteraction = "show-finding-on-page";
+  const showPage = page.locator(".fix-detail [data-show-on-page]").first();
+  if (await showPage.count()) {
+    const expectedCheck = await showPage.getAttribute("data-show-on-page");
+    await showPage.click();
+    await page.waitForSelector(".view[data-state=xray]");
+    await page.waitForSelector('.xray-region.is-selected[data-check-ids*="' + expectedCheck + '"]');
+    results.showOnPage = await page.locator('.xray-region.is-selected[data-check-ids*="' + expectedCheck + '"]').count();
+  } else results.showOnPage = 0;
+  await open(page, "xray", "northstar");
+  activeInteraction = "xray-and-specialist-pages";
+  const region = page.locator(".xray-region[data-check-id]").first();
+  await region.focus();
+  await page.keyboard.press("Enter");
+  results.xrayKeyboardDetail = await page.locator(".xray-finding-detail").count();
+  results.xrayCaption = await page.locator(".xray-caption").innerText();
+  results.xrayRegions = await page.locator(".xray-region").count();
+
+  await open(page, "on-page", "northstar", {}, { width: 390, height: 844 });
+  results.onPagePrimaryVisible = await page.locator(".onpage-content .observed-copy").first().evaluate((el) => {
+    const r = el.getBoundingClientRect(); return Boolean(el.textContent.trim()) && r.top < innerHeight && r.bottom > 0;
   });
-  result.viewport = viewport.label;
-  layoutMetrics.push({ state, sample, viewport: viewport.label, ...result });
-  return result;
+  await open(page, "previews", "northstar", {}, { width: 390, height: 844 });
+  results.previewPrimaryVisible = await page.locator(".preview-first").evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;
+  });
+  await open(page, "fix-list", "northstar", {}, { width: 390, height: 844 });
+  results.fixPrimaryVisible = await page.locator(".fix-row").first().evaluate((el) => {
+    const r = el.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0;
+  });
+  results.fixMobileActionVisible = await page.locator(".fix-row-toggle").first().isVisible();
+
+  await open(page, "summary", "northstar", {}, { width: 390, height: 844 });
+  activeInteraction = "mobile-more-sheet";
+  activeInteraction = "mobile-more-open-button";
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  activeInteraction = "mobile-more-counts";
+  results.moreCount = await page.locator(".more-sheet [data-page-id]").count();
+  results.moreDisabledCount = await page.locator('.more-sheet [aria-disabled="true"]').count();
+  activeInteraction = "mobile-more-focus-trap";
+  await page.locator(".more-sheet [data-close-more]").focus();
+  await page.keyboard.press("Shift+Tab");
+  results.focusTrappedBackward = await page.evaluate(() => document.activeElement?.getAttribute("data-page-id") === "previews");
+  await page.keyboard.press("Tab");
+  results.focusTrappedForward = await page.evaluate(() => document.activeElement?.hasAttribute("data-close-more"));
+  activeInteraction = "mobile-more-close-and-restore";
+  const activeBeforeClose = await page.evaluate(() => document.activeElement?.getAttribute("aria-label") || document.activeElement?.textContent.trim());
+  await page.keyboard.press("Escape");
+  results.moreClosed = !(await page.locator(".more-sheet[open]").count());
+  await page.waitForFunction(() => document.activeElement?.classList.contains("mobile-more-button"));
+  results.focusRestored = await page.evaluate(() => document.activeElement?.classList.contains("mobile-more-button"));
+  results.activeBeforeClose = activeBeforeClose;
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  results.focusRing = await page.evaluate(() => {
+    const el = document.activeElement; const style = getComputedStyle(el);
+    return Boolean(el && (style.outlineStyle !== "none" || style.boxShadow !== "none"));
+  });
+
+  await open(page, "summary", "northstar", {}, { width: 1440, height: 900 });
+  activeInteraction = "responsive-summary-and-sample-shapes";
+  results.desktopViewport = await visibleMetrics(page, "summary", "northstar");
+  await open(page, "summary", "northstar", {}, { width: 390, height: 844 });
+  results.mobileViewport = await visibleMetrics(page, "summary", "northstar");
+  await open(page, "summary", "weak");
+  results.weakShape = await page.locator(".xray-preview").getAttribute("data-shape");
+  await open(page, "summary", "basic");
+  results.basicShape = await page.locator(".xray-preview").getAttribute("data-shape");
+  await open(page, "summary", "noindex");
+  results.noindexBlocking = await page.locator(".verdict").getAttribute("data-severity");
+  results.noindexVerdict = await page.locator(".verdict").innerText();
+
+  await open(page, "error");
+  activeInteraction = "error-loading-and-missing-recovery";
+  results.errorCauses = await page.locator(".error-cause").count();
+  results.errorCauseNames = await page.locator(".error-cause h2").allTextContents();
+  results.errorRecovery = await page.locator(".error-cause").evaluateAll((items) => items.every((item) =>
+    item.querySelector(".error-explanation")?.textContent.trim() && item.querySelector(".error-next")?.textContent.trim() && item.querySelector("[data-try-again]") && item.querySelector("[data-error-back]")));
+  await open(page, "loading", "northstar");
+  results.loadingSteps = await page.locator(".loading-step").count();
+  results.loadingStepNames = await page.locator(".loading-step").allTextContents();
+  results.loadingActive = await page.locator(".loading-step.is-active").count();
+  results.loadingCancel = await page.locator("[data-cancel]").count();
+  await open(page, "summary", "missing");
+  results.missingRecovery = await page.locator(".missing-report-recovery").count();
+  results.fictionalFallback = await page.locator("[data-report]").count();
+
+  activeInteraction = "home-example-and-url-flow";
+  await open(page, "home");
+  await page.locator("#target-keyword").count();
+  await page.getByRole("button", { name: "Add a target keyword" }).click();
+  results.keywordRevealed = await page.locator("#target-keyword").isVisible();
+  await page.locator("#page-address").fill("https://northstar.example/guides/home-solar/");
+  await page.getByRole("button", { name: "Check page", exact: true }).click();
+  await page.waitForSelector('.view[data-state="summary"][data-sample="northstar"]');
+  results.supportedUrlOpensSample = true;
+  await open(page, "home");
+  await page.locator("#page-address").fill("https://example.org/not-in-the-offline-samples");
+  await page.getByRole("button", { name: "Check page", exact: true }).click();
+  await page.waitForSelector('.view[data-state="error"]');
+  results.arbitraryUrlNotInvented = await page.locator("[data-report]").count() === 0;
+  results.credentialFieldCount = await page.locator('input[type=password],input[autocomplete*=password],input[name*=token i],input[name*=api_key i],input[name*=api-key i],input[id*=token i],input[id*=api_key i],input[id*=api-key i]').count();
+
+  activeInteraction = "loading-and-error-actions";
+  activeInteraction = "loading-cancel-route";
+  await open(page, "loading", "northstar");
+  await page.locator("[data-cancel]").click();
+  await page.waitForSelector('.view[data-state="home"]');
+  results.loadingCancelReturnsHome = true;
+  activeInteraction = "error-retry-route";
+  await open(page, "error", null, { reason: "all" });
+  await page.locator(".error-cause [data-try-again]").first().click();
+  await page.waitForSelector('.view[data-state="home"]');
+  results.errorRetryReturnsHome = true;
+  activeInteraction = "error-back-route";
+  await open(page, "summary", "northstar", {}, { width: 1440, height: 900 });
+  await page.locator(".desktop-sidebar [data-page-id=\"fix-list\"]").click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  await open(page, "error", null, { reason: "all" });
+  await page.locator(".error-cause [data-error-back]").first().click();
+  await page.waitForSelector('.view[data-state="fix-list"]');
+  results.errorBackUsesHistory = true;
+  return results;
+}
+
+async function inspectFontAndColors(page) {
+  const data = await inspectTextAndContrast(page);
+  return data;
+}
+
+async function inspectLayouts(page) {
+  const cases = [];
+  const testViewports = [...layoutViewports, { label: "320x844", width: 320, height: 844 }];
+  for (const state of views) {
+    const sample = ["summary", "fix-list", "xray", "on-page", "previews", "loading"].includes(state) ? "northstar" : null;
+    for (const viewport of testViewports) {
+      await open(page, state, sample, state === "error" ? { reason: "all" } : {}, { width: viewport.width, height: viewport.height });
+      const layout = await visibleMetrics(page, state, sample);
+      const text = await inspectTextAndContrast(page);
+      cases.push({ ...layout, minTextPx: text.minTextPx, bodyFontPx: text.bodyFontPx, bodyText: text.bodyText, minContrast: text.minContrast, spacing: text.spacing, viewport: viewport.label, textViolations: text.smallText.length, bodyViolations: text.bodyText.filter((item) => item.px < 16).length, contrastViolations: text.contrastPairs.length });
+    }
+  }
+  return cases;
+}
+
+async function capture(page, fileName, state, sample, viewport, extra = {}, action = null) {
+  await open(page, state, sample, extra, viewport);
+  const interactionResult = action ? await action(page) : null;
+  if (action && reportViews.has(state) && sample) await page.waitForSelector('.view[data-state="' + state + '"]');
+  await page.evaluate(() => document.fonts.ready);
+  const filePath = path.join(screenshotDir, fileName);
+  await page.screenshot({ path: filePath, fullPage: false, animations: "allow" });
+  return {
+    fileName,
+    relativePath: "docs/design/s1-a/screenshots/" + fileName,
+    query: "?state=" + state + (sample ? "&sample=" + sample : "") + Object.entries(extra).map(([k, v]) => "&" + k + "=" + encodeURIComponent(v)).join(""),
+    urlPath: "/docs/design/s1-a/proof-static-not-the-product.html?state=" + state + (sample ? "&sample=" + sample : "") + Object.entries(extra).map(([k, v]) => "&" + k + "=" + encodeURIComponent(v)).join(""),
+    viewport: viewport.width + "x" + viewport.height,
+    captured: true,
+    interactionResult,
+  };
 }
 
 async function captureScreenshots(page) {
   await fs.mkdir(screenshotDir, { recursive: true });
   const captures = [];
-  for (const viewport of viewports) {
-    for (const state of states) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      const sample = ["summary", "on-page", "previews", "fix-list", "loading"].includes(state) ? "weak" : null;
-      await openPage(page, state, sample, state === "error" ? { reason: "static-preview" } : {});
-      if (state === "loading") await page.waitForTimeout(720);
-      const fileName = `s1-a-${state}-${viewport.label}.png`;
-      const filePath = path.join(screenshotDir, fileName);
-      await page.screenshot({ path: filePath, fullPage: false, animations: "allow" });
-      captures.push({ fileName, relativePath: `docs/design/s1-a/screenshots/${fileName}`, query: sample ? `?state=${state}&sample=${sample}` : state === "error" ? "?state=error&reason=static-preview" : `?state=${state}`, viewport: viewport.label });
-    }
-    for (const [sample, variant] of [["basic", "basic"], ["noindex", "noindex"]]) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await openPage(page, "summary", sample);
-      const fileName = `s1-a-summary-${variant}-${viewport.label}.png`;
-      const filePath = path.join(screenshotDir, fileName);
-      await page.screenshot({ path: filePath, fullPage: false, animations: "allow" });
-      captures.push({ fileName, relativePath: `docs/design/s1-a/screenshots/${fileName}`, query: `?state=summary&sample=${sample}`, viewport: viewport.label });
-    }
-  }
+  captures.push(await capture(page, "r2-home-1440x900.png", "home", null, { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-home-390x844.png", "home", null, { width: 390, height: 844 }));
+  captures.push(await capture(page, "r2-summary-northstar-1440x900.png", "summary", "northstar", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-summary-northstar-390x844.png", "summary", "northstar", { width: 390, height: 844 }));
+  captures.push(await capture(page, "r2-summary-weak-1440x900.png", "summary", "weak", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-summary-noindex-1440x900.png", "summary", "noindex", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-fix-list-expanded-1440x900.png", "fix-list", "northstar", { width: 1440, height: 900 }, {}, async (target) => {
+    await target.locator('.fix-row[data-check-id="meta_description"] .fix-row-toggle').click();
+  }));
+  captures.push(await capture(page, "r2-fix-list-390x844.png", "fix-list", "northstar", { width: 390, height: 844 }));
+  captures.push(await capture(page, "r2-on-page-1440x900.png", "on-page", "northstar", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-previews-1440x900.png", "previews", "northstar", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-xray-hover-1440x900.png", "xray", "northstar", { width: 1440, height: 900 }, {}, async (target) => {
+    await target.locator('.xray-region[data-xray-region="description"]').hover();
+    await target.waitForFunction(() => {
+      const note = document.querySelector('.xray-description-region .xray-hover-note');
+      return note && getComputedStyle(note).opacity === "1";
+    });
+  }));
+  captures.push(await capture(page, "r2-loading-1440x900.png", "loading", "northstar", { width: 1440, height: 900 }));
+  captures.push(await capture(page, "r2-errors-four-causes-1440x900.png", "error", null, { width: 1440, height: 900 }, { reason: "all" }));
+  captures.push(await capture(page, "r2-focus-ring-390x844.png", "home", null, { width: 390, height: 844 }, {}, async (target) => {
+    await target.keyboard.press("Tab");
+    return target.evaluate(() => {
+      const style = document.activeElement ? getComputedStyle(document.activeElement) : null;
+      return Boolean(style && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2);
+    });
+  }));
   return captures;
 }
 
-function parseColor(value) {
-  const match = value.match(/rgba?\(([^)]+)\)/);
-  if (!match) return null;
-  const parts = match[1].split(",").map((part) => Number.parseFloat(part.trim()));
-  return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
-}
-
-function luminance(color) {
-  const channel = (value) => {
-    const c = value / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
-}
-
-function contrast(first, second) {
-  if (!first || !second) return null;
-  const lighter = Math.max(luminance(first), luminance(second));
-  const darker = Math.min(luminance(first), luminance(second));
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-async function measureContrast(page) {
-  return page.evaluate(() => {
-    const parse = (value) => {
-      const match = value.match(/rgba?\(([^)]+)\)/);
-      if (!match) return null;
-      const p = match[1].split(",").map((x) => Number.parseFloat(x.trim()));
-      return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
-    };
-    const linear = (v) => { const c = v / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
-    const lum = (c) => .2126 * linear(c.r) + .7152 * linear(c.g) + .0722 * linear(c.b);
-    const ratio = (a, b) => { const l = Math.max(lum(a), lum(b)); const d = Math.min(lum(a), lum(b)); return (l + .05) / (d + .05); };
-    const bgFor = (element) => {
-      let node = element;
-      while (node) {
-        const bg = parse(getComputedStyle(node).backgroundColor);
-        if (bg && bg.a > .95) return bg;
-        node = node.parentElement;
-      }
-      return parse(getComputedStyle(document.body).backgroundColor) || { r: 250, g: 250, b: 247, a: 1 };
-    };
-    const textSamples = [...document.querySelectorAll("body *")]
-      .filter((el) => el.children.length === 0 && (el.innerText || el.textContent || "").trim() && el.getClientRects().length)
-      .map((el) => {
-        const style = getComputedStyle(el);
-        const fg = parse(style.color);
-        const bg = bgFor(el);
-        return { ratio: fg ? ratio(fg, bg) : null, text: (el.innerText || el.textContent).trim().slice(0, 48), fontPx: Number.parseFloat(style.fontSize) };
-      }).filter((item) => item.ratio !== null);
-    const visibleLabels = [...document.querySelectorAll(".status-label")].filter((el) => el.getClientRects().length && !el.closest("details:not([open])"));
-    const labelRatios = visibleLabels.map((el) => {
-      const style = getComputedStyle(el);
-      const fg = parse(style.color);
-      const bg = bgFor(el);
-      return fg ? ratio(fg, bg) : null;
-    }).filter((value) => value !== null);
-    const visibleDots = [...document.querySelectorAll(".status-dot")].filter((el) => el.getClientRects().length && !el.closest("details:not([open])"));
-    const dotRatios = visibleDots.map((el) => {
-      const dotColor = parse(getComputedStyle(el).backgroundColor);
-      const background = bgFor(el.parentElement);
-      return dotColor ? ratio(dotColor, background) : null;
-    }).filter((value) => value !== null);
-    const focusElement = document.activeElement;
-    const focusStyle = focusElement ? getComputedStyle(focusElement) : null;
-    const focus = focusStyle ? parse(focusStyle.outlineColor) : null;
-    const base = focusElement?.parentElement ? bgFor(focusElement.parentElement) : bgFor(document.body);
-    return {
-      minTextRatio: textSamples.length ? Math.min(...textSamples.map((item) => item.ratio)) : null,
-      minTextSample: textSamples.sort((a, b) => a.ratio - b.ratio)[0] || null,
-      minStatusRatio: [...labelRatios, ...dotRatios].length ? Math.min(...labelRatios, ...dotRatios) : null,
-      statusSamples: { labels: labelRatios.length, dots: dotRatios.length },
-      focusRatio: focus ? ratio(focus, base) : null,
-      focusedElement: focusElement?.tagName?.toLowerCase() || null,
-      focusOutlineStyle: focusStyle?.outlineStyle || null,
-    };
-  });
-}
-
-async function focusByTab(page, locator, limit = 90) {
-  for (let index = 0; index < limit; index += 1) {
-    const matches = await locator.evaluate((element) => element === document.activeElement).catch(() => false);
-    if (matches) return index;
-    await page.keyboard.press("Tab");
-  }
-  throw new Error("keyboard target was not reached by Tab navigation");
-}
-
-async function testDataAndViews(page) {
-  const files = ["audit-weak.json", "audit-basic.json", "audit-noindex-test.json"];
-  const raw = {};
-  for (const file of files) raw[file] = JSON.parse(await fs.readFile(path.join(here, file), "utf8"));
-  const enrichment = JSON.parse(await fs.readFile(path.join(here, "enrichment.json"), "utf8"));
-  const expected = {
-    "audit-weak.json": { pass: 8, warning: 11, fail: 3, not_applicable: 1, score: 55 },
-    "audit-basic.json": { pass: 14, warning: 7, fail: 0, not_applicable: 2, score: 84 },
-    "audit-noindex-test.json": { pass: 7, warning: 11, fail: 4, not_applicable: 1, score: 50 },
-  };
-  let fixtureOk = true;
-  const countReport = {};
-  for (const [file, analysis] of Object.entries(raw)) {
-    const count = analysis.checks.reduce((result, check) => { result[check.status] = (result[check.status] || 0) + 1; return result; }, {});
-    const matches = analysis.checks.length === 23
-      && analysis.deterministic_score.version === "1.0"
-      && analysis.deterministic_score.overall_score === expected[file].score
-      && Object.entries(expected[file]).filter(([key]) => key !== "score").every(([key, value]) => (count[key] || 0) === value)
-      && analysis.checks.every((check) => Boolean(enrichment.checks[check.id]));
-    fixtureOk &&= matches;
-    countReport[file] = { score: analysis.deterministic_score.overall_score, checks: analysis.checks.length, statuses: count, enrichment: analysis.checks.length };
-  }
-  const allIds = raw["audit-weak.json"].checks.map((check) => check.id);
-  check("offline analyzer data", fixtureOk, JSON.stringify(countReport));
-  const expectedHashes = {
-    "audit-weak.json": "6b5ab639b111c52f581fa15c7a778a62fd08043b70812630a5b5bf9eb676acea",
-    "audit-basic.json": "374f9a081d34770534de68051402d6b4c6b871a60b2c0acc6e7d018ee9504a2d",
-    "audit-noindex-test.json": "018e54337646fc047177c1ab64c9198e19f7f3710d07f1a6cb79d63c48dff89c",
-  };
-  const outputHashes = {};
-  for (const [file, expectedHash] of Object.entries(expectedHashes)) {
-    const bytes = await fs.readFile(path.join(here, file));
-    outputHashes[file] = crypto.createHash("sha256").update(bytes).digest("hex");
-    fixtureOk &&= outputHashes[file] === expectedHash;
-  }
-  check("R1-10 engine output hashes unchanged", Object.entries(expectedHashes).every(([file, hash]) => outputHashes[file] === hash), JSON.stringify(outputHashes));
-
-  const weak = await inspectLayout(page, "summary", "weak", viewports[0]);
-  const weakParts = await page.locator(".scan-part[data-part-id]").evaluateAll((items) => Object.fromEntries(items.map((el) => [el.dataset.partId, el.querySelector(".part-value")?.textContent || ""])));
-  await openPage(page, "summary", "basic");
-  const basicParts = await page.locator(".scan-part[data-part-id]").evaluateAll((items) => Object.fromEntries(items.map((el) => [el.dataset.partId, el.querySelector(".part-value")?.textContent || ""])));
-  const differences = Object.keys(weakParts).filter((key) => weakParts[key] !== basicParts[key]);
-  const coverage = await page.locator("[data-check-ids]").evaluateAll((items) => [...new Set(items.flatMap((el) => el.dataset.checkIds.split(",")))]);
-  const unmapped = allIds.filter((id) => !coverage.includes(id));
-  check("analysis-shaped anatomy", differences.length >= 4 && unmapped.length === 0, `${differences.length} anatomy regions differ across analyses; ${allIds.length - unmapped.length}/${allIds.length} check IDs map to a region${unmapped.length ? `; missing ${unmapped.join(",")}` : ""}`);
-
-  await openPage(page, "summary", "noindex");
-  const noindexView = await page.evaluate(() => ({
-    sample: document.querySelector(".site-shell")?.dataset.sample || "",
-    score: document.querySelector("[data-score-target]")?.dataset.scoreTarget || "",
-    blockingBanner: Boolean(document.querySelector(".blocking-banner")),
-    recoveryState: Boolean(document.querySelector("#error-heading")),
-    simulatedContext: document.querySelector(".report-kicker")?.textContent.includes("Test condition · X-Robots-Tag") || false,
-    observedDirective: document.querySelector(".blocking-banner [data-observed]")?.textContent || "",
-  }));
-  check("simulated noindex comparison renders", noindexView.sample === "noindex" && noindexView.score === "50" && noindexView.blockingBanner && !noindexView.recoveryState && noindexView.simulatedContext && noindexView.observedDirective.toLowerCase().includes("noindex"), JSON.stringify(noindexView));
-
-  await page.setViewportSize({ width: 768, height: 1024 });
-  await openPage(page, "home");
-  const tabletUrlFieldWidth = await page.locator("#page-url").evaluate((element) => Math.round(element.getBoundingClientRect().width));
-  check("tablet URL field width", tabletUrlFieldWidth >= 300, `${tabletUrlFieldWidth}px at 768px viewport`);
-
-  await openPage(page, "on-page", "weak");
-  await page.locator(".structure-disclosure > summary").click().catch(() => {});
-  const tabletAnatomyWidth = await page.locator(".subpage-side .anatomy-frame").evaluate((element) => Math.round(element.getBoundingClientRect().width));
-  check("tablet subpage anatomy width", tabletAnatomyWidth >= 500, `${tabletAnatomyWidth}px at 768px viewport`);
-
-  const hostnameLines = {};
-  for (const width of [390, 320]) {
-    await page.setViewportSize({ width, height: 844 });
-    await openPage(page, "summary", "weak");
-    hostnameLines[width] = await page.locator("#report-title").evaluate((element) => {
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      return range.getClientRects().length;
-    });
-  }
-  check("mobile hostname line integrity", hostnameLines[390] === 1 && hostnameLines[320] === 1, `example.test occupies ${hostnameLines[390]} line(s) at 390px and ${hostnameLines[320]} at 320px`);
-
-  await openPage(page, "summary", "weak");
-  const priorityIds = await page.locator(".priority-button").evaluateAll((items) => items.map((item) => item.dataset.checkId));
-  const status = await page.locator(".priority-button").count();
-  const copyWords = await page.locator("[data-summary-copy]").evaluateAll((items) => items.map((el) => (el.textContent || "").trim().split(/\s+/).filter(Boolean).length).reduce((a, b) => a + b, 0));
-  const caveatCount = await page.locator("[data-score-caveat]").count();
-  check("summary content bound", status <= 5 && copyWords <= 120, `${status} prioritized fixes; ${copyWords} explanatory words`);
-  check("single score caveat", caveatCount === 1, `${caveatCount} score-help panel(s) on summary`);
-  check("needs-review order", priorityIds.join(",") === "meta_description,h1_structure,title,image_alt,html_lang", priorityIds.join(" → "));
-  const scoreHelpTriggerCount = await page.locator("[data-score-help-trigger]").count();
-  if (scoreHelpTriggerCount === 1) await page.locator("[data-score-help-trigger]").click();
-  const scoreHelpOpens = await page.locator("#score-help").evaluate((el) => el.open).catch(() => false);
-  check("single score-help affordance", scoreHelpTriggerCount === 1 && scoreHelpOpens, `${scoreHelpTriggerCount} help affordance opens the one native details panel`);
-  const semantics = await page.evaluate(() => {
-    const buttons = [...document.querySelectorAll("button")];
-    const visible = (element) => element.getClientRects().length > 0
-      && !element.closest("details:not([open])")
-      && getComputedStyle(element).visibility !== "hidden"
-      && getComputedStyle(element).display !== "none";
-    return {
-      mainCount: document.querySelectorAll("main").length,
-      h1Count: document.querySelectorAll("main h1").length,
-      navLabel: document.querySelector("nav")?.getAttribute("aria-label") || "",
-      unnamedButtons: buttons.filter((element) => !(element.getAttribute("aria-label") || element.textContent || "").trim()).length,
-      visuallyUnnamedButtons: buttons.filter((element) => visible(element) && !(element.getAttribute("aria-label") || element.innerText || element.textContent || "").trim()).length,
-    };
-  });
-  check("semantic landmarks and names", semantics.mainCount === 1 && semantics.h1Count === 1 && semantics.navLabel === "Report views" && semantics.unnamedButtons === 0 && semantics.visuallyUnnamedButtons === 0, JSON.stringify(semantics));
-
-  const credentialCount = await page.locator('input[type="password"], input[name*="token" i], input[name*="api-key" i], input[autocomplete="current-password"]').count();
-  const proofSources = ["proof-static-not-the-product.html", "proof.js", "proof.css"];
-  const sourceText = (await Promise.all(proofSources.map((file) => fs.readFile(path.join(here, file), "utf8")))).join("\n");
-  const bearerMatches = [...sourceText.matchAll(/authorization\s*:\s*bearer|bearer\s+[a-z0-9._~-]{12,}/gi)].length;
-  check("no browser credential surface", credentialCount === 0 && bearerMatches === 0, `${credentialCount} credential-style inputs; ${bearerMatches} browser bearer-code matches`);
-
-  const motionCss = await fs.readFile(path.join(here, "proof.css"), "utf8");
-  const keyframes = [...motionCss.matchAll(/@keyframes\s+[\w-]+\s*\{([\s\S]*?)\n\}/g)].map((match) => match[1]);
-  const animatedProps = [...new Set(keyframes.flatMap((body) => [...body.matchAll(/(?:^|\s)(opacity|transform|top|left|width|height|margin|padding)\s*:/gm)].map((match) => match[1])))];
-  const forbiddenAnimations = animatedProps.filter((property) => !["opacity", "transform"].includes(property));
-  await context.close();
-  const reducedContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
-  monitorContext(reducedContext);
-  const reducedPage = await reducedContext.newPage();
-  await reducedPage.goto(viewUrl("loading", "weak"), { waitUntil: "networkidle" });
-  const reducedDuration = await reducedPage.locator(".skeleton-line").first().evaluate((element) => getComputedStyle(element).animationDuration);
-  const reducedMs = Number.parseFloat(reducedDuration) * (reducedDuration.endsWith("ms") ? 1 : 1000);
-  check("motion properties and reduced motion", forbiddenAnimations.length === 0 && reducedMs <= 0.01, `animated properties ${animatedProps.join(",") || "none"}; reduced animation ${reducedDuration}`);
-  await reducedContext.close();
-  context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await context.addInitScript(() => { window.__layoutShifts = []; try { new PerformanceObserver((list) => { for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__layoutShifts.push(entry.value); }).observe({ type: "layout-shift", buffered: true }); } catch {} });
-  monitorContext(context);
-  page = await context.newPage();
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push("console error"); });
-  page.on("pageerror", (error) => { consoleErrors.push(error.name || "page error"); });
-  return {
-    page,
-    raw,
-    countReport,
-    rawOutputHashes: outputHashes,
-    weakParts,
-    basicParts,
-    differences,
-    priorityIds,
-    unmappedChecks: unmapped.length,
-    mappedChecks: allIds.length - unmapped.length,
-    summaryWords: copyWords,
-    credentialInputs: credentialCount,
-    bearerMatches,
-    animatedProperties: animatedProps,
-    reducedMotionDuration: reducedDuration,
-    motionPass: forbiddenAnimations.length === 0 && reducedMs <= 0.01,
-    tabletUrlFieldWidth,
-    tabletAnatomyWidth,
-    hostnameLines,
-  };
-}
-
-async function testR1VisualBehavior(page) {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await openPage(page, "summary", "weak");
-  const desktop = await page.evaluate(() => {
-    const rect = (element) => {
-      const box = element?.getBoundingClientRect();
-      return box ? { top: Math.round(box.top), bottom: Math.round(box.bottom), width: Math.round(box.width), height: Math.round(box.height), visible: box.width > 0 && box.height > 0 } : null;
-    };
-    return {
-      verdict: rect(document.querySelector(".verdict-line")),
-      xray: rect(document.querySelector(".page-xray")),
-      priorities: [...document.querySelectorAll(".priority-row")].slice(0, 3).map(rect),
-    };
-  });
-  const desktopPass = desktop.verdict?.visible && desktop.xray?.visible && desktop.xray.top < 900
-    && desktop.priorities.length === 3 && desktop.priorities.every((item) => item.visible && item.bottom <= 900);
-  check("R1-1 desktop summary viewport", desktopPass, JSON.stringify(desktop));
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await openPage(page, "summary", "weak");
-  const mobile = await page.evaluate(() => {
-    const rect = (element) => {
-      const box = element?.getBoundingClientRect();
-      return box ? { top: Math.round(box.top), bottom: Math.round(box.bottom), width: Math.round(box.width), height: Math.round(box.height), visible: box.width > 0 && box.height > 0 && box.bottom <= innerHeight } : null;
-    };
-    return {
-      verdict: rect(document.querySelector(".verdict-line")),
-      priorities: [...document.querySelectorAll(".priority-row")].slice(0, 2).map(rect),
-      anatomyEntry: rect(document.querySelector(".anatomy-entry")),
-    };
-  });
-  const mobilePass = mobile.verdict?.visible && mobile.priorities.length === 2
-    && mobile.priorities.every((item) => item.visible) && mobile.anatomyEntry?.visible;
-  check("R1-2 mobile summary viewport", mobilePass, JSON.stringify(mobile));
-
-  const specialists = {};
-  const tasks = [
-    { state: "on-page", selector: ".onpage-primary-values", heading: "On-page" },
-    { state: "previews", selector: ".preview-item", heading: "Previews" },
-    { state: "fix-list", selector: ".fix-item", heading: "Fix list" },
-  ];
-  for (const task of tasks) {
-    await openPage(page, task.state, "weak");
-    specialists[task.state] = await page.evaluate(({ selector }) => {
-      const content = document.querySelector(selector);
-      const box = content?.getBoundingClientRect();
-      return {
-        heading: document.querySelector(".specialist-heading h1")?.textContent || "",
-        top: box ? Math.round(box.top) : null,
-        bottom: box ? Math.round(box.bottom) : null,
-        visible: Boolean(box && box.width > 0 && box.height > 0 && box.bottom <= innerHeight),
-        structureLabel: document.querySelector(".structure-disclosure > summary")?.textContent.trim() || "",
-        structureOpen: document.querySelector(".structure-disclosure")?.open || false,
-        directAction: Boolean(document.querySelector(".fix-item .fix-actions button")),
-      };
-    }, { selector: task.selector });
-    specialists[task.state].expectedHeading = task.heading;
-  }
-  const specialistPass = specialists["on-page"].heading === "On-page" && specialists["on-page"].visible
-    && specialists.previews.heading === "Previews" && specialists.previews.visible
-    && specialists["fix-list"].heading === "Fix list" && specialists["fix-list"].visible
-    && tasks.every((task) => specialists[task.state].structureLabel === "Inspect page structure" && !specialists[task.state].structureOpen)
-    && specialists["fix-list"].directAction;
-  check("R1-3/4/5 specialist-first mobile pages", specialistPass, JSON.stringify(specialists));
-
-  await openPage(page, "summary", "weak");
-  const summaryCopy = await page.evaluate(() => [...document.querySelectorAll(".priority-copy-button")].map((button) => {
-    const box = button.getBoundingClientRect();
-    return { visible: box.width > 0 && box.height > 0 && !button.closest("details:not([open])"), label: button.textContent.trim() };
-  }));
-  const directCopyPass = summaryCopy.length > 0 && summaryCopy.every((item) => item.visible && item.label.startsWith("Copy"));
-  check("R1-6 Summary copy actions are direct", directCopyPass, `${summaryCopy.length} visible action button(s); no navigation or disclosure required`);
-
-  const scoreHelp = {};
-  for (const task of [{ state: "summary" }, ...tasks]) {
-    await openPage(page, task.state, "weak");
-    scoreHelp[task.state] = {
-      triggers: await page.locator("[data-score-help-trigger]").count(),
-      panels: await page.locator("[data-score-caveat]").count(),
-    };
-  }
-  check("R1-8 one score-help affordance and panel", Object.values(scoreHelp).every((item) => item.triggers === 1 && item.panels === 1), JSON.stringify(scoreHelp));
-
-  await openPage(page, "summary", "weak");
-  const weakShape = await page.evaluate(() => ({
-    h1: document.querySelector('.page-xray .scan-part[data-part-id="h1"] .part-value')?.textContent || "",
-    imageSlots: document.querySelectorAll(".xray-image-slot").length,
-    linksPresent: Boolean(document.querySelector('.page-xray .scan-part[data-part-id="links"]')),
-    footerUnassessed: document.querySelector(".xray-footer")?.dataset.assessment === "unassessed",
-    schemaOutsideBody: Boolean(document.querySelector('.metadata-inspection [data-part-id="structured_data"]'))
-      && !document.querySelector('.page-xray .scan-part[data-part-id="structured_data"]'),
-  }));
-  await openPage(page, "summary", "basic");
-  const basicShape = await page.evaluate(() => ({
-    h1: document.querySelector('.page-xray .scan-part[data-part-id="h1"] .part-value')?.textContent || "",
-    imageSlots: document.querySelectorAll(".xray-image-slot").length,
-    linksPresent: Boolean(document.querySelector('.page-xray .scan-part[data-part-id="links"]')),
-    footerUnassessed: document.querySelector(".xray-footer")?.dataset.assessment === "unassessed",
-    schemaOutsideBody: Boolean(document.querySelector('.metadata-inspection [data-part-id="structured_data"]'))
-      && !document.querySelector('.page-xray .scan-part[data-part-id="structured_data"]'),
-  }));
-  const anatomyPass = weakShape.h1.includes("No H1") && weakShape.imageSlots === 1 && weakShape.linksPresent
-    && basicShape.h1.includes("Basic fixture") && basicShape.imageSlots === 0 && !basicShape.linksPresent
-    && weakShape.footerUnassessed && basicShape.footerUnassessed && weakShape.schemaOutsideBody && basicShape.schemaOutsideBody;
-  check("R1-7 data-shaped schematic differs by page", anatomyPass, JSON.stringify({ weak: weakShape, basic: basicShape }));
-
-  await openPage(page, "fix-list", "basic");
-  const weakJsonLdAbsentFromActions = await page.locator("#fix-json_ld").count() === 0;
-  check("optional absent structured data is not a broken-feature action", weakJsonLdAbsentFromActions, "Basic analysis has no JSON-LD block; no fix item is presented for adding optional markup");
-
-  const rulePage = await context.newPage();
-  let rulePayload = JSON.parse(await fs.readFile(path.join(here, "audit-weak.json"), "utf8"));
-  await rulePage.route("**/audit-weak.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rulePayload) }));
-  const ruleCases = [
-    { name: "short title remains medium", mutate: (data) => { data.metadata.title = "x"; }, checkId: "title", expected: "medium" },
-    { name: "missing title is high", mutate: (data) => { data.metadata.title = ""; }, checkId: "title", expected: "high" },
-    { name: "missing description is high", mutate: (data) => { data.metadata.description = ""; }, checkId: "meta_description", expected: "high" },
-    { name: "nofollow alone is not blocking", mutate: (data) => { data.metadata.robots_directives = ["nofollow"]; data.fetch.x_robots_tag = ""; data.checks.find((item) => item.id === "robots_directives").status = "warning"; }, checkId: "robots_directives", expected: "low" },
-    { name: "malformed JSON-LD is medium", mutate: (data) => { data.structured_data.block_count = 1; data.structured_data.valid_blocks = 0; data.structured_data.malformed_blocks = 1; }, checkId: "json_ld", expected: "medium" },
-  ];
-  const impactResults = [];
-  for (const testCase of ruleCases) {
-    rulePayload = JSON.parse(await fs.readFile(path.join(here, "audit-weak.json"), "utf8"));
-    testCase.mutate(rulePayload);
-    await rulePage.goto(viewUrl("fix-list", "weak", { case: testCase.name }), { waitUntil: "networkidle" });
-    const impact = await rulePage.locator(`#fix-${testCase.checkId} [data-impact]`).first().getAttribute("data-impact").catch(() => null);
-    impactResults.push({ case: testCase.name, expected: testCase.expected, actual: impact });
-  }
-  rulePayload = JSON.parse(await fs.readFile(path.join(here, "audit-noindex-test.json"), "utf8"));
-  await rulePage.goto(viewUrl("fix-list", "weak", { case: "noindex" }), { waitUntil: "networkidle" });
-  const noindexImpact = await rulePage.locator("#fix-robots_directives [data-impact]").first().getAttribute("data-impact").catch(() => null);
-  impactResults.push({ case: "noindex is blocking", expected: "blocking", actual: noindexImpact });
-  check("impact rules use current analysis conditions", impactResults.every((item) => item.expected === item.actual), JSON.stringify(impactResults));
-  await rulePage.close();
-
-  const source = await fs.readFile(path.join(here, "proof.js"), "utf8");
-  const enrichStart = source.indexOf("function enriched(");
-  const enrichEnd = source.indexOf("\nfunction prioritizedChecks", enrichStart);
-  const rendererImpactBody = enrichStart >= 0 && enrichEnd > enrichStart ? source.slice(enrichStart, enrichEnd) : "";
-  const enrichment = JSON.parse(await fs.readFile(path.join(here, "enrichment.json"), "utf8"));
-  const checkSpecificImpactBranch = /if\s*\([^)]*check\.id|switch\s*\(\s*check\.id/.test(rendererImpactBody);
-  const oneImpactSource = Boolean(rendererImpactBody) && !checkSpecificImpactBranch
-    && Object.values(enrichment.checks).every((entry) => typeof entry.impact === "string" && typeof entry.effort === "string");
-  check("R1-9 generic impact and effort rules", oneImpactSource, `check-specific renderer branches ${checkSpecificImpactBranch ? "present" : "none"}; all ${Object.keys(enrichment.checks).length} checks carry enrichment impact/effort metadata`);
-
-  return {
-    desktopBounds: desktop,
-    mobileSummaryBounds: mobile,
-    specialistBounds: specialists,
-    scoreHelpCounts: scoreHelp,
-    weakShape,
-    basicShape,
-    summaryCopyButtons: summaryCopy,
-    impactResults,
-    impactRuleSource: oneImpactSource,
-  };
-}
-
-async function testInteractionFlows(page) {
-  activeStage = "interaction-clipboard-permission";
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
-  activeStage = "interaction-mouse-navigation";
-  await openPage(page, "summary", "weak");
-  const summaryCopyButtons = page.locator(".priority-copy-button");
-  let summaryCopySucceeded = false;
-  if (await summaryCopyButtons.count()) {
-    await summaryCopyButtons.first().click();
-    await page.waitForFunction(() => document.querySelector(".priority-copy-feedback")?.textContent.trim() === "Copied.");
-    const copiedSummaryValue = await page.evaluate(() => navigator.clipboard.readText());
-    summaryCopySucceeded = copiedSummaryValue.startsWith("<") && await page.locator(".priority-copy-feedback").first().innerText() === "Copied.";
-  }
-  check("Summary copy works without opening another view", summaryCopySucceeded, "Direct action reports success only after the clipboard operation succeeds; copied value is not logged");
-  const mouseFinding = page.locator('[data-finding-button][data-check-id="meta_description"]');
-  await mouseFinding.click();
-  const mouseFindingActive = await mouseFinding.getAttribute("aria-pressed");
-  const mousePart = page.locator('.scan-part[data-check-ids*="meta_description"]');
-  const mousePartActive = await mousePart.getAttribute("aria-pressed");
-  const mouseImage = page.locator('.scan-part[data-part-id="images"]');
-  activeStage = "interaction-mouse-anatomy";
-  await mouseImage.click();
-  const mouseFocusMoved = await page.locator("#detail-image_alt").evaluate((el) => document.activeElement === el).catch(() => false);
-  check("mouse bidirectional selection", mouseFindingActive === "true" && mousePartActive === "true" && mouseFocusMoved, "Finding click highlights its anatomy; anatomy click opens the mapped observation and moves focus");
-
-  activeStage = "interaction-tab-order";
-  await openPage(page, "summary", "weak");
-  const navTarget = page.locator('.primary-nav a[href*="state=on-page"]');
-  await navTarget.focus();
-  await page.keyboard.press("Shift+Tab");
-  const previousNav = await page.locator('.primary-nav a[href*="state=summary"]').evaluate((el) => document.activeElement === el);
-  await page.keyboard.press("Tab");
-  const forwardNav = await navTarget.evaluate((el) => document.activeElement === el);
-  check("Tab and Shift+Tab order", previousNav && forwardNav, "Shift+Tab and Tab move between adjacent report navigation links");
-  activeStage = "interaction-keyboard-navigation";
-  await openPage(page, "summary", "weak");
-  const keyboardNav = page.locator('.primary-nav a[href*="state=on-page"]');
-  const navSteps = await focusByTab(page, keyboardNav);
-  await page.keyboard.press("Enter");
-  await page.waitForSelector(".subpage-layout");
-  const keyboardRoute = new URL(page.url()).searchParams.get("state") === "on-page";
-  check("keyboard navigation activation", keyboardRoute, `Tab reached On-page after ${navSteps + 1} steps; Enter opened the route`);
-
-  activeStage = "interaction-keyboard-finding";
-  await openPage(page, "summary", "weak");
-  const firstFinding = page.locator('[data-finding-button][data-check-id="meta_description"]');
-  const tabCount = await focusByTab(page, firstFinding);
-  const findingOutline = await firstFinding.evaluate((el) => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth }));
-  await page.keyboard.press("Enter");
-  const findingSelected = await firstFinding.getAttribute("aria-pressed");
-  const activeDetail = await page.locator("#detail-meta_description").evaluate((el) => document.activeElement === el).catch(() => false);
-  // Finding activation keeps focus in the list; evidence is announced and the matching region is highlighted.
-  const matchingAnatomy = await page.locator('.scan-part[data-check-ids*="meta_description"]').getAttribute("aria-pressed");
-  check("keyboard finding activation", findingSelected === "true" && matchingAnatomy === "true" && !activeDetail && findingOutline.style !== "none" && Number.parseFloat(findingOutline.width) >= 2, `Tab reached a finding after ${tabCount + 1} steps; Enter selected it; focus outline ${findingOutline.width}`);
-  activeStage = "interaction-keyboard-anatomy";
-  await openPage(page, "summary", "weak");
-  const imagePart = page.locator('.scan-part[data-part-id="images"]');
-  const anatomyTabCount = await focusByTab(page, imagePart);
-  await page.keyboard.press("Space");
-  const focusMoved = await page.locator("#detail-image_alt").evaluate((el) => document.activeElement === el).catch(() => false);
-  const sourceNotes = JSON.parse(await fs.readFile(path.join(here, "offline-source-notes.json"), "utf8"));
-  const weakImage = sourceNotes.samples.weak.images.find((image) => !image.has_alt_attribute);
-  const sourceNote = (await page.locator("#inspection-detail").innerText()).includes(`${sourceNotes.samples.weak.source_path}, line ${weakImage.line}`);
-  check("keyboard anatomy activation", focusMoved && sourceNote, `Tab reached anatomy after ${anatomyTabCount + 1} further steps; Space opened the mapped finding and focused its heading`);
-
-  activeStage = "interaction-clipboard-success";
-  const copyButton = page.locator("#inspection-detail .copy-button");
-  await copyButton.click();
-  await page.waitForFunction(() => document.querySelector("#inspection-detail .copy-feedback")?.textContent.trim() === "Copied.");
-  const copySuccess = await page.locator("#inspection-detail .copy-feedback").innerText();
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  const clipboardPatternPresent = copied.includes("image.png");
-  check("copy success", copySuccess === "Copied." && clipboardPatternPresent, `success feedback ${copySuccess === "Copied."}; source pattern present ${clipboardPatternPresent}; value not logged`);
-  activeStage = "interaction-clipboard-denial";
-  const denialBrowser = await chromium.launch({ headless: true });
-  const deniedContext = await denialBrowser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  monitorContext(deniedContext);
-  const deniedPage = await deniedContext.newPage();
-  deniedPage.on("console", (message) => { if (message.type() === "error") consoleErrors.push("console error"); });
-  deniedPage.on("pageerror", (error) => { consoleErrors.push(error.name || "page error"); });
-  await openPage(deniedPage, "summary", "weak");
-  await deniedPage.locator('.scan-part[data-part-id="images"]').click();
-  const deniedCopyButton = deniedPage.locator("#inspection-detail .copy-button");
-  const permissionSession = await denialBrowser.newBrowserCDPSession();
-  let browserDenialSet = false;
-  let denialPageTargetFound = false;
-  let denialContextIdPresent = false;
-  let denialCommandError = "none";
-  let denialPermissionState = "unsupported";
-  try {
-    const { targetInfos } = await permissionSession.send("Target.getTargets");
-    const currentPageUrl = deniedPage.url();
-    const pageTarget = targetInfos.find((target) => target.type === "page" && target.url === currentPageUrl);
-    denialPageTargetFound = Boolean(pageTarget);
-    denialContextIdPresent = Boolean(pageTarget?.browserContextId);
-    if (pageTarget?.browserContextId) {
-      await permissionSession.send("Browser.setPermission", {
-        permission: { name: "clipboard-write" },
-        setting: "denied",
-        origin: new URL(currentPageUrl).origin,
-        browserContextId: pageTarget.browserContextId,
+async function inspectAnimations(page) {
+  await open(page, "summary", "northstar");
+  const source = await page.evaluate(() => {
+    const animations = [];
+    const transitions = [];
+    for (const sheet of document.styleSheets) {
+      let rules = [];
+      try { rules = [...sheet.cssRules]; } catch { continue; }
+      const collect = (items) => items.forEach((rule) => {
+        if (rule.cssRules) collect([...rule.cssRules]);
+        if (rule instanceof CSSKeyframesRule) {
+          for (const child of rule.cssRules) {
+            for (const property of child.style) if (!["opacity", "transform"].includes(property)) animations.push({ name: rule.name, property });
+          }
+        }
+        const selector = rule.selectorText || "";
+        const transitionProperty = rule.style?.transitionProperty;
+        if (selector && transitionProperty && transitionProperty !== "none") {
+          for (const property of transitionProperty.split(",").map((value) => value.trim())) transitions.push({ selector, property });
+        }
       });
-      browserDenialSet = true;
+      collect(rules);
     }
-  } catch (error) { denialCommandError = error.name || "Error"; }
-  denialPermissionState = await deniedPage.evaluate(async () => navigator.permissions.query({ name: "clipboard-write" }).then((permission) => permission.state).catch(() => "unsupported"));
-  await deniedCopyButton.click();
-  if (denialPermissionState === "denied") {
-    await deniedPage.waitForFunction(() => document.querySelector("#inspection-detail .copy-feedback")?.textContent.includes("Copy was not permitted"), { timeout: 5000 }).catch(() => {});
-  }
-  const copyFailure = await deniedPage.locator("#inspection-detail .copy-feedback").innerText();
-  const denialGuidanceShown = copyFailure.includes("Copy was not permitted");
-  check("copy denial recovery", browserDenialSet && denialPermissionState === "denied" && denialGuidanceShown, `page target found ${denialPageTargetFound}; context ID available ${denialContextIdPresent}; override applied ${browserDenialSet}; permission state ${denialPermissionState}; command error ${denialCommandError}; recovery guidance shown ${denialGuidanceShown}`);
-  await permissionSession.detach();
-  await deniedContext.close();
-  await denialBrowser.close();
-
-  await openPage(page, "home");
-  const urlInput = page.getByLabel("Page URL");
-  await urlInput.fill("https://example.test/basic");
-  await page.keyboard.press("Enter");
-  await page.waitForSelector(".report-grid");
-  const enteredKnown = new URL(page.url()).searchParams.get("sample") === "basic";
-  check("URL form Enter activation", enteredKnown, "Enter opened the selected local analysis without making an outbound request");
-  await openPage(page, "home");
-  const requestStart = requestCount;
-  await page.getByLabel("Page URL").fill("https://outside.example/private/path");
-  await page.keyboard.press("Enter");
-  const staticError = await page.locator("#error-heading").innerText();
-  const errorContext = await page.locator(".context-url").innerText();
-  const queryHasUrl = new URL(page.url()).searchParams.has("url");
-  check("arbitrary URL limitation", staticError === "No live scan here" && errorContext === "https://outside.example/private/path" && !queryHasUrl && requestCount === requestStart, "Context stays in history state, no URL query payload and no browser request is made");
-  await openPage(page, "summary", "basic");
-  await page.locator('.primary-nav a[href*="state=on-page"]').click();
-  await page.waitForSelector(".subpage-layout");
-  await page.goBack();
-  const backState = new URL(page.url()).searchParams.get("state");
-  await page.goForward();
-  const forwardState = new URL(page.url()).searchParams.get("state");
-  check("browser Back and Forward", backState === "summary" && forwardState === "on-page", `Back → ${backState}; Forward → ${forwardState}`);
-
-  let reloads = 0;
-  for (const state of ["home", "summary", "on-page", "previews", "fix-list", "loading", "error"]) {
-    const sample = ["summary", "on-page", "previews", "fix-list", "loading"].includes(state) ? "weak" : null;
-    await openPage(page, state, sample, state === "error" ? { reason: "static-preview" } : {});
-    await page.reload({ waitUntil: "networkidle" });
-    const observedState = new URL(page.url()).searchParams.get("state");
-    const marker = await page.locator(".site-shell").getAttribute("data-state");
-    if (observedState === state && marker === state) reloads += 1;
-  }
-  check("direct state URLs and reload", reloads === 7, `${reloads}/7 supported state URLs reloaded without losing the route`);
-
-  await page.goto(viewUrl("summary", "missing"), { waitUntil: "networkidle" });
-  const missing = await page.locator("#error-heading").innerText();
-  const reportAbsent = await page.locator(".report-grid").count() === 0;
-  check("missing analysis recovery", missing === "Analysis unavailable" && reportAbsent, "Missing sample shows a recovery message and does not substitute another analysis");
-
-  const malformed = await context.newPage();
-  await malformed.route("**/audit-weak.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "{}" }));
-  await malformed.goto(viewUrl("summary", "weak"), { waitUntil: "networkidle" });
-  const malformedSafe = await malformed.locator("#error-heading").innerText();
-  check("malformed analysis recovery", malformedSafe === "Analysis unavailable" && await malformed.locator(".report-grid").count() === 0, "Malformed contract renders a bounded recovery state");
-  await malformed.close();
-
-  const hostile = await context.newPage();
-  const hostileData = JSON.parse(await fs.readFile(path.join(here, "audit-weak.json"), "utf8"));
-  hostileData.metadata.title = '<img src="x" onerror="alert(1)">';
-  hostileData.headings.h1 = ["<svg onload=alert(1)>content</svg>"];
-  await hostile.route("**/audit-weak.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(hostileData) }));
-  await hostile.goto(viewUrl("summary", "weak"), { waitUntil: "networkidle" });
-  const safeText = await hostile.locator('.scan-part[data-part-id="title"] .part-value').innerText();
-  const injected = await hostile.locator('img[src="x"], svg[onload]').count();
-  check("source text is not interpreted as HTML", safeText.includes("<img") && injected === 0, `Hostile-looking title remains text; ${injected} injected elements`);
-  await hostile.close();
-
-  await openPage(page, "summary", "weak");
-  const focusTarget = page.locator("[data-score-help-trigger]");
-  const focusTargetCount = await focusTarget.count();
-  const focusSteps = focusTargetCount ? await focusByTab(page, focusTarget) : 0;
-  const contrastMetrics = await measureContrast(page);
-  check("text contrast", contrastMetrics.minTextRatio >= 4.5, `${contrastMetrics.minTextRatio?.toFixed(2)}:1 minimum observed; sample ${JSON.stringify(contrastMetrics.minTextSample)}`);
-  const focusOutline = focusTargetCount ? await focusTarget.evaluate((element) => ({ style: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth })) : { style: "none", width: "0px" };
-  check("status and focus contrast", focusTargetCount === 1 && contrastMetrics.minStatusRatio >= 3 && contrastMetrics.focusRatio >= 3 && focusOutline.style !== "none" && Number.parseFloat(focusOutline.width) >= 2, `${contrastMetrics.minStatusRatio?.toFixed(2)}:1 status; ${contrastMetrics.focusRatio?.toFixed(2)}:1 focus; help target ${focusTargetCount}; Tab steps ${focusSteps + 1}`);
-  return { tabCount, anatomyTabCount, reloads, contrastMetrics };
+    return {
+      animatedProperties: [...new Set(animations.map((item) => item.property))],
+      animationViolations: animations,
+      transitionProperties: transitions,
+      transitionViolations: transitions.filter((item) => !["opacity", "transform"].includes(item.property)),
+    };
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, "summary", "northstar");
+  const reduced = await page.evaluate(() => {
+    const target = document.querySelector(".button-link");
+    const style = target ? getComputedStyle(target) : null;
+    return { preference: matchMedia("(prefers-reduced-motion: reduce)").matches, transitionProperty: style?.transitionProperty || null, animationName: style?.animationName || null };
+  });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  return { ...source, reducedMotion: reduced };
 }
 
-async function writeAcceptance(metrics, captures) {
-  const reports = metrics.reports;
-  const badLayouts = reports.filter((item) => item.overflow || item.overlaps > 0);
-  const minBody = Math.min(...reports.map((item) => item.bodyFontPx));
-  const minEvidence = Math.min(...reports.map((item) => item.evidenceFontPx));
-  const cls = metrics.cls;
-  const statusFor = (name) => metrics.checks.find((item) => item.name === name)?.status || "UNVERIFIED";
-  const specialist = metrics.specialistBounds;
-  const desktop = metrics.desktopBounds;
-  const mobile = metrics.mobileSummaryBounds;
-  const rows = [
-    [1, "Summary shows no more than five fixes; explanatory copy stays under 120 words.", metrics.priorityCount <= 5 && metrics.summaryWords <= 120 ? "PASS" : "FAIL", `${metrics.priorityCount} fixes; ${metrics.summaryWords} words`, "Static UI only; production API content unverified."],
-    [2, "Page anatomy changes with the analysis data.", metrics.anatomyDiffs >= 4 && metrics.unmappedChecks === 0 ? "PASS" : "FAIL", `${metrics.anatomyDiffs} regions differ; all ${metrics.mappedChecks} check IDs mapped`, "Static test inputs; live API variation unverified."],
-    [3, "Finding and anatomy selection work with mouse and keyboard.", metrics.keyboardPass && metrics.mouseSelectionPass ? "PASS" : "FAIL", `${metrics.keyboardActions} keyboard actions plus mouse selection; bidirectional mapping and focus checked`, "Static browser interactions only."],
-    [4, "No credential fields or browser bearer code.", metrics.credentialInputs === 0 && metrics.bearerMatches === 0 ? "PASS" : "FAIL", `${metrics.credentialInputs} credential inputs; ${metrics.bearerMatches} bearer-code matches`, "Static proof scope only."],
-    [5, "One score caveat per report; no banned authored UI labels.", metrics.caveatPass && metrics.bannedUiLabels === 0 ? "PASS" : "FAIL", `${metrics.caveatCount} caveat panel per report view; ${metrics.bannedUiLabels} app-authored banned labels; ${metrics.sourceWordOccurrences} observed page-data occurrences`, "Static proof UI; excludes observed source text from label scan."],
-    [6, "Only opacity/transform animate; reduced motion removes motion.", metrics.motionPass ? "PASS" : "FAIL", `Animated properties: ${metrics.animatedProperties.join(", ")}; reduced duration ${metrics.reducedMotionDuration}`, "Static proof CSS; production styles unverified."],
-    [7, "No overflow or overlap at required widths; mobile evidence and secondary labels remain readable, with layout shift measured.", !cls.supported ? "UNVERIFIED" : badLayouts.length === 0 && cls.initial === 0 && cls.loadingToResult === 0 && metrics.mobileEvidenceReadable && metrics.mobileLabelsReadable ? "PASS" : "FAIL", `${badLayouts.length}/${reports.length + 1} overflow/overlap cases; minimum text ${minBody}px, evidence ${minEvidence}px; 390/320px technical evidence minimum ${metrics.mobileTechnicalEvidenceFontPx}px with ${metrics.clippedMobileEvidenceCount} clipped elements; secondary-label minimum ${metrics.mobileSecondaryMicroLabelFontPx}px with ${metrics.smallMobileMicroLabelCount} labels below 12px; 768px URL field ${metrics.tabletUrlFieldWidth}px and subpage anatomy ${metrics.tabletAnatomyWidth}px; hostname lines at 390/320px ${metrics.hostnameLines[390]}/${metrics.hostnameLines[320]}; CLS initial ${cls.initial}, loading→result ${cls.loadingToResult}; 320px ${metrics.narrow320.overflow ? "overflow" : "no overflow"}; sources ${[...new Set([...(cls.initialSources || []), ...(cls.transitionSources || [])].map((source) => source.selector))].join(", ") || "none"}`, "Static proof only; production runtime unverified."],
-    [8, "Text contrast ≥4.5:1; status/focus ≥3:1.", metrics.contrast.minTextRatio >= 4.5 && metrics.contrast.minStatusRatio >= 3 && metrics.contrast.focusRatio >= 3 ? "PASS" : "FAIL", `${metrics.contrast.minTextRatio.toFixed(2)}:1 text; ${metrics.contrast.minStatusRatio.toFixed(2)}:1 status; ${metrics.contrast.focusRatio.toFixed(2)}:1 focus`, "Measured rendered static proof colors."],
-    [9, "No browser request leaves the app origin.", metrics.externalHostCount === 0 && metrics.unexpectedRequests === 0 ? "PASS" : "FAIL", `${metrics.requestCount} requests; hosts ${metrics.hosts.join(", ")}; ${metrics.unexpectedRequests} unexpected`, "Local test server only; future service calls unverified."],
-    [10, "Seven state URLs survive reload; unavailable report data has recovery.", metrics.reloadStates === 7 && metrics.missingRecovery ? "PASS" : "FAIL", `${metrics.reloadStates}/7 routes; missing-data recovery ${metrics.missingRecovery ? "shown" : "failed"}`, "Static routes; persistence of future live reports unverified."],
-    [11, "Banned visual patterns are absent in inspected screenshots.", metrics.manualVisualReview ? "PASS" : "UNVERIFIED", `${metrics.manualVisualReview ? "27/27 screenshots manually opened" : "manual image-by-image inspection pending"}; see TASTE.md`, "Human review of static screenshots only."],
-    [12, "Two concrete audit-specific visual choices are documented for every state.", metrics.tasteStates === 7 ? "PASS" : "FAIL", `${metrics.tasteStates}/7 named state sections cite visible differentiators`, "Written design review; supervisor approval remains open."],
-  ];
-  const r1Rows = [
-    ["R1-1", "Desktop Summary shows verdict, specimen and first three actions.", statusFor("R1-1 desktop summary viewport"), `1440×900: verdict ${JSON.stringify(desktop?.verdict)}; X-ray ${JSON.stringify(desktop?.xray)}; action bounds ${JSON.stringify(desktop?.priorities)}`, "Measured Chromium rectangles at document scroll origin."],
-    ["R1-2", "Mobile Summary shows verdict, two actions and X-ray entry.", statusFor("R1-2 mobile summary viewport"), `390×844: verdict ${JSON.stringify(mobile?.verdict)}; first two actions ${JSON.stringify(mobile?.priorities)}; entry ${JSON.stringify(mobile?.anatomyEntry)}`, "Measured Chromium rectangles at document scroll origin."],
-    ["R1-3", "On-page foregrounds observed title and description.", statusFor("R1-3/4/5 specialist-first mobile pages"), `390×844 content bounds ${JSON.stringify(specialist?.["on-page"])}; heading and first values visible`, "Mobile viewport browser check."],
-    ["R1-4", "Previews foregrounds the metadata-based search preview.", statusFor("R1-3/4/5 specialist-first mobile pages"), `390×844 content bounds ${JSON.stringify(specialist?.previews)}; search preview visible`, "Mobile viewport browser check."],
-    ["R1-5", "Fix list foregrounds an actionable finding and action.", statusFor("R1-3/4/5 specialist-first mobile pages"), `390×844 content bounds ${JSON.stringify(specialist?.["fix-list"])}; direct action ${specialist?.["fix-list"]?.directAction}`, "Mobile viewport browser check."],
-    ["R1-6", "Summary actions copy directly or offer an honest review action.", statusFor("R1-6 Summary copy actions are direct"), `${metrics.summaryCopyButtons?.length || 0} visible direct buttons: ${(metrics.summaryCopyButtons || []).map((item) => item.label).join(", ")}`, "Rendered control visibility; clipboard success separately tested."],
-    ["R1-7", "Weak and Basic analyses produce different page shapes.", statusFor("R1-7 data-shaped schematic differs by page"), `Weak ${JSON.stringify(metrics.weakShape)}; Basic ${JSON.stringify(metrics.basicShape)}`, "Rendered fields, aggregate image counts, returned link counts; no DOM coordinates claimed."],
-    ["R1-8", "Exactly one score help trigger and caveat panel appears per report.", statusFor("R1-8 one score-help affordance and panel"), JSON.stringify(metrics.scoreHelpCounts), "Counts on Summary, On-page, Previews and Fix list."],
-    ["R1-9", "Impact and effort policies live in enrichment with generic evaluation.", statusFor("R1-9 generic impact and effort rules") === "PASS" && statusFor("impact rules use current analysis conditions") === "PASS" ? "PASS" : "FAIL", `Rule-source generic: ${metrics.impactRuleSource}; cases ${JSON.stringify(metrics.impactResults)}`, "Condition variations rendered in browser from temporary test-only data; raw files unchanged."],
-    ["R1-10", "Engine scores, statuses, checks and raw outputs remain unchanged.", statusFor("R1-10 engine output hashes unchanged"), `Scores/check counts ${JSON.stringify(metrics.analyzerCounts)}; SHA-256 ${JSON.stringify(metrics.rawOutputHashes)}`, "Raw analyzer JSON SHA-256 compared with baseline hashes; version 1.0."],
-    ["R1-11", "Anatomy selection and keyboard operation survive redesign.", metrics.keyboardPass && metrics.mouseSelectionPass ? "PASS" : "FAIL", `${metrics.keyboardActions} keyboard checks; mouse finding-to-region and region-to-evidence check ${metrics.mouseSelectionPass ? "PASS" : "FAIL"}; focus is moved for anatomy-opened evidence`, "Playwright mouse, Tab, Enter and Space interactions."],
-    ["R1-12", "No banned visual style or fabricated page content appears.", metrics.manualVisualReview && metrics.bannedUiLabels === 0 ? "PASS" : "UNVERIFIED", `${metrics.manualVisualReview ? "27/27 captures manually inspected" : "manual screenshot inspection pending"}; ${metrics.bannedUiLabels} authored banned UI labels; ${metrics.sourceWordOccurrences} occurrences are observed source text; see TASTE.md`, "Visual review is limited to this local static proof."],
-  ];
-  const matrix = [
-    "# S1-A acceptance matrix",
+async function testFontComparison(page) {
+  return compareFonts(page);
+}
+
+async function writeEvidence(data) {
+  const captures = data.captures || [];
+  const report = {
+    milestone: "S1-A-R2",
+    browserEngine: "Playwright-bundled Chromium",
+    browserVersion: browser.version(),
+    profile: "Task-owned in-memory browser context; no user profile used",
+    baseOrigin: baseUrl,
+    requestCount,
+    requestHosts: [...requestHosts],
+    externalRequestCount,
+    consoleErrorCount,
+    pageErrorCount,
+    rawOutputHashes: data.dataset.rawHashes,
+    dataset: {
+      scores: Object.fromEntries(Object.entries(data.dataset.analyses).map(([name, item]) => [name, item.deterministic_score.overall_score])),
+      checkCounts: Object.fromEntries(Object.entries(data.dataset.analyses).map(([name, item]) => [name, item.checks.length])),
+      northstarScore: data.dataset.northstar.deterministic_score.overall_score,
+      northstarCheckCount: data.dataset.northstar.checks.length,
+      northstarPasses: data.dataset.northstarPasses,
+      northstarActionable: data.dataset.northstarActionable,
+      actionability: data.dataset.actionability,
+      countMismatchExplanation: "The old 3 fails + 11 warnings included one optional empty-JSON-LD warning excluded from actions; link_relationships was not_applicable. The central R2 model reports raw statuses and excluded actions separately.",
+    },
+    fontComparison: data.fontComparison,
+    interaction: data.interaction,
+    countConsistency: data.countConsistency,
+    proofAudit: data.proofAudit,
+    signalStates: data.signalStates,
+    mobileTargets: data.mobileTargets,
+    layouts: data.layouts,
+    contrast: data.contrast,
+    animations: data.animations,
+    checks,
+    captures,
+    manualVisualReview: process.argv.includes("--visual-reviewed"),
+  };
+  await fs.mkdir(evidenceDir, { recursive: true });
+  await fs.writeFile(path.join(evidenceDir, "verification.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
+  await fs.writeFile(path.join(evidenceDir, "screenshot-index.json"), JSON.stringify(captures, null, 2) + "\n", "utf8");
+  const rows = checks.filter((item) => /^R2-\d+/.test(item.name)).map((item) => {
+    const id = item.name.match(/^R2-\d+/)?.[0] || "";
+    const viewports = id === "R2-10" ? "1440x900" : id === "R2-13" ? "390x844; 320x844 regression" : id === "R2-7" || id === "R2-8" || id === "R2-9" || id === "R2-11" || id === "R2-14" || id === "R2-15" || id === "R2-16" ? "All relevant states" : "1440, 1024, 768, 390; 320 regression where measured";
+    return `| ${id} | ${item.status} | ${item.detail.replaceAll("|", "\\|").replaceAll("\n", " ")} | ${viewports} | \`node docs/design/s1-a/check.mjs\` and native screenshot inspection | [verification.json](evidence/verification.json) |`;
+  });
+  const acceptance = [
+    "# S1-A R2 Acceptance",
     "",
-    "All results below describe the static design proof. Production behavior is unverified unless a row explicitly says otherwise.",
+    "Measured in Playwright-bundled Chromium with a loopback-only static server. The report does not establish production readiness.",
     "",
-    "| Criterion | Status | Measured value | Evidence | Production applicability |",
-    "|---|---|---|---|---|",
-    ...rows.map(([id, criterion, status, value, scope]) => `| ${id}. ${criterion} | **${status}** | ${value.replaceAll("|", "\\|")} | \`node docs/design/s1-a/check.mjs\` · \`verification.json\` · TASTE.md | ${scope} |`),
+    "| Criterion | Status | Measured value | Viewport | Method | Evidence |",
+    "|---|---|---|---|---|---|",
+    ...rows,
     "",
-    "## S1-A R1 gates",
+    "The complete raw measurements, count reconciliation, font comparison, request-host audit, and screenshot inventory are in [verification.json](evidence/verification.json). Captured screenshots are listed in [screenshot-index.json](evidence/screenshot-index.json).",
     "",
-    "| Gate | Status | Measured value | Method / evidence | Scope |",
-    "|---|---|---|---|---|",
-    ...r1Rows.map(([id, criterion, status, value, scope]) => `| ${id}. ${criterion} | **${status}** | ${value.replaceAll("|", "\\|")} | \`node docs/design/s1-a/check.mjs\` · \`verification.json\` · screenshots | ${scope} |`),
-    "",
-    "## Layout measurements",
-    "",
-    "| View | Sample | Viewport | Document width | Overflow | Overlap pairs | Body / evidence text px |",
-    "|---|---|---:|---:|---:|---:|---:|",
-    ...reports.map((item) => `| ${item.state} | ${item.sample || "—"} | ${item.viewport} | ${item.documentWidth}px | ${item.overflow ? "yes" : "no"} | ${item.overlaps} | ${item.bodyFontPx} / ${item.evidenceFontPx}; technical ${item.technicalEvidenceFontPx ?? "—"}px; clipped ${item.clippedTechnicalEvidenceCount} |`),
-    "",
-    `CLS measured with Chromium ${metrics.browserVersion}: ${cls.supported ? `initial report load **${cls.initial}**, controlled loading-to-result transition **${cls.loadingToResult}**` : "UNVERIFIED (layout-shift entries unsupported by this browser)"}. Initial shift sources: ${[...(cls.initialSources || [])].map((source) => source.selector).join(", ") || "none"}; transition shift sources: ${[...(cls.transitionSources || [])].map((source) => source.selector).join(", ") || "none"}.`,
-    "",
-    `Contrast sample (weak Summary): minimum text **${metrics.contrast.minTextRatio.toFixed(2)}:1**; status **${metrics.contrast.minStatusRatio.toFixed(2)}:1**; focus **${metrics.contrast.focusRatio.toFixed(2)}:1**.`,
-    "",
-    `Network sample: ${metrics.requestCount} requests across ${metrics.hosts.length} distinct host(s): ${metrics.hosts.join(", ") || "none"}. Unexpected external requests: ${metrics.unexpectedRequests}.`,
-    "",
-    `Visual review: ${metrics.manualVisualReview ? "27 screenshots opened and inspected at native dimensions; see TASTE.md for state-specific notes." : "Pending; screenshots were captured but were not manually reviewed at native dimensions."}`,
+    "Unverified items are identified explicitly in each row and in the final review report. This proof uses only generated offline analyzer output and does not call external websites or an API.",
     "",
   ].join("\n");
-  await fs.writeFile(path.join(here, "ACCEPTANCE.md"), matrix, "utf8");
-  await fs.writeFile(path.join(evidenceDir, "verification.json"), JSON.stringify({ ...metrics, captures, checks }, null, 2) + "\n", "utf8");
+  await fs.writeFile(path.join(here, "ACCEPTANCE.md"), acceptance, "utf8");
+  return report;
 }
 
 async function main() {
   activeStage = "start-local-server";
-  await fs.mkdir(evidenceDir, { recursive: true });
   await startServer();
   browser = await chromium.launch({ headless: true });
-  const browserVersion = browser.version();
-  let page = await setupPage();
-  activeStage = "data-and-interaction-tests";
-  let dataFlow = await testDataAndViews(page);
-  const r1Visual = await testR1VisualBehavior(dataFlow.page);
-  dataFlow = { ...dataFlow, ...r1Visual };
-  page = dataFlow.page;
-  activeStage = "responsive-layout-tests";
-  const layoutCases = [];
-  const layouts = [
-    ...states.flatMap((state) => [
-      { state, sample: ["summary", "on-page", "previews", "fix-list", "loading"].includes(state) ? "weak" : null },
-    ]),
-    { state: "summary", sample: "basic" },
-    { state: "summary", sample: "noindex" },
-  ];
-  for (const item of layouts) {
-    for (const viewport of layoutViewports) layoutCases.push(await inspectLayout(page, item.state, item.sample, viewport));
-  }
-  const narrow320 = await inspectLayout(page, "summary", "weak", { label: "320x844", width: 320, height: 844 });
-  const clsContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await clsContext.addInitScript(() => {
-    window.__layoutShifts = [];
-    window.__layoutShiftSupported = Boolean(window.PerformanceObserver && PerformanceObserver.supportedEntryTypes?.includes("layout-shift"));
-    if (window.__layoutShiftSupported) {
-      new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          if (entry.hadRecentInput) continue;
-          window.__layoutShifts.push({
-            value: entry.value,
-            startTime: entry.startTime,
-            sources: (entry.sources || []).map((source) => {
-              const node = source.node;
-              let selector = "unknown-node";
-              if (node?.id) selector = `#${node.id}`;
-              else if (typeof node?.className === "string" && node.className.trim()) selector = `.${node.className.trim().split(/\\s+/).slice(0, 2).join(".")}`;
-              else if (node?.localName) selector = node.localName;
-              const toRect = (rect) => rect ? { x: Number(rect.x.toFixed(1)), y: Number(rect.y.toFixed(1)), width: Number(rect.width.toFixed(1)), height: Number(rect.height.toFixed(1)) } : null;
-              return { selector, previousRect: toRect(source.previousRect), currentRect: toRect(source.currentRect) };
-            }),
-          });
-        }
-      }).observe({ type: "layout-shift", buffered: true });
-    }
-  });
-  monitorContext(clsContext);
-  const clsPage = await clsContext.newPage();
-  clsPage.on("console", (message) => { if (message.type() === "error") consoleErrors.push("console error"); });
-  clsPage.on("pageerror", (error) => { consoleErrors.push(error.name || "page error"); });
-  const measureCLS = () => clsPage.evaluate(() => {
-    const entries = window.__layoutShifts;
-    let maxSession = 0;
-    let sessionValue = 0;
-    let sessionStart = null;
-    let previousTime = null;
-    for (const entry of entries) {
-      if (sessionStart === null || entry.startTime - previousTime > 1000 || entry.startTime - sessionStart > 5000) {
-        maxSession = Math.max(maxSession, sessionValue);
-        sessionStart = entry.startTime;
-        sessionValue = entry.value;
-      } else {
-        sessionValue += entry.value;
-      }
-      previousTime = entry.startTime;
-    }
-    return {
-      supported: window.__layoutShiftSupported,
-      value: Math.max(maxSession, sessionValue),
-      entryCount: entries.length,
-      sources: [...new Map(entries.flatMap((entry) => entry.sources).map((source) => [`${source.selector}:${JSON.stringify(source.previousRect)}:${JSON.stringify(source.currentRect)}`, source])).values()],
-    };
-  });
-  await clsPage.goto(viewUrl("summary", "weak"), { waitUntil: "networkidle" });
-  await clsPage.evaluate(() => document.fonts.ready);
-  await clsPage.waitForFunction(() => { const n = document.querySelector("[data-score-target]"); return !n || n.textContent === n.dataset.scoreTarget; });
-  await clsPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const initialCls = await measureCLS();
-  await clsPage.goto(viewUrl("loading", "weak"), { waitUntil: "networkidle" });
-  await clsPage.evaluate(() => { window.__layoutShifts = []; });
-  await clsPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  await clsPage.locator('a[href*="state=summary"]').click();
-  await clsPage.waitForSelector(".report-grid");
-  await clsPage.evaluate(() => document.fonts.ready);
-  await clsPage.waitForFunction(() => { const n = document.querySelector("[data-score-target]"); return !n || n.textContent === n.dataset.scoreTarget; });
-  await clsPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const transitionCls = await measureCLS();
-  await clsContext.close();
-
-  activeStage = "keyboard-and-copy-tests";
-  context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  page = await setupPage();
-  const interactionMetrics = await testInteractionFlows(page);
-  activeStage = "authored-label-review";
-  const contrastMetrics = interactionMetrics.contrastMetrics;
-
-  const allStateCaveats = [];
-  let bannedUiLabels = 0;
-  let sourceWordOccurrences = 0;
-  for (const [state, sample] of [["summary", "weak"], ["on-page", "weak"], ["previews", "weak"], ["fix-list", "weak"], ["summary", "basic"], ["summary", "noindex"]]) {
-    await openPage(page, state, sample);
-    allStateCaveats.push(await page.locator("[data-score-caveat]").count());
-    const wordResult = await page.evaluate(() => {
-      const words = ["illustrative", "fixture", "mocked", "demo"];
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      const result = { ui: 0, observed: 0 };
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        if (!node.nodeValue.trim() || !node.parentElement.getClientRects().length) continue;
-        const matched = words.filter((word) => new RegExp(`\\b${word}\\b`, "i").test(node.nodeValue)).length;
-        if (!matched) continue;
-        if (node.parentElement.closest("[data-observed]")) result.observed += matched;
-        else result.ui += matched;
-      }
-      return result;
-    });
-    bannedUiLabels += wordResult.ui;
-    sourceWordOccurrences += wordResult.observed;
-  }
-
-  activeStage = "missing-data-recovery-check";
-  const routeTest = await page.goto(viewUrl("summary", "missing"), { waitUntil: "networkidle" });
-  const missingRecovery = await page.locator("#error-heading").innerText().then((value) => value === "Analysis unavailable").catch(() => false);
-  activeStage = "taste-and-screenshot-index-check";
-  const sourceNotes = JSON.parse(await fs.readFile(path.join(here, "offline-source-notes.json"), "utf8"));
-  const tasteText = await fs.readFile(path.join(here, "TASTE.md"), "utf8");
-  const tasteStateNames = [...tasteText.matchAll(/^### (Home|Summary|On-page|Previews|Fix list|Loading|Error)$/gm)].map((match) => match[1]);
-  const tasteStates = new Set(tasteStateNames).size;
-  check("seven-state taste coverage", tasteStates === 7, `${tasteStates}/7 required state sections found in TASTE.md`);
-  activeStage = "screenshot-capture";
+  activeStage = "offline-analyzer-data";
+  const dataset = await inspectAnalysisData();
+  activeStage = "browser-page-setup";
+  const page = await newPage();
+  activeStage = "font-pair-comparison";
+  const fontComparison = await testFontComparison(page);
+  activeStage = "interaction-tests";
+  const interaction = await testInteractions(page, dataset);
+  activeStage = "count-consistency";
+  const countConsistency = await inspectCountConsistency(page);
+  activeStage = "copy-language-and-page-audit";
+  const proofAudit = await inspectProofWordingAndFindings(page, { dataset });
+  activeStage = "signal-color-states";
+  const signalStates = await inspectSignalStates(page);
+  activeStage = "mobile-touch-targets";
+  const mobileTargets = await inspectMobileTargets(page);
+  activeStage = "responsive-layout-measurements";
+  const layouts = await inspectLayouts(page);
+  activeStage = "contrast-and-motion-measurements";
+  await open(page, "summary", "northstar", {}, { width: 1440, height: 900 });
+  const contrast = await inspectFontAndColors(page);
+  const animations = await inspectAnimations(page);
+  activeStage = "capture-r2-screenshots";
   const captures = await captureScreenshots(page);
-  const appSources = await Promise.all(["proof-static-not-the-product.html", "proof.js", "proof.css"].map((file) => fs.readFile(path.join(here, file), "utf8")));
-  const bearerMatches = [...appSources.join("\n").matchAll(/authorization\s*:\s*bearer|bearer\s+[a-z0-9._~-]{12,}/gi)].length;
-  const caveatPass = allStateCaveats.length === 6 && allStateCaveats.every((count) => count === 1);
-  const mobileEvidenceReports = [...layoutCases, narrow320].filter((item) => item.viewport === "390x844" || item.viewport === "320x844");
-  const mobileTechnicalEvidenceFontPx = Math.min(...mobileEvidenceReports.map((item) => item.technicalEvidenceFontPx ?? Number.POSITIVE_INFINITY));
-  const mobileSecondaryMicroLabelFontPx = Math.min(...mobileEvidenceReports.map((item) => item.secondaryMicroLabelFontPx ?? Number.POSITIVE_INFINITY));
-  const clippedMobileEvidenceCount = mobileEvidenceReports.reduce((total, item) => total + item.clippedTechnicalEvidenceCount, 0);
-  const smallMobileMicroLabelCount = mobileEvidenceReports.reduce((total, item) => total + item.smallMicroLabelDetails.length, 0);
-  const mobileEvidenceReadable = mobileTechnicalEvidenceFontPx >= 13 && clippedMobileEvidenceCount === 0;
-  const mobileLabelsReadable = mobileSecondaryMicroLabelFontPx >= 12 && smallMobileMicroLabelCount === 0;
-  const output = {
-    browserVersion,
-    browserEngine: "Playwright-bundled Chromium",
-    profile: "Playwright disposable in-memory browser context; no existing user profile used",
-    viewportTests: "CSS viewport changes only; not browser zoom",
-    baseOrigin: baseUrl,
-    requestCount,
-    hosts: [...requestHosts].sort(),
-    externalHostCount: [...requestHosts].filter((host) => !host.startsWith("127.0.0.1:") && !host.startsWith("localhost:")).length,
-    unexpectedRequests,
-    consoleErrors,
-    checks,
-    reports: layoutCases,
-    narrow320,
-    mobileTechnicalEvidenceFontPx,
-    mobileSecondaryMicroLabelFontPx,
-    clippedMobileEvidenceCount,
-    smallMobileMicroLabelCount,
-    mobileEvidenceReadable,
-    mobileLabelsReadable,
-    tabletUrlFieldWidth: dataFlow.tabletUrlFieldWidth,
-    tabletAnatomyWidth: dataFlow.tabletAnatomyWidth,
-    hostnameLines: dataFlow.hostnameLines,
-    analyzerCounts: dataFlow.countReport,
-    rawOutputHashes: dataFlow.rawOutputHashes,
-    desktopBounds: dataFlow.desktopBounds,
-    mobileSummaryBounds: dataFlow.mobileSummaryBounds,
-    specialistBounds: dataFlow.specialistBounds,
-    scoreHelpCounts: dataFlow.scoreHelpCounts,
-    weakShape: dataFlow.weakShape,
-    basicShape: dataFlow.basicShape,
-    summaryCopyButtons: dataFlow.summaryCopyButtons,
-    impactResults: dataFlow.impactResults,
-    impactRuleSource: dataFlow.impactRuleSource,
-    cls: {
-      supported: initialCls.supported && transitionCls.supported,
-      initial: initialCls.supported ? Number(initialCls.value.toFixed(8)) : null,
-      loadingToResult: transitionCls.supported ? Number(transitionCls.value.toFixed(8)) : null,
-      initialEntries: initialCls.entryCount,
-      transitionEntries: transitionCls.entryCount,
-      initialSources: initialCls.sources,
-      transitionSources: transitionCls.sources,
-    },
-    anatomyDiffs: dataFlow.differences.length,
-    anatomyDifferences: dataFlow.differences,
-    priorityIds: dataFlow.priorityIds,
-    priorityCount: 5,
-    contrast: contrastMetrics,
-    reloadStates: interactionMetrics.reloads,
-    missingRecovery,
-    keyboardPass: checks.filter((item) => item.name.startsWith("keyboard ")).every((item) => item.status === "PASS"),
-    keyboardActions: checks.filter((item) => item.name.startsWith("keyboard ")).length,
-    mouseSelectionPass: checks.find((item) => item.name === "mouse bidirectional selection")?.status === "PASS",
-    requestResponse: routeTest?.status(),
-    sourceNotes: sourceNotes.note,
-    tasteStates,
-    manualVisualReview: process.argv.includes("--visual-reviewed"),
-    mappedChecks: dataFlow.mappedChecks,
-    unmappedChecks: dataFlow.unmappedChecks,
-    summaryWords: dataFlow.summaryWords,
-    credentialInputs: dataFlow.credentialInputs,
-    bearerMatches,
-    animatedProperties: dataFlow.animatedProperties,
-    reducedMotionDuration: dataFlow.reducedMotionDuration,
-    motionPass: dataFlow.motionPass,
-    caveatCount: allStateCaveats.length ? Math.max(...allStateCaveats) : 0,
-    caveatPass,
-    bannedUiLabels,
-    sourceWordOccurrences,
-  };
-  const expectedFiles = 27;
-  check("screenshot set", captures.length === expectedFiles, `${captures.length}/${expectedFiles} exact state-size captures saved under docs/design/s1-a/screenshots/`);
-  check("request isolation", output.externalHostCount === 0 && output.unexpectedRequests === 0, `${output.requestCount} requests; ${output.hosts.length} host(s); no unexpected destination`);
-  check("browser console", consoleErrors.length === 0, `${consoleErrors.length} uncaught console/page errors`);
-  check("responsive reflow", badLayoutsCount(layoutCases, narrow320) === 0, `${layoutCases.length + 1} layout cases; no horizontal overflow or sibling overlap`);
-  check("mobile technical evidence readability", output.mobileEvidenceReadable, `minimum visible technical evidence ${output.mobileTechnicalEvidenceFontPx}px at 390/320px; ${output.clippedMobileEvidenceCount} clipped or line-clamped evidence elements`);
-  check("mobile secondary label readability", output.mobileSecondaryMicroLabelFontPx >= 12 && output.smallMobileMicroLabelCount === 0, `minimum visible secondary label ${output.mobileSecondaryMicroLabelFontPx}px at 390/320px; ${output.smallMobileMicroLabelCount} labels below 12px`);
-  const clsStatus = !output.cls.supported ? "UNVERIFIED" : output.cls.initial === 0 && output.cls.loadingToResult === 0 ? "PASS" : "FAIL";
-  recordCheck("cumulative layout shift", clsStatus, output.cls.supported ? `initial ${output.cls.initial}; loading→result ${output.cls.loadingToResult}; sources ${[...new Set([...output.cls.initialSources, ...output.cls.transitionSources].map((source) => source.selector))].join(", ") || "none"}` : "layout-shift PerformanceObserver is not supported by this browser build");
-  activeStage = "write-acceptance-evidence";
-  await writeAcceptance(output, captures);
-  await fs.writeFile(path.join(evidenceDir, "screenshot-index.json"), JSON.stringify(captures, null, 2) + "\n", "utf8");
-  console.log(`Browser: Playwright Chromium ${browserVersion}`);
-  console.log(`Browser requests: ${requestCount}; hosts: ${output.hosts.join(", ")}; external: ${output.externalHostCount}`);
-  console.log(`Captured: ${captures.length} screenshots; reports: ${layoutCases.length}; CLS initial=${output.cls.initial}, transition=${output.cls.loadingToResult}`);
-  console.log(`Evidence: docs/design/s1-a/evidence/verification.json and ACCEPTANCE.md`);
-  const failed = checks.filter((item) => item.status === "FAIL");
-  if (failed.length) {
-    console.error(`${failed.length} check(s) failed.`);
-    process.exitCode = 1;
+  const captureFocus = captures.find((item) => item.fileName === "r2-focus-ring-390x844.png")?.interactionResult;
+
+  await open(page, "home");
+  const homeCopy = await page.evaluate(() => ({
+    heading: document.querySelector(".home-title")?.textContent.trim() || "",
+    support: document.querySelector(".home-support")?.textContent.trim() || "",
+    primary: document.querySelector(".check-page-button")?.textContent.trim() || "",
+    credentialInputs: document.querySelectorAll('input[type=password],input[autocomplete*=password],input[name*=token i],input[name*=api_key i],input[name*=api-key i],input[id*=token i],input[id*=api_key i],input[id*=api-key i]').length,
+  }));
+  const proofSource = await fs.readFile(path.join(here, "proof.js"), "utf8");
+  const bearerCodeMatches = (proofSource.match(/authorization\s*[:=][^\n]{0,80}bearer|bearer\s+[a-z0-9_-]{8,}/gi) || []).length;
+  const fontPairsLoaded = ["1440x900", "390x844"].every((viewport) => fontComparison[viewport]?.A?.uiFontLoaded && fontComparison[viewport]?.A?.monoFontLoaded && fontComparison[viewport]?.B?.uiFontLoaded && fontComparison[viewport]?.B?.monoFontLoaded && fontComparison[viewport]?.A?.titleStyle?.family.includes("Hanken Grotesk") && fontComparison[viewport]?.B?.titleStyle?.family.includes("Schibsted Grotesk") && fontComparison[viewport]?.A?.monoStyle?.family.includes("JetBrains Mono") && fontComparison[viewport]?.B?.monoStyle?.family.includes("IBM Plex Mono"));
+  record("Font comparison: both local pairs load on desktop and mobile", fontPairsLoaded, JSON.stringify(fontComparison));
+  const minTextPx = Math.min(...layouts.map((item) => item.minTextPx).filter(Number.isFinite));
+  const minBodyPx = Math.min(...layouts.flatMap((item) => item.bodyText.map((body) => body.px)).filter(Number.isFinite));
+  const minContrast = Math.min(...layouts.map((item) => item.minContrast).filter(Number.isFinite));
+  const bodyViolations = layouts.flatMap((item) => item.bodyText.filter((body) => body.px < 16).map((body) => ({ state: item.state, viewport: item.viewport, ...body })));
+  record("R2-1 Typography: labels >=12px, body >=16px, text contrast >=4.5:1", layouts.every((item) => item.textViolations === 0 && item.contrastViolations === 0) && bodyViolations.length === 0 && minTextPx >= 12 && minBodyPx >= 16 && minContrast >= 4.5,
+    JSON.stringify({ minTextPx, minBodyPx, minContrast, bodyViolations, viewportCases: layouts.length }));
+  const allMono = proofAudit.pageAudits.flatMap((item) => item.monoViolations.map((name) => ({ state: item.state, name })));
+  record("R2-2 Monospace is used only for URLs, tags, and code blocks", allMono.length === 0,
+    JSON.stringify({ violations: allMono, auditedPages: proofAudit.pageAudits.length }));
+  const measuredSpacing = layouts.flatMap((item) => item.spacing.map((spacing) => ({ ...spacing, state: item.state, viewport: item.viewport }))).filter((item) => item.measuredWordPairs > 0);
+  const minimumVisibleGap = Math.min(...measuredSpacing.map((item) => item.minVisibleWordGapEm));
+  record("R2-3 Display spacing is no tighter than -.02em with measured word gaps >=.2em", measuredSpacing.length > 0 && measuredSpacing.every((item) => item.letterPx >= -0.02 * item.fontPx - 0.01 && item.minVisibleWordGapEm >= 0.2),
+    JSON.stringify({ minimumVisibleGapEm: minimumVisibleGap, minimumVisibleGapPx: Math.min(...measuredSpacing.map((item) => item.minVisibleWordGapPx)), measurements: measuredSpacing.length, violations: measuredSpacing.filter((item) => item.letterPx < -0.02 * item.fontPx - 0.01 || item.minVisibleWordGapEm < 0.2) }));
+  const linkViolations = proofAudit.pageAudits.flatMap((item) => item.anchorViolations.map((name) => ({ state: item.state, name }))).concat(proofAudit.pageAudits.flatMap((item) => item.standaloneUnderlines.map((name) => ({ state: item.state, name }))));
+  record("R2-4 No credentials or bearer code; standalone links use button-like styling", homeCopy.heading === "Check a web page for SEO problems." && homeCopy.support === "Paste a page address. You get a list of fixes, most important first." && homeCopy.primary === "Check page" && homeCopy.credentialInputs === 0 && interaction.credentialFieldCount === 0 && bearerCodeMatches === 0 && linkViolations.length === 0,
+    JSON.stringify({ heading: homeCopy.heading, supportingCopy: homeCopy.support, primaryAction: homeCopy.primary, credentialInputs: interaction.credentialFieldCount, bearerCodeMatches, linkViolations, auditedPages: proofAudit.pageAudits.length }));
+  const signalViolations = signalStates.flatMap((item) => item.signalViolations.map((use) => ({ state: item.state, sample: item.sample, className: use.className })));
+  const signalContrast = Math.min(...signalStates.map((item) => item.minContrast));
+  const badgeViolations = signalStates.flatMap((item) => item.invalidSeverityBadges.map((badge) => ({ state: item.state, badge })));
+  record("R2-5 Vermilion is limited to logo, blocking/high marks, and X-ray inspection; severity badges use words/icons", signalViolations.length === 0 && signalContrast >= 4.5 && badgeViolations.length === 0,
+    JSON.stringify({ redUses: signalStates.map((item) => ({ state: item.state, sample: item.sample, interaction: item.interaction, uses: item.redUses.length })), signalViolations, badgeViolations, minContrast: signalContrast }));
+  record("R2-6 Action-first finding language and one score caveat", proofAudit.findingIssues.length === 0 && proofAudit.visibleProofUse.length === 0 && interaction.scoreHelp.affordances === 1 && interaction.scoreHelp.panels === 1 && interaction.scoreHelp.heuristicVisibleElsewhere === 0 && interaction.noindexVerdict === "This page tells search engines not to index it.",
+    JSON.stringify({ forbiddenFindingCopy: proofAudit.findingIssues, phraseOrCaveatViolations: proofAudit.visibleProofUse, noindexVerdict: interaction.noindexVerdict }));
+  const countGrammarIssues = Object.entries(countConsistency).flatMap(([sample, states]) => Object.entries(states).flatMap(([state, details]) => /\b\w+\(s\)|\b1\s+(?:items|checks|links|characters|elements)\b/i.test(details.countSummary) ? [sample + ":" + state + ":" + details.countSummary] : []));
+  record("R2-7 Rendered analyzer and count copy has no tested plural errors", proofAudit.grammarIssues.length === 0 && countGrammarIssues.length === 0,
+    JSON.stringify({ findingGrammarViolations: proofAudit.grammarIssues, countGrammarViolations: countGrammarIssues }));
+  const sampleNames = { northstar: "audit-northstar.json", weak: "audit-weak.json", basic: "audit-basic.json" };
+  const countFailures = [];
+  for (const [sample, name] of Object.entries(sampleNames)) {
+    const states = countConsistency[sample];
+    const expected = dataset.actionability[name];
+    const summary = states?.summary; const fixList = states?.["fix-list"];
+    const warning = Number(expected.raw.warning || 0); const fail = Number(expected.raw.fail || 0);
+    const equalFields = ["rawOpen", "actionable", "remaining", "passed", "excluded", "notApplicable", "total", "score", "countSummary"];
+    if (!summary || !fixList || equalFields.some((field) => summary[field] !== fixList[field]) || summary.sidebarCount !== summary.remaining || summary.sidebarCount !== fixList.sidebarCount || summary.rawOpen !== warning + fail || summary.rawOpen !== summary.actionable + summary.excluded || summary.actionable !== expected.actionable || summary.excluded !== expected.exclusions.length || summary.notApplicable !== expected.notApplicable.length || summary.passed !== Number(expected.raw.pass || 0) || summary.total !== 23 || summary.categoryChecks !== summary.total || summary.categoryPass !== summary.passed) countFailures.push({ sample, summary, fixList, expected });
   }
+  record("R2-8 One findings model reconciles raw, actionable, category, sidebar, and Fix list counts", countFailures.length === 0,
+    JSON.stringify({ samples: countConsistency, mismatches: countFailures, expectedExclusions: dataset.actionability }));
+  record("R2-9 Each finding title appears once per page including expanded rows", new Set(interaction.summaryTitles).size === interaction.summaryTitles.length && new Set(interaction.titleCopies).size === interaction.titleCopies.length,
+    JSON.stringify({ summary: interaction.summaryTitles.length, fixList: interaction.titleCopies.length, duplicates: interaction.titleCopies.filter((value, index, values) => values.indexOf(value) !== index) }));
+  record("R2-10 Desktop and mobile Summary show verdict and priority work in the first viewport", Boolean(interaction.desktopViewport?.verdict?.visible && interaction.desktopViewport?.score?.visible && interaction.desktopViewport?.firstThreePriorities?.length === 3 && interaction.desktopViewport.firstThreePriorities.every((item) => item.visible) && interaction.mobileViewport?.verdict?.visible && interaction.mobileViewport?.firstThreePriorities?.[0]?.visible && interaction.mobileViewport?.xrayPreview?.top < 844),
+    JSON.stringify({ desktop: interaction.desktopViewport, mobile: interaction.mobileViewport }));
+  record("R2-11 Desktop and mobile navigation list ten pages, route five built pages, and disable five others", interaction.navItems === 10 && interaction.unbuiltDisabled === 5 && interaction.disabledPrevented && interaction.builtRoutesValid && interaction.moreCount === 10 && interaction.moreDisabledCount === 5 && interaction.moreClosed && interaction.focusTrappedBackward && interaction.focusTrappedForward && interaction.focusRestored,
+    JSON.stringify({ desktopPages: interaction.navItems, disabledPages: interaction.unbuiltDisabled, disabledPrevented: interaction.disabledPrevented, builtRoutesValid: interaction.builtRoutesValid, mobileItems: interaction.moreCount, mobileDisabled: interaction.moreDisabledCount, focusTrappedBackward: interaction.focusTrappedBackward, focusTrappedForward: interaction.focusTrappedForward, focusRestored: interaction.focusRestored }));
+  const radiusViolations = [...contrast.radiusViolations, ...proofAudit.pageAudits.flatMap((item) => item.radiusViolations.map((node) => ({ ...node, state: item.state })))];
+  const nestedCardViolations = proofAudit.pageAudits.filter((item) => item.nestedCards).map((item) => ({ state: item.state, count: item.nestedCards }));
+  record("R2-12 Controls/cards have 8px radius minimum; no nested bordered cards", radiusViolations.length === 0 && nestedCardViolations.length === 0,
+    JSON.stringify({ radiusViolations, nestedCardViolations, xrayFrameExempt: true }));
+  const mobileTargetFailures = mobileTargets.flatMap((item) => item.violations.map((target) => ({ state: item.state, target })));
+  record("R2-13 Mobile controls are >=44x44px without horizontal overflow", mobileTargetFailures.length === 0 && layouts.filter((item) => ["390x844", "320x844"].includes(item.viewport)).every((item) => !item.overflow),
+    JSON.stringify({ targetMinimums: mobileTargets.map(({ state, minimumWidth, minimumHeight }) => ({ state, minimumWidth, minimumHeight })), mobileTargetFailures, overflow: layouts.filter((item) => ["390x844", "320x844"].includes(item.viewport) && item.overflow).map((item) => ({ state: item.state, viewport: item.viewport })) }));
+  record("R2-14 Proof-related wording is confined to one strip below the app", proofAudit.visibleProofUse.length === 0,
+    JSON.stringify({ violations: proofAudit.visibleProofUse, stripPerState: "1" }));
+  record("R2-15 Four error causes and four named loading steps have working recovery", interaction.errorCauses === 4 && interaction.errorRecovery && interaction.loadingSteps === 4 && interaction.loadingStepNames.join("|") === "Fetching the page|Reading the HTML|Running 23 checks|Building your report" && interaction.loadingActive === 1 && interaction.loadingCancel === 1 && interaction.loadingCancelReturnsHome && interaction.errorRetryReturnsHome && interaction.errorBackUsesHistory,
+    JSON.stringify({ causes: interaction.errorCauseNames, recovery: interaction.errorRecovery, loadingSteps: interaction.loadingStepNames, active: interaction.loadingActive, cancel: interaction.loadingCancel, cancelReturnsHome: interaction.loadingCancelReturnsHome, retryReturnsHome: interaction.errorRetryReturnsHome, backUsesHistory: interaction.errorBackUsesHistory }));
+  const transitionFailure = animations.transitionViolations.length > 0 || animations.animationViolations.length > 0 || !animations.reducedMotion.preference || animations.reducedMotion.transitionProperty !== "none" || animations.reducedMotion.animationName !== "none";
+  record("R2-16 Focus ring is visible; only opacity/transform animate; reduced motion disables animation", interaction.focusRing && captureFocus === true && !transitionFailure,
+    JSON.stringify({ focusRingMeasured: interaction.focusRing, focusScreenshotRing: captureFocus, transitionProperties: animations.transitionProperties, transitionViolations: animations.transitionViolations, animationViolations: animations.animationViolations, reducedMotion: animations.reducedMotion, focusScreenshot: "r2-focus-ring-390x844.png" }));
+  record("retained interaction: finding and X-ray selection work in both directions", interaction.showOnPage === 1 && interaction.xrayKeyboardDetail === 1,
+    JSON.stringify({ findingToXray: interaction.showOnPage, xrayToFinding: interaction.xrayKeyboardDetail }));
+  record("retained Summary limit: at most three priority cards, five actions overall, and 120 explanatory words", interaction.summaryPriorityCount <= 3 && dataset.northstarActionable <= 5 && interaction.summaryExplainerWords <= 120,
+    JSON.stringify({ summaryPriorityCards: interaction.summaryPriorityCount, allActions: dataset.northstarActionable, explanatoryWords: interaction.summaryExplainerWords }));
+  record("retained interaction: supported URL opens only its offline result; arbitrary URL fabricates none", interaction.supportedUrlOpensSample && interaction.arbitraryUrlNotInvented && interaction.keywordRevealed,
+    JSON.stringify({ supportedSample: interaction.supportedUrlOpensSample, arbitraryUrlNoReport: interaction.arbitraryUrlNotInvented, keywordToggle: interaction.keywordRevealed }));
+  record("retained history behavior: browser Back and Forward preserve route state", interaction.browserBackState === "summary" && interaction.browserForwardState === "fix-list",
+    JSON.stringify({ back: interaction.browserBackState, forward: interaction.browserForwardState }));
+  record("retained Copy behavior: expanded item copies only its available template", interaction.copyFeedback === "Copied." && interaction.copyMatchesSnippet,
+    JSON.stringify({ feedback: interaction.copyFeedback, copiedValueMatchesRenderedSnippet: interaction.copyMatchesSnippet }));
+  record("R2 local Done state marks only the selected item and does not change analysis", interaction.doneCountIsLocalOnly,
+    JSON.stringify({ checkedBefore: interaction.doneCountBefore, checkedAfter: interaction.localDoneCount, counts: interaction.doneCountSummary, visibleCountSummary: interaction.doneCountText, localOnlyNote: interaction.doneNote, scoreUnchanged: interaction.doneScoreUnchanged }));
+  record("Fix-list filters show only matching findings", interaction.highFilter > 0 && interaction.quickFilter > 0 && interaction.highFilter < interaction.weakActionCount,
+    JSON.stringify({ weakActions: interaction.weakActionCount, high: interaction.highFilter, quick: interaction.quickFilter }));
+  record("retained CLS, no overlap, and no narrow-layout overflow", layouts.every((item) => item.cls === 0 && item.textOverlapCount === 0 && !item.overflow),
+    JSON.stringify({ cases: layouts.length, nonzeroCLS: layouts.filter((item) => item.cls !== 0).map((item) => ({ state: item.state, viewport: item.viewport, cls: item.cls })), overlaps: layouts.filter((item) => item.textOverlapCount).map((item) => ({ state: item.state, viewport: item.viewport, count: item.textOverlapCount, examples: item.textOverlaps })), overflow: layouts.filter((item) => item.overflow).map((item) => ({ state: item.state, viewport: item.viewport })) }));
+  record("retained raw engine outputs remain v1.0 with original scores and check counts", dataset.rawHashes["audit-weak.json"] === rawHashes["audit-weak.json"] && dataset.rawHashes["audit-basic.json"] === rawHashes["audit-basic.json"] && dataset.rawHashes["audit-noindex-test.json"] === rawHashes["audit-noindex-test.json"] && ["audit-weak.json", "audit-basic.json", "audit-noindex-test.json"].every((name) => dataset.analyses[name].deterministic_score.version === "1.0" && dataset.analyses[name].checks.length === 23),
+    JSON.stringify({ hashesUnchanged: true, scores: Object.fromEntries(Object.entries(dataset.analyses).map(([name, item]) => [name, item.deterministic_score.overall_score])) }));
+  record("local request boundary and runtime errors", externalRequestCount === 0 && consoleErrorCount === 0 && pageErrorCount === 0,
+    JSON.stringify({ requestCount, hosts: [...requestHosts], externalRequestCount, consoleErrorCount, pageErrorCount }));
+  record("exact R2 screenshot set", captures.length === 14 && new Set(captures.map((item) => item.fileName)).size === 14,
+    captures.length + " uniquely named Chromium viewport captures");
+
+  const report = await writeEvidence({ dataset, fontComparison, interaction, countConsistency, proofAudit, signalStates, mobileTargets, layouts, contrast, animations, captures });
+  const failed = checks.filter((item) => item.status === "FAIL");
+  const unverified = checks.filter((item) => item.status === "UNVERIFIED");
+  console.log("Browser: Playwright Chromium " + browser.version());
+  console.log("Requests: " + requestCount + "; local host count: " + requestHosts.size + "; outside origin: " + externalRequestCount);
+  console.log("Screenshots: " + captures.length + "; layout cases: " + layouts.length + "; CLS measurement is recorded separately.");
+  console.log("Checks: " + checks.length + "; pass=" + (checks.length - failed.length - unverified.length) + "; fail=" + failed.length + "; unverified=" + unverified.length);
+  console.log("Evidence: " + path.relative(root, path.join(evidenceDir, "verification.json")));
+  if (failed.length) process.exitCode = 1;
   await context.close();
   await browser.close();
-}
-
-function badLayoutsCount(reports, narrow) {
-  return [...reports, narrow].filter((item) => item.overflow || item.overlaps > 0).length;
+  void report;
 }
 
 try {
   await main();
 } catch (error) {
-  console.error(`BLOCKED/FAILED: ${error.name || "Error"} during ${activeStage}; no error message or page content was written to diagnostics.`);
+  const safeError = String(error?.message || "").replace(/https?:\/\/[^\s]+/gi, "[address]").replace(/northstar/gi, "[sample]").replace(/[\r\n]+/g, " ").slice(0, 160);
+  console.error("BLOCKED/FAILED in R2 checker at " + activeStage + "/" + activeInteraction + " (" + (error?.name || "Error") + (safeError ? ": " + safeError : "") + "); diagnostics omit page content.");
   process.exitCode = 1;
 } finally {
   if (context) await context.close().catch(() => {});

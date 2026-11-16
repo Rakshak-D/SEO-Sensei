@@ -1039,3 +1039,45 @@ a { color: inherit; }
   .priority-action { font-size: 10px; }
   .impact-tag { max-width: none; white-space: nowrap; }
 }
+
+@media (max-width: 650px) {
+  .masthead-meta, .primary-nav a { font-size: 12px; }
+  .report-kicker, .score-caption, .score-help, .score-help summary,
+  .report-grid .section-heading .small-label, .score-context .small-label { font-size: 12px; }
+  .report-url, .specialist-url, .verdict-sub { font-size: 13px; }
+  .scan-ruler, .xray-zone-label, .part-tag, .scan-mark,
+  .metadata-inspection .status-word, .metadata-note,
+  .anatomy-footnote, .priority-number, .entry-count,
+  .preview-meta, .preview-disclosure, .fix-list-intro,
+  .specialist-heading .eyebrow, .onpage-primary-values .small-label { font-size: 12px; }
+  .status-label, .impact-tag { font-size: 12px; }
+  .report-grid .xray-head-signals .part-tag,
+  .report-grid .scan-part.xray-block .part-tag,
+  .report-grid .metadata-inspection .part-tag,
+  .report-grid .metadata-observation .part-tag,
+  .report-grid .metadata-inspection .status-word { font-size: 12px; }
+  .xray-browser-bar span, .xray-unassessed-label { font-size: 12px; }
+  .part-tag, .xray-unassessed-label { overflow-wrap: anywhere; }
+  .scan-part .part-value, .metadata-value, .observed-value,
+  .finding-evidence, .priority-action, .preview-search .preview-url,
+  .snippet-wrap pre, .preview-image-missing { font-size: 13px; }
+  .report-grid .xray-head-signals .part-value,
+  .report-grid .scan-part.xray-block .part-value,
+  .report-grid .scan-part.xray-h1 .part-value.is-missing,
+  .report-grid .metadata-inspection .part-value,
+  .metadata-inspection .part-value { font-size: 13px; }
+  .fix-item > .finding-evidence, .subcheck .finding-evidence { font-size: 13px; }
+  .scan-part.xray-h1 .part-value.is-missing { font: 13px/1.4 var(--mono); }
+  .priority-top > .impact-tag { font-size: 12px; }
+  .finding-evidence, .priority-action, .fix-item > .finding-evidence {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .priority-copy-button, .priority-review-button, .priority-copy-feedback { font-size: 12px !important; }
+  .onpage-primary-values .observed-value { font-size: 13px; }
+  .preview-search .preview-description, .fix-item p { font-size: 13px; }
+  .fix-item .snippet-wrap pre { font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+}

@@ -44,9 +44,9 @@ The weak and basic results differ structurally, not just by labels: weak has a d
 
 ## Responsive decisions and measurements
 
-At 1440×900, the verdict occupies y=268–306; the specimen begins at y=420; the first three priority rows end at y=515, 676 and 837. At 390×844, the verdict occupies y=239–265, the anatomy entry y=295–360, and the first two priority rows end at y=506 and 632. On-page primary values, the first preview and first fix item all fit within their 390×844 first viewport. The detailed anatomy is available in a labelled, keyboard-operable disclosure on tablet and mobile; the disclosure opens when a check is inspected.
+At 1440×900, the verdict occupies y=268–306; the specimen begins at y=420; the first three priority rows end at y=515, 676 and 837. At 390×844 after the final readability pass, the verdict occupies y=254–279, the anatomy entry y=312–377, and the first two priority rows span y=397–550 and y=550–685. On-page primary values, the first preview and first fix item all fit within their 390×844 first viewport. The detailed anatomy is available in a labelled, keyboard-operable disclosure on tablet and mobile; the disclosure opens when a check is inspected.
 
-Measurements run at 390, 768, 1024 and 1440 CSS pixels show no horizontal overflow or detected sibling overlap; the extra 320px Summary check also has no overflow. Measured CLS is 0 on initial Summary load and on the controlled loading-to-result transition. Text contrast measured 6.07:1, status 3.81:1 and focus 3.81:1 in the reported sample. The evidence includes some compact 10–11px monospace labels on mobile; those remain secondary to 14–16px page and finding text. CSS viewport emulation is not browser zoom or text enlargement.
+Measurements run at 390, 768, 1024 and 1440 CSS pixels show no horizontal overflow or detected sibling overlap; the extra 320px Summary check also has no overflow. Visible primary technical evidence measures at least 13px at both 390px and 320px, with no clipped or line-clamped evidence. Measured secondary labels are at least 12px at those widths. Measured CLS is 0 on initial Summary load and on the controlled loading-to-result transition. Text contrast measured 6.07:1, status 3.81:1 and focus 3.81:1 in the reported sample. CSS viewport emulation is not browser zoom or text enlargement.
 
 ## Priority and snippet honesty
 
@@ -58,10 +58,14 @@ Snippets preserve provenance. An observed H1 can seed a clearly labelled editabl
 
 - The X-ray is intentionally a schematic grouping of API fields; the engine does not return DOM positions or header/footer landmarks. The footer is never marked as passed or failed.
 - The desktop Summary specimen is still taller than the first viewport. Its top establishes the page shape, while all first three priority actions remain visible; the rest is available by scrolling.
-- The mobile Summary intentionally limits evidence/action previews to compact lines so two priority actions and the anatomy entry fit together. Full observations and fix detail remain available from inspection.
+- At 390px, longer evidence and actions now wrap at readable sizes rather than being clamped. This makes the first two Summary priorities taller, while the verdict, X-ray entry and both actions remain visible in the initial viewport. Later findings remain available by scrolling.
 - The input pages are short, so some regions are sparse. The proof keeps those absences instead of adding invented content.
-- All 27 final Chromium captures were opened and inspected at their native dimensions. The banned cream-and-serif, blue/gradient, three-card and emoji patterns are absent. The weakest visual spots remain the desktop Summary's specimen extending below the capture and compact 10–11px monospace labels; mobile Summary also shortens some longer action copy to keep two priorities and the anatomy entry together. No control is clipped, and specialist-page mobile captures show each page's primary job before the anatomy disclosure.
+- All 27 final Chromium captures were opened and inspected at their native dimensions. The banned cream-and-serif, blue/gradient, three-card and emoji patterns are absent. The weakest visual spot remains the desktop Summary specimen extending below the capture; its first three actions are visible. Mobile Summary no longer shortens evidence or actions, and specialist-page mobile captures show each page's primary job before the anatomy disclosure.
 - Social previews are sparse when metadata is absent. Empty imagery and missing values remain explicit.
 - The score and check statuses are byte-for-byte unchanged engine outputs at version 1.0. Enrichment affects presentation priority only.
 - Automated browser checks use Playwright-bundled Chromium and CSS viewport changes. No actual 200% browser zoom, text-enlargement/reflow or manual screen-reader review is claimed.
 - This remains an offline static design proof. It does not validate production API behavior, anonymous quotas, account-free access, crawl safety, or deployment.
+
+## Final readability correction
+
+The last mobile typography pass changed only compact mobile sizes and wrapping; it did not change palette, fonts, hierarchy or page composition. Primary observed evidence, recommendations, URLs and code snippets are at least 13px at 390px and 320px. The measured secondary labels are at least 12px. Summary observations and actions wrap naturally with no line clamp; the measured browser check found zero clipped evidence elements, zero horizontal overflow and zero detected overlap. The regenerated 27 screenshots were re-opened at native dimensions. Desktop typography and the accepted desktop layout remain unchanged.

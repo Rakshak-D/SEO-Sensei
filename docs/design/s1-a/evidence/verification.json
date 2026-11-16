@@ -3,10 +3,10 @@
   "browserEngine": "Playwright-bundled Chromium",
   "profile": "Playwright disposable in-memory browser context; no existing user profile used",
   "viewportTests": "CSS viewport changes only; not browser zoom",
-  "baseOrigin": "http://127.0.0.1:50725",
+  "baseOrigin": "http://127.0.0.1:58683",
   "requestCount": 1068,
   "hosts": [
-    "127.0.0.1:50725"
+    "127.0.0.1:58683"
   ],
   "externalHostCount": 0,
   "unexpectedRequests": 0,
@@ -90,12 +90,12 @@
     {
       "name": "R1-2 mobile summary viewport",
       "status": "PASS",
-      "detail": "{\"verdict\":{\"top\":239,\"bottom\":265,\"width\":352,\"height\":26,\"visible\":true},\"priorities\":[{\"top\":380,\"bottom\":506,\"width\":352,\"height\":126,\"visible\":true},{\"top\":506,\"bottom\":632,\"width\":352,\"height\":126,\"visible\":true}],\"anatomyEntry\":{\"top\":295,\"bottom\":360,\"width\":352,\"height\":65,\"visible\":true}}"
+      "detail": "{\"verdict\":{\"top\":254,\"bottom\":279,\"width\":352,\"height\":26,\"visible\":true},\"priorities\":[{\"top\":397,\"bottom\":550,\"width\":352,\"height\":153,\"visible\":true},{\"top\":550,\"bottom\":685,\"width\":352,\"height\":135,\"visible\":true}],\"anatomyEntry\":{\"top\":312,\"bottom\":377,\"width\":352,\"height\":65,\"visible\":true}}"
     },
     {
       "name": "R1-3/4/5 specialist-first mobile pages",
       "status": "PASS",
-      "detail": "{\"on-page\":{\"heading\":\"On-page\",\"top\":179,\"bottom\":369,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"On-page\"},\"previews\":{\"heading\":\"Previews\",\"top\":179,\"bottom\":318,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"Previews\"},\"fix-list\":{\"heading\":\"Fix list\",\"top\":216,\"bottom\":524,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":true,\"expectedHeading\":\"Fix list\"}}"
+      "detail": "{\"on-page\":{\"heading\":\"On-page\",\"top\":187,\"bottom\":409,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"On-page\"},\"previews\":{\"heading\":\"Previews\",\"top\":187,\"bottom\":340,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":false,\"expectedHeading\":\"Previews\"},\"fix-list\":{\"heading\":\"Fix list\",\"top\":227,\"bottom\":549,\"visible\":true,\"structureLabel\":\"Inspect page structure\",\"structureOpen\":false,\"directAction\":true,\"expectedHeading\":\"Fix list\"}}"
     },
     {
       "name": "R1-6 Summary copy actions are direct",
@@ -238,6 +238,16 @@
       "detail": "37 layout cases; no horizontal overflow or sibling overlap"
     },
     {
+      "name": "mobile technical evidence readability",
+      "status": "PASS",
+      "detail": "minimum visible technical evidence 13px at 390/320px; 0 clipped or line-clamped evidence elements"
+    },
+    {
+      "name": "mobile secondary label readability",
+      "status": "PASS",
+      "detail": "minimum visible secondary label 12px at 390/320px; 0 labels below 12px"
+    },
+    {
       "name": "cumulative layout shift",
       "status": "PASS",
       "detail": "initial 0; loading→result 0; sources none"
@@ -251,6 +261,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "home",
       "sample": "",
       "viewport": "1440x900"
@@ -262,6 +278,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "home",
       "sample": "",
       "viewport": "1024x768"
@@ -273,6 +295,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "home",
       "sample": "",
       "viewport": "768x1024"
@@ -284,6 +312,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "home",
       "sample": "",
       "viewport": "390x844"
@@ -295,6 +329,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "weak",
       "viewport": "1440x900"
@@ -306,6 +616,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "weak",
       "viewport": "1024x768"
@@ -317,6 +903,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "weak",
       "viewport": "768x1024"
@@ -327,7 +1189,13 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 10,
+      "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "weak",
       "viewport": "390x844"
@@ -339,6 +1207,174 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 14,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "on-page",
       "sample": "weak",
       "viewport": "1440x900"
@@ -350,6 +1386,174 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 14,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "on-page",
       "sample": "weak",
       "viewport": "1024x768"
@@ -361,6 +1565,46 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 14,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 10,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "on-page",
       "sample": "weak",
       "viewport": "768x1024"
@@ -371,7 +1615,13 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 12,
+      "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "on-page",
       "sample": "weak",
       "viewport": "390x844"
@@ -383,6 +1633,182 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "previews",
       "sample": "weak",
       "viewport": "1440x900"
@@ -394,6 +1820,182 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "previews",
       "sample": "weak",
       "viewport": "1024x768"
@@ -405,6 +2007,54 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-url data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 10,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        },
+        {
+          "className": "preview-meta",
+          "fontPx": 10
+        },
+        {
+          "className": "preview-image-missing",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "previews",
       "sample": "weak",
       "viewport": "768x1024"
@@ -416,6 +2066,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "previews",
       "sample": "weak",
       "viewport": "390x844"
@@ -427,6 +2083,306 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "fix-list",
       "sample": "weak",
       "viewport": "1440x900"
@@ -438,6 +2394,306 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "fix-list",
       "sample": "weak",
       "viewport": "1024x768"
@@ -449,6 +2705,178 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "specialist-url data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        }
+      ],
+      "secondaryMicroLabelFontPx": 10,
+      "smallMicroLabelDetails": [
+        {
+          "className": "eyebrow",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "fix-list",
       "sample": "weak",
       "viewport": "768x1024"
@@ -459,7 +2887,13 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 11,
+      "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "fix-list",
       "sample": "weak",
       "viewport": "390x844"
@@ -471,6 +2905,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "loading",
       "sample": "weak",
       "viewport": "1440x900"
@@ -482,6 +2922,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "loading",
       "sample": "weak",
       "viewport": "1024x768"
@@ -493,6 +2939,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "loading",
       "sample": "weak",
       "viewport": "768x1024"
@@ -504,6 +2956,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "loading",
       "sample": "weak",
       "viewport": "390x844"
@@ -515,6 +2973,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "error",
       "sample": "",
       "viewport": "1440x900"
@@ -526,6 +2990,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "error",
       "sample": "",
       "viewport": "1024x768"
@@ -537,6 +3007,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "error",
       "sample": "",
       "viewport": "768x1024"
@@ -548,6 +3024,12 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 16,
+      "technicalEvidenceFontPx": null,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": null,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "error",
       "sample": "",
       "viewport": "390x844"
@@ -559,6 +3041,286 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "basic",
       "viewport": "1440x900"
@@ -570,6 +3332,286 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "basic",
       "viewport": "1024x768"
@@ -581,6 +3623,286 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-review-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "basic",
       "viewport": "768x1024"
@@ -591,7 +3913,13 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 10,
+      "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "basic",
       "viewport": "390x844"
@@ -603,6 +3931,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "noindex",
       "viewport": "1440x900"
@@ -614,6 +4218,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "noindex",
       "viewport": "1024x768"
@@ -625,6 +4505,282 @@
       "overlaps": 0,
       "bodyFontPx": 16,
       "evidenceFontPx": 11,
+      "technicalEvidenceFontPx": 11,
+      "technicalEvidenceDetails": [
+        {
+          "className": "report-url data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 12
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "part-value is-missing data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "metadata-value data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        },
+        {
+          "className": "finding-evidence data-observed",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-action",
+          "fontPx": 12
+        }
+      ],
+      "secondaryMicroLabelFontPx": 8,
+      "smallMicroLabelDetails": [
+        {
+          "className": "score-caption",
+          "fontPx": 11
+        },
+        {
+          "className": "span",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "xray-unassessed-label",
+          "fontPx": 9
+        },
+        {
+          "className": "xray-zone-label",
+          "fontPx": 9
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "status-word",
+          "fontPx": 8
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "part-tag",
+          "fontPx": 8
+        },
+        {
+          "className": "metadata-note",
+          "fontPx": 10
+        },
+        {
+          "className": "anatomy-footnote",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        },
+        {
+          "className": "impact-tag",
+          "fontPx": 10
+        },
+        {
+          "className": "status-label",
+          "fontPx": 10
+        },
+        {
+          "className": "priority-copy-button",
+          "fontPx": 11
+        },
+        {
+          "className": "priority-copy-feedback",
+          "fontPx": 11
+        }
+      ],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "noindex",
       "viewport": "768x1024"
@@ -635,7 +4791,13 @@
       "overflow": false,
       "overlaps": 0,
       "bodyFontPx": 16,
-      "evidenceFontPx": 10,
+      "evidenceFontPx": 13,
+      "technicalEvidenceFontPx": 13,
+      "technicalEvidenceDetails": [],
+      "secondaryMicroLabelFontPx": 12,
+      "smallMicroLabelDetails": [],
+      "clippedTechnicalEvidenceCount": 0,
+      "clippedTechnicalEvidenceSelectors": [],
       "state": "summary",
       "sample": "noindex",
       "viewport": "390x844"
@@ -647,11 +4809,23 @@
     "overflow": false,
     "overlaps": 0,
     "bodyFontPx": 16,
-    "evidenceFontPx": 10,
+    "evidenceFontPx": 13,
+    "technicalEvidenceFontPx": 13,
+    "technicalEvidenceDetails": [],
+    "secondaryMicroLabelFontPx": 12,
+    "smallMicroLabelDetails": [],
+    "clippedTechnicalEvidenceCount": 0,
+    "clippedTechnicalEvidenceSelectors": [],
     "state": "summary",
     "sample": "weak",
     "viewport": "320x844"
   },
+  "mobileTechnicalEvidenceFontPx": 13,
+  "mobileSecondaryMicroLabelFontPx": 12,
+  "clippedMobileEvidenceCount": 0,
+  "smallMobileMicroLabelCount": 0,
+  "mobileEvidenceReadable": true,
+  "mobileLabelsReadable": true,
   "tabletUrlFieldWidth": 377,
   "tabletAnatomyWidth": 707,
   "hostnameLines": {
@@ -738,31 +4912,31 @@
   },
   "mobileSummaryBounds": {
     "verdict": {
-      "top": 239,
-      "bottom": 265,
+      "top": 254,
+      "bottom": 279,
       "width": 352,
       "height": 26,
       "visible": true
     },
     "priorities": [
       {
-        "top": 380,
-        "bottom": 506,
+        "top": 397,
+        "bottom": 550,
         "width": 352,
-        "height": 126,
+        "height": 153,
         "visible": true
       },
       {
-        "top": 506,
-        "bottom": 632,
+        "top": 550,
+        "bottom": 685,
         "width": 352,
-        "height": 126,
+        "height": 135,
         "visible": true
       }
     ],
     "anatomyEntry": {
-      "top": 295,
-      "bottom": 360,
+      "top": 312,
+      "bottom": 377,
       "width": 352,
       "height": 65,
       "visible": true
@@ -771,8 +4945,8 @@
   "specialistBounds": {
     "on-page": {
       "heading": "On-page",
-      "top": 179,
-      "bottom": 369,
+      "top": 187,
+      "bottom": 409,
       "visible": true,
       "structureLabel": "Inspect page structure",
       "structureOpen": false,
@@ -781,8 +4955,8 @@
     },
     "previews": {
       "heading": "Previews",
-      "top": 179,
-      "bottom": 318,
+      "top": 187,
+      "bottom": 340,
       "visible": true,
       "structureLabel": "Inspect page structure",
       "structureOpen": false,
@@ -791,8 +4965,8 @@
     },
     "fix-list": {
       "heading": "Fix list",
-      "top": 216,
-      "bottom": 524,
+      "top": 227,
+      "bottom": 549,
       "visible": true,
       "structureLabel": "Inspect page structure",
       "structureOpen": false,

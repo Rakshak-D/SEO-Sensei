@@ -147,6 +147,19 @@ async function inspectLayout(page, state, sample, viewport) {
     const rects = [...document.querySelectorAll(".masthead, .report-head, .report-grid, .subpage-layout, .loading-grid, .blocking-banner, .site-footer, .priority-button, .scan-part, .preview-item, .fix-item")]
       .filter((element) => element.getClientRects().length)
       .map((element) => ({ element, rect: element.getBoundingClientRect() }));
+    const evidenceNodes = [...document.querySelectorAll(".report-url, .specialist-url, .scan-part .part-value, .metadata-value, .finding-evidence, .priority-action, .observed-value, .preview-search .preview-url, .snippet-wrap pre")]
+      .filter((element) => element.getClientRects().length);
+    const evidenceFontSizes = evidenceNodes.map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    const microLabelNodes = [...document.querySelectorAll(".report-kicker, .score-caption, .score-help summary, .report-grid .section-heading .small-label, .part-tag, .scan-ruler, .xray-zone-label, .xray-browser-bar span, .xray-unassessed-label, .metadata-inspection .status-word, .status-label, .impact-tag, .priority-number, .priority-copy-button, .priority-review-button, .priority-copy-feedback, .metadata-note, .anatomy-footnote, .preview-meta, .preview-disclosure, .preview-image-missing, .entry-count, .specialist-heading .eyebrow, .onpage-primary-values .small-label, .fix-list-intro")]
+      .filter((element) => element.getClientRects().length);
+    const microLabelFontSizes = microLabelNodes.map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    const clippedEvidence = evidenceNodes.filter((element) => {
+      const style = getComputedStyle(element);
+      const lineClamped = style.webkitLineClamp && style.webkitLineClamp !== "none" && style.webkitLineClamp !== "0";
+      const clippedByOverflow = (style.overflow === "hidden" || style.overflowY === "hidden" || style.overflowX === "hidden")
+        && (element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1);
+      return Boolean(lineClamped || clippedByOverflow || style.textOverflow === "ellipsis");
+    });
     let overlaps = 0;
     for (let i = 0; i < rects.length; i += 1) {
       for (let j = i + 1; j < rects.length; j += 1) {
@@ -165,6 +178,12 @@ async function inspectLayout(page, state, sample, viewport) {
       overlaps,
       bodyFontPx: Number.parseFloat(getComputedStyle(body).fontSize),
       evidenceFontPx: Number.parseFloat(getComputedStyle(document.querySelector(".evidence-value, .finding-evidence, .observed-value") || body).fontSize),
+      technicalEvidenceFontPx: evidenceFontSizes.length ? Math.min(...evidenceFontSizes) : null,
+      technicalEvidenceDetails: evidenceNodes.map((element) => ({ className: element.className || element.localName, fontPx: Number.parseFloat(getComputedStyle(element).fontSize) })).filter((item) => item.fontPx < 13),
+      secondaryMicroLabelFontPx: microLabelFontSizes.length ? Math.min(...microLabelFontSizes) : null,
+      smallMicroLabelDetails: microLabelNodes.map((element) => ({ className: element.className || element.localName, fontPx: Number.parseFloat(getComputedStyle(element).fontSize) })).filter((item) => item.fontPx < 12),
+      clippedTechnicalEvidenceCount: clippedEvidence.length,
+      clippedTechnicalEvidenceSelectors: clippedEvidence.map((element) => element.className || element.localName),
       state: document.querySelector(".site-shell")?.dataset.state,
       sample: document.querySelector(".site-shell")?.dataset.sample,
     };
@@ -804,7 +823,7 @@ async function writeAcceptance(metrics, captures) {
     [4, "No credential fields or browser bearer code.", metrics.credentialInputs === 0 && metrics.bearerMatches === 0 ? "PASS" : "FAIL", `${metrics.credentialInputs} credential inputs; ${metrics.bearerMatches} bearer-code matches`, "Static proof scope only."],
     [5, "One score caveat per report; no banned authored UI labels.", metrics.caveatPass && metrics.bannedUiLabels === 0 ? "PASS" : "FAIL", `${metrics.caveatCount} caveat panel per report view; ${metrics.bannedUiLabels} app-authored banned labels; ${metrics.sourceWordOccurrences} observed page-data occurrences`, "Static proof UI; excludes observed source text from label scan."],
     [6, "Only opacity/transform animate; reduced motion removes motion.", metrics.motionPass ? "PASS" : "FAIL", `Animated properties: ${metrics.animatedProperties.join(", ")}; reduced duration ${metrics.reducedMotionDuration}`, "Static proof CSS; production styles unverified."],
-    [7, "No overflow or overlap at required widths; layout shift measured.", !cls.supported ? "UNVERIFIED" : badLayouts.length === 0 && cls.initial === 0 && cls.loadingToResult === 0 ? "PASS" : "FAIL", `${badLayouts.length}/${reports.length + 1} overflow/overlap cases; minimum text ${minBody}px, evidence ${minEvidence}px; 768px URL field ${metrics.tabletUrlFieldWidth}px and subpage anatomy ${metrics.tabletAnatomyWidth}px; hostname lines at 390/320px ${metrics.hostnameLines[390]}/${metrics.hostnameLines[320]}; CLS initial ${cls.initial}, loading→result ${cls.loadingToResult}; 320px ${metrics.narrow320.overflow ? "overflow" : "no overflow"}; sources ${[...new Set([...(cls.initialSources || []), ...(cls.transitionSources || [])].map((source) => source.selector))].join(", ") || "none"}`, "Static proof only; production runtime unverified."],
+    [7, "No overflow or overlap at required widths; mobile evidence and secondary labels remain readable, with layout shift measured.", !cls.supported ? "UNVERIFIED" : badLayouts.length === 0 && cls.initial === 0 && cls.loadingToResult === 0 && metrics.mobileEvidenceReadable && metrics.mobileLabelsReadable ? "PASS" : "FAIL", `${badLayouts.length}/${reports.length + 1} overflow/overlap cases; minimum text ${minBody}px, evidence ${minEvidence}px; 390/320px technical evidence minimum ${metrics.mobileTechnicalEvidenceFontPx}px with ${metrics.clippedMobileEvidenceCount} clipped elements; secondary-label minimum ${metrics.mobileSecondaryMicroLabelFontPx}px with ${metrics.smallMobileMicroLabelCount} labels below 12px; 768px URL field ${metrics.tabletUrlFieldWidth}px and subpage anatomy ${metrics.tabletAnatomyWidth}px; hostname lines at 390/320px ${metrics.hostnameLines[390]}/${metrics.hostnameLines[320]}; CLS initial ${cls.initial}, loading→result ${cls.loadingToResult}; 320px ${metrics.narrow320.overflow ? "overflow" : "no overflow"}; sources ${[...new Set([...(cls.initialSources || []), ...(cls.transitionSources || [])].map((source) => source.selector))].join(", ") || "none"}`, "Static proof only; production runtime unverified."],
     [8, "Text contrast ≥4.5:1; status/focus ≥3:1.", metrics.contrast.minTextRatio >= 4.5 && metrics.contrast.minStatusRatio >= 3 && metrics.contrast.focusRatio >= 3 ? "PASS" : "FAIL", `${metrics.contrast.minTextRatio.toFixed(2)}:1 text; ${metrics.contrast.minStatusRatio.toFixed(2)}:1 status; ${metrics.contrast.focusRatio.toFixed(2)}:1 focus`, "Measured rendered static proof colors."],
     [9, "No browser request leaves the app origin.", metrics.externalHostCount === 0 && metrics.unexpectedRequests === 0 ? "PASS" : "FAIL", `${metrics.requestCount} requests; hosts ${metrics.hosts.join(", ")}; ${metrics.unexpectedRequests} unexpected`, "Local test server only; future service calls unverified."],
     [10, "Seven state URLs survive reload; unavailable report data has recovery.", metrics.reloadStates === 7 && metrics.missingRecovery ? "PASS" : "FAIL", `${metrics.reloadStates}/7 routes; missing-data recovery ${metrics.missingRecovery ? "shown" : "failed"}`, "Static routes; persistence of future live reports unverified."],
@@ -844,7 +863,7 @@ async function writeAcceptance(metrics, captures) {
     "",
     "| View | Sample | Viewport | Document width | Overflow | Overlap pairs | Body / evidence text px |",
     "|---|---|---:|---:|---:|---:|---:|",
-    ...reports.map((item) => `| ${item.state} | ${item.sample || "—"} | ${item.viewport} | ${item.documentWidth}px | ${item.overflow ? "yes" : "no"} | ${item.overlaps} | ${item.bodyFontPx} / ${item.evidenceFontPx} |`),
+    ...reports.map((item) => `| ${item.state} | ${item.sample || "—"} | ${item.viewport} | ${item.documentWidth}px | ${item.overflow ? "yes" : "no"} | ${item.overlaps} | ${item.bodyFontPx} / ${item.evidenceFontPx}; technical ${item.technicalEvidenceFontPx ?? "—"}px; clipped ${item.clippedTechnicalEvidenceCount} |`),
     "",
     `CLS measured with Chromium ${metrics.browserVersion}: ${cls.supported ? `initial report load **${cls.initial}**, controlled loading-to-result transition **${cls.loadingToResult}**` : "UNVERIFIED (layout-shift entries unsupported by this browser)"}. Initial shift sources: ${[...(cls.initialSources || [])].map((source) => source.selector).join(", ") || "none"}; transition shift sources: ${[...(cls.transitionSources || [])].map((source) => source.selector).join(", ") || "none"}.`,
     "",
@@ -997,6 +1016,13 @@ async function main() {
   const appSources = await Promise.all(["proof-static-not-the-product.html", "proof.js", "proof.css"].map((file) => fs.readFile(path.join(here, file), "utf8")));
   const bearerMatches = [...appSources.join("\n").matchAll(/authorization\s*:\s*bearer|bearer\s+[a-z0-9._~-]{12,}/gi)].length;
   const caveatPass = allStateCaveats.length === 6 && allStateCaveats.every((count) => count === 1);
+  const mobileEvidenceReports = [...layoutCases, narrow320].filter((item) => item.viewport === "390x844" || item.viewport === "320x844");
+  const mobileTechnicalEvidenceFontPx = Math.min(...mobileEvidenceReports.map((item) => item.technicalEvidenceFontPx ?? Number.POSITIVE_INFINITY));
+  const mobileSecondaryMicroLabelFontPx = Math.min(...mobileEvidenceReports.map((item) => item.secondaryMicroLabelFontPx ?? Number.POSITIVE_INFINITY));
+  const clippedMobileEvidenceCount = mobileEvidenceReports.reduce((total, item) => total + item.clippedTechnicalEvidenceCount, 0);
+  const smallMobileMicroLabelCount = mobileEvidenceReports.reduce((total, item) => total + item.smallMicroLabelDetails.length, 0);
+  const mobileEvidenceReadable = mobileTechnicalEvidenceFontPx >= 13 && clippedMobileEvidenceCount === 0;
+  const mobileLabelsReadable = mobileSecondaryMicroLabelFontPx >= 12 && smallMobileMicroLabelCount === 0;
   const output = {
     browserVersion,
     browserEngine: "Playwright-bundled Chromium",
@@ -1011,6 +1037,12 @@ async function main() {
     checks,
     reports: layoutCases,
     narrow320,
+    mobileTechnicalEvidenceFontPx,
+    mobileSecondaryMicroLabelFontPx,
+    clippedMobileEvidenceCount,
+    smallMobileMicroLabelCount,
+    mobileEvidenceReadable,
+    mobileLabelsReadable,
     tabletUrlFieldWidth: dataFlow.tabletUrlFieldWidth,
     tabletAnatomyWidth: dataFlow.tabletAnatomyWidth,
     hostnameLines: dataFlow.hostnameLines,
@@ -1066,6 +1098,8 @@ async function main() {
   check("request isolation", output.externalHostCount === 0 && output.unexpectedRequests === 0, `${output.requestCount} requests; ${output.hosts.length} host(s); no unexpected destination`);
   check("browser console", consoleErrors.length === 0, `${consoleErrors.length} uncaught console/page errors`);
   check("responsive reflow", badLayoutsCount(layoutCases, narrow320) === 0, `${layoutCases.length + 1} layout cases; no horizontal overflow or sibling overlap`);
+  check("mobile technical evidence readability", output.mobileEvidenceReadable, `minimum visible technical evidence ${output.mobileTechnicalEvidenceFontPx}px at 390/320px; ${output.clippedMobileEvidenceCount} clipped or line-clamped evidence elements`);
+  check("mobile secondary label readability", output.mobileSecondaryMicroLabelFontPx >= 12 && output.smallMobileMicroLabelCount === 0, `minimum visible secondary label ${output.mobileSecondaryMicroLabelFontPx}px at 390/320px; ${output.smallMobileMicroLabelCount} labels below 12px`);
   const clsStatus = !output.cls.supported ? "UNVERIFIED" : output.cls.initial === 0 && output.cls.loadingToResult === 0 ? "PASS" : "FAIL";
   recordCheck("cumulative layout shift", clsStatus, output.cls.supported ? `initial ${output.cls.initial}; loading→result ${output.cls.loadingToResult}; sources ${[...new Set([...output.cls.initialSources, ...output.cls.transitionSources].map((source) => source.selector))].join(", ") || "none"}` : "layout-shift PerformanceObserver is not supported by this browser build");
   activeStage = "write-acceptance-evidence";

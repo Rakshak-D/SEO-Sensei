@@ -97,6 +97,21 @@ and is limited to one API process.
 Never commit `.env`, put secrets in a Dockerfile, or pass credentials in image
 build arguments.
 
+Anonymous guest audits also remain disabled by default. Enabling them requires
+an exact HTTPS `GUEST_APP_ORIGIN`, production Turnstile credentials, and a
+separate review of the guest quota and capacity settings. Guest quota state is
+process-local; production configuration additionally requires
+`WEB_CONCURRENCY=1` and `GUEST_PROCESS_LOCAL_LIMITS_CONFIRMED=true`. The
+confirmation variable is an operator attestation only. Verify the actual
+runtime has exactly one API worker and one replica before setting it; the
+application cannot inspect the container orchestrator's replica count. If the
+single-process topology cannot be verified, leave `GUEST_AUDITS_ENABLED=false`
+or introduce a separately reviewed shared coordination system. This milestone
+does not authorize guest production enablement or deployment. The current
+Caddyfile does not forward `/api/guest/v1/*` on the application host, so a
+same-origin hosted guest flow also requires a separately reviewed ingress
+change before it can be reached through the existing website.
+
 ## Health and resources
 
 The API liveness check calls the lightweight public `/health` endpoint. Compose

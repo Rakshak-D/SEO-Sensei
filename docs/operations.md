@@ -83,3 +83,37 @@ existing `AI_RETRY_COUNT` setting.
 Never put secrets in logs or health responses. `API_ACCESS_TOKEN`,
 `DASHBOARD_API_ACCESS_TOKEN`, and `GEMINI_API_KEY` remain deployment-side
 configuration only.
+
+## Anonymous guest audit controls
+
+Guest audits are disabled unless `GUEST_AUDITS_ENABLED=true` is explicitly
+set. Enabling the flag also requires a canonical HTTPS `GUEST_APP_ORIGIN` and
+complete Turnstile sitekey, server secret, expected hostname, and action unless
+the restricted local/test bypass is active. The bypass cannot be enabled in
+production. Startup rejects missing or inconsistent settings rather than
+accepting unauthenticated guest fetches without bot verification.
+
+The default ceilings are 20/120 bootstrap attempts per IP per minute/hour,
+5/30 bot attempts per IP, 2/8 accepted audits per visitor, 5/20 per IP,
+8/60 per process, and 250 per rolling 24 hours. At most two guest analyses run
+at once (one per visitor). The process retains no more than 2,048 live guest
+sessions, 2,048 visitor limiter keys, and 1,024 IP keys. Audit request bodies
+are capped at 4 KiB, body receipt at five seconds, response models at 256 KiB,
+the overall guest operation at 15 seconds, and Siteverify at three seconds.
+Settings are bounded and can be adjusted only within their validation ranges;
+keep changes conservative.
+
+All guest coordination is in process memory. Do not use multiple Uvicorn
+workers or multiple API replicas while this limiter is active. Production
+startup requires `WEB_CONCURRENCY=1` and
+`GUEST_PROCESS_LOCAL_LIMITS_CONFIRMED=true`; the latter is an operator
+attestation, not a topology detector. Verify the actual runtime has one API
+worker and one replica before setting it. If that cannot be established, leave
+guest access disabled. A shared limiter requires separate architecture review.
+
+The guest path never calls Gemini or another paid API. Its daily count bounds
+deterministic request volume, not hosting spend. When provider verification is
+unavailable, reject the request before SafeFetcher; do not add retries or turn
+the failure into a successful audit. Use the response request ID to find the
+sanitized log record. Never record the URL, its query, the guest cookie, CSRF
+value, challenge token, fetched HTML, or response report in operational logs.

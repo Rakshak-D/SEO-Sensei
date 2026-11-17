@@ -29,6 +29,19 @@ class BrowserURLAnalysisRequest(BaseModel):
     )
 
 
+class GuestURLAnalysisRequest(BaseModel):
+    """Strict URL-only request for anonymous deterministic analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: Annotated[str, StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=2_048)] = Field(
+        json_schema_extra={"format": "uri"}
+    )
+    challenge_token: (
+        Annotated[str, StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=2_048)] | None
+    ) = None
+
+
 class ArticleGenerationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

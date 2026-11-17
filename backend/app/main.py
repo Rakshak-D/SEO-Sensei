@@ -20,6 +20,7 @@ from .api.errors import (
     INTERNAL_SERVER_ERROR,
     INVALID_URL,
     INVALID_REQUEST,
+    REQUEST_TIMEOUT,
     REQUEST_TOO_LARGE,
     UPSTREAM_AI_UNAVAILABLE,
     api_error_for_fetch_failure,
@@ -36,6 +37,12 @@ from .api.browser_auth import (
     router as browser_auth_router,
 )
 from .api.browser_analysis import MAX_ANALYSIS_BODY_BYTES, router as browser_analysis_router
+from .api.guest_analysis import (
+    GUEST_ANALYSIS_BODY_BYTES,
+    GuestNamespaceOriginMiddleware,
+    guest_runtime,
+    router as guest_analysis_router,
+)
 from .api.observability import request_context
 from .api.rate_limit import InMemoryRateLimiter, enforce_rate_limit, rate_limit_for
 from .config import Settings, get_settings
@@ -45,6 +52,7 @@ from .schemas.requests import ArticleGenerationRequest, SEOBoostRequest, URLAnal
 from .schemas.responses import ArticleGenerationResponse, HealthResponse, SEOBoostResponse, URLAnalysisResponse
 from .security.fetcher import SafeFetcher
 from .security.browser_analysis_limits import BrowserAnalysisLimits
+from .security.turnstile import TurnstileReplayGuard, TurnstileVerifier
 from .seo.models import SEOAnalysis
 
 
@@ -62,6 +70,18 @@ async def lifespan(application: FastAPI):
     if settings.browser_auth_enabled:
         application.state.browser_auth = BrowserAuthRuntime.from_settings(settings)
         application.state.browser_analysis_limits = BrowserAnalysisLimits()
+    if settings.guest_audits_enabled:
+        application.state.guest_sessions, application.state.guest_analysis_limits = guest_runtime(settings)
+        application.state.guest_turnstile_replay_guard = TurnstileReplayGuard()
+        application.state.guest_turnstile_verifier = None
+        if not settings.guest_turnstile_test_mode:
+            if settings.guest_turnstile_secret_key is None:
+                raise RuntimeError("Guest verification configuration is incomplete.")
+            application.state.guest_turnstile_verifier = TurnstileVerifier(
+                settings.guest_turnstile_secret_key.get_secret_value(),
+                expected_hostname=settings.guest_turnstile_expected_hostname or "",
+                expected_action=settings.guest_turnstile_action or "",
+            )
     application.state.safe_fetcher = SafeFetcher(settings, metrics=metrics)
     application.state.rate_limiter = InMemoryRateLimiter(settings)
     application.state.gemini_service = None
@@ -77,6 +97,9 @@ async def lifespan(application: FastAPI):
         gemini_service = getattr(application.state, "gemini_service", None)
         if gemini_service is not None:
             await gemini_service.aclose()
+        guest_verifier = getattr(application.state, "guest_turnstile_verifier", None)
+        if guest_verifier is not None:
+            await guest_verifier.aclose()
 
 
 app = FastAPI(
@@ -89,6 +112,8 @@ app.state.settings = settings
 if settings.browser_auth_enabled:
     app.include_router(browser_auth_router)
     app.include_router(browser_analysis_router)
+if settings.guest_audits_enabled:
+    app.include_router(guest_analysis_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,6 +130,13 @@ if settings.browser_auth_enabled:
         BrowserNamespaceOriginMiddleware,
         allowed_origin=settings.browser_app_origin or "",
     )
+if settings.guest_audits_enabled:
+    # The extension's legacy CORS permission must not make guest APIs
+    # cross-origin readable. Same-origin app requests remain allowed.
+    app.add_middleware(
+        GuestNamespaceOriginMiddleware,
+        allowed_origin=settings.guest_app_origin or "",
+    )
 
 
 class RequestContextMiddleware:
@@ -115,14 +147,19 @@ class RequestContextMiddleware:
         app: ASGIApp,
         max_body_size: int,
         path_body_limits: dict[str, int] | None = None,
+        path_receive_timeouts: dict[str, float] | None = None,
     ) -> None:
         self.app = app
         self.max_body_size = max_body_size
         self.path_body_limits = dict(path_body_limits or {})
+        self.path_receive_timeouts = dict(path_receive_timeouts or {})
 
     def _body_limit(self, path: str) -> int:
         route_limit = self.path_body_limits.get(path.rstrip("/"))
         return min(self.max_body_size, route_limit) if route_limit is not None else self.max_body_size
+
+    def _receive_timeout(self, path: str) -> float | None:
+        return self.path_receive_timeouts.get(path.rstrip("/"))
 
     @staticmethod
     def _declared_length(headers: dict[bytes, list[bytes]], limit: int) -> tuple[int | None, str | None]:
@@ -217,8 +254,23 @@ class RequestContextMiddleware:
             chunks: list[bytes] = []
             replay_buffer = bytearray()
             actual_length = 0
+            receive_timeout = self._receive_timeout(scope.get("path", ""))
+            receive_deadline = (
+                asyncio.get_running_loop().time() + receive_timeout if receive_timeout is not None else None
+            )
             while True:
-                message = await receive()
+                try:
+                    if receive_deadline is None:
+                        message = await receive()
+                    else:
+                        remaining = receive_deadline - asyncio.get_running_loop().time()
+                        if remaining <= 0:
+                            raise TimeoutError
+                        async with asyncio.timeout(remaining):
+                            message = await receive()
+                except TimeoutError:
+                    await reject(408, REQUEST_TIMEOUT, "The request body was not received in time.")
+                    return
                 message_type = message.get("type")
                 if message_type == "http.disconnect":
                     # A disconnected caller cannot receive a response, and no downstream
@@ -290,10 +342,18 @@ class RequestContextMiddleware:
             raise
 
 
+path_body_limits = {"/api/browser/v1/analyse-url": MAX_ANALYSIS_BODY_BYTES}
+path_receive_timeouts: dict[str, float] = {}
+if settings.guest_audits_enabled:
+    path_body_limits["/api/guest/v1/session"] = 0
+    path_receive_timeouts["/api/guest/v1/session"] = settings.guest_request_body_timeout_seconds
+    path_body_limits["/api/guest/v1/analyse-url"] = GUEST_ANALYSIS_BODY_BYTES
+    path_receive_timeouts["/api/guest/v1/analyse-url"] = settings.guest_request_body_timeout_seconds
 app.add_middleware(
     RequestContextMiddleware,
     max_body_size=settings.max_request_body_size_bytes,
-    path_body_limits={"/api/browser/v1/analyse-url": MAX_ANALYSIS_BODY_BYTES},
+    path_body_limits=path_body_limits,
+    path_receive_timeouts=path_receive_timeouts,
 )
 app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]

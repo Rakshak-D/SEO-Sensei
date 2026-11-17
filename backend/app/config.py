@@ -13,7 +13,7 @@ from functools import lru_cache
 from typing import Any
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 
 class ConfigurationError(RuntimeError):
@@ -38,6 +38,35 @@ class Settings(BaseModel):
     browser_session_idle_timeout_seconds: int = Field(default=1_800, ge=60, le=3_600)
     browser_session_absolute_lifetime_seconds: int = Field(default=28_800, ge=300, le=86_400)
     browser_session_capacity: int = Field(default=64, ge=1, le=64)
+    guest_audits_enabled: bool = False
+    guest_app_origin: str | None = Field(default=None, max_length=512)
+    guest_session_lifetime_seconds: int = Field(default=3_600, ge=300, le=86_400)
+    guest_session_capacity: int = Field(default=2_048, ge=1, le=10_000)
+    guest_bootstrap_per_minute: int = Field(default=20, ge=1, le=100)
+    guest_bootstrap_per_hour: int = Field(default=120, ge=1, le=1_000)
+    guest_bot_attempts_per_minute: int = Field(default=5, ge=1, le=30)
+    guest_bot_attempts_per_hour: int = Field(default=30, ge=1, le=300)
+    guest_audits_per_visitor_per_minute: int = Field(default=2, ge=1, le=10)
+    guest_audits_per_visitor_per_hour: int = Field(default=8, ge=1, le=50)
+    guest_audits_per_ip_per_minute: int = Field(default=5, ge=1, le=20)
+    guest_audits_per_ip_per_hour: int = Field(default=20, ge=1, le=100)
+    guest_audits_global_per_minute: int = Field(default=8, ge=1, le=50)
+    guest_audits_global_per_hour: int = Field(default=60, ge=1, le=500)
+    guest_global_audits_per_day: int = Field(default=250, ge=1, le=50_000)
+    guest_audit_max_concurrent: int = Field(default=2, ge=1, le=10)
+    guest_audit_concurrent_per_visitor: int = Field(default=1, ge=1, le=2)
+    guest_request_body_timeout_seconds: float = Field(default=5.0, gt=0, le=15)
+    guest_analysis_timeout_seconds: float = Field(default=15.0, gt=0, le=30)
+    guest_session_max_keys: int = Field(default=2_048, ge=1, le=10_000)
+    guest_ip_max_keys: int = Field(default=1_024, ge=1, le=20_000)
+    guest_response_size_bytes: int = Field(default=262_144, ge=1_024, le=1_000_000)
+    guest_turnstile_sitekey: str | None = Field(default=None, max_length=255)
+    guest_turnstile_secret_key: SecretStr | None = None
+    guest_turnstile_expected_hostname: str | None = Field(default=None, max_length=253)
+    guest_turnstile_action: str | None = Field(default=None, max_length=32)
+    guest_turnstile_test_mode: bool = False
+    guest_process_local_limits_confirmed: bool = False
+    guest_runtime_worker_count: int = Field(default=1, ge=1, le=32)
     cors_allow_credentials: bool = False
     trusted_proxy_networks: list[str] = Field(default_factory=list)
     app_version: str = Field(default="1.0.0", min_length=1, max_length=64)
@@ -174,6 +203,110 @@ class Settings(BaseModel):
             raise ValueError("Browser session absolute lifetime must be at least its idle timeout.")
         return self
 
+    @model_validator(mode="after")
+    def validate_guest_audits(self) -> "Settings":
+        if not self.guest_audits_enabled:
+            return self
+
+        if not self.guest_app_origin:
+            raise ValueError("Guest audits require an application origin.")
+
+        from urllib.parse import urlsplit
+
+        origin = self.guest_app_origin
+        try:
+            parsed = urlsplit(origin)
+            hostname = parsed.hostname
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError("Guest application origin is invalid.") from exc
+
+        if (
+            not hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+            or parsed.scheme != "https"
+            or "*" in origin
+            or hostname.endswith(".")
+        ):
+            raise ValueError("Guest application origin must be one exact HTTPS origin without a path.")
+        try:
+            hostname.encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise ValueError("Guest application origin must use an ASCII hostname or punycode.") from exc
+
+        host = hostname.lower()
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            address = None
+        if address is None and not re.fullmatch(
+            r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*",
+            host,
+        ):
+            raise ValueError("Guest application origin hostname is invalid.")
+
+        if port == 0 or port == 443:
+            raise ValueError("Guest application origin must omit the default port and use a valid port.")
+        authority_host = f"[{host}]" if address is not None and address.version == 6 else host
+        authority = f"{authority_host}:{port}" if port is not None else authority_host
+        if origin != f"https://{authority}":
+            raise ValueError("Guest application origin must be in canonical form.")
+
+        if self.guest_bootstrap_per_minute > self.guest_bootstrap_per_hour:
+            raise ValueError("Guest bootstrap minute limit cannot exceed its hourly limit.")
+        if self.guest_bot_attempts_per_minute > self.guest_bot_attempts_per_hour:
+            raise ValueError("Guest bot-attempt minute limit cannot exceed its hourly limit.")
+        if self.guest_audits_per_visitor_per_minute > self.guest_audits_per_visitor_per_hour:
+            raise ValueError("Guest visitor minute limit cannot exceed its hourly limit.")
+        if self.guest_audits_per_ip_per_minute > self.guest_audits_per_ip_per_hour:
+            raise ValueError("Guest IP minute limit cannot exceed its hourly limit.")
+        if self.guest_audits_global_per_minute > self.guest_audits_global_per_hour:
+            raise ValueError("Guest global minute limit cannot exceed its hourly limit.")
+        if self.guest_audits_global_per_hour > self.guest_global_audits_per_day:
+            raise ValueError("Guest global hourly limit cannot exceed its daily limit.")
+
+        if self.guest_turnstile_test_mode:
+            if self.environment not in {"test", "development"}:
+                raise ValueError("Guest Turnstile test mode is limited to local development and tests.")
+            if self.environment == "development":
+                loopback = host == "localhost" or (address is not None and address.is_loopback)
+                if not loopback:
+                    raise ValueError("Guest Turnstile test mode requires a loopback development origin.")
+        elif not all(
+            (
+                self.guest_turnstile_sitekey,
+                self.guest_turnstile_secret_key,
+                self.guest_turnstile_expected_hostname,
+                self.guest_turnstile_action,
+            )
+        ):
+            raise ValueError("Guest audits require complete Turnstile verification settings.")
+
+        if self.guest_turnstile_sitekey and not self.guest_turnstile_sitekey.strip():
+            raise ValueError("Guest Turnstile sitekey is invalid.")
+        if self.guest_turnstile_secret_key is not None:
+            secret_value = self.guest_turnstile_secret_key.get_secret_value()
+            if not secret_value.strip() or len(secret_value) > 512:
+                raise ValueError("Guest Turnstile secret key is invalid.")
+
+        if self.guest_turnstile_expected_hostname and (
+            self.guest_turnstile_expected_hostname.lower() != host
+            or self.guest_turnstile_expected_hostname != self.guest_turnstile_expected_hostname.lower()
+        ):
+            raise ValueError("Guest Turnstile hostname must exactly match the application origin.")
+        if self.guest_turnstile_action and not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", self.guest_turnstile_action):
+            raise ValueError("Guest Turnstile action is invalid.")
+
+        if self.environment in {"production", "prod"} and not self.guest_process_local_limits_confirmed:
+            raise ValueError("Production guest audits require verified single-process topology confirmation.")
+        if self.environment in {"production", "prod"} and self.guest_runtime_worker_count != 1:
+            raise ValueError("Production guest audits require exactly one API worker.")
+        return self
+
     @classmethod
     def from_environment(cls, environ: dict[str, str] | None = None) -> "Settings":
         """Load settings without ever printing secret values."""
@@ -224,6 +357,35 @@ class Settings(BaseModel):
             "boost_rate_limit_per_minute": source.get("BOOST_RATE_LIMIT_PER_MINUTE", 5),
             "boost_rate_limit_per_hour": source.get("BOOST_RATE_LIMIT_PER_HOUR", 30),
             "rate_limit_max_keys": source.get("RATE_LIMIT_MAX_KEYS", 10_000),
+            "guest_audits_enabled": source.get("GUEST_AUDITS_ENABLED", "false"),
+            "guest_app_origin": source.get("GUEST_APP_ORIGIN") or None,
+            "guest_session_lifetime_seconds": source.get("GUEST_SESSION_LIFETIME_SECONDS", 3_600),
+            "guest_session_capacity": source.get("GUEST_SESSION_CAPACITY", 2_048),
+            "guest_bootstrap_per_minute": source.get("GUEST_BOOTSTRAP_PER_MINUTE", 20),
+            "guest_bootstrap_per_hour": source.get("GUEST_BOOTSTRAP_PER_HOUR", 120),
+            "guest_bot_attempts_per_minute": source.get("GUEST_BOT_ATTEMPTS_PER_MINUTE", 5),
+            "guest_bot_attempts_per_hour": source.get("GUEST_BOT_ATTEMPTS_PER_HOUR", 30),
+            "guest_audits_per_visitor_per_minute": source.get("GUEST_AUDITS_PER_VISITOR_PER_MINUTE", 2),
+            "guest_audits_per_visitor_per_hour": source.get("GUEST_AUDITS_PER_VISITOR_PER_HOUR", 8),
+            "guest_audits_per_ip_per_minute": source.get("GUEST_AUDITS_PER_IP_PER_MINUTE", 5),
+            "guest_audits_per_ip_per_hour": source.get("GUEST_AUDITS_PER_IP_PER_HOUR", 20),
+            "guest_audits_global_per_minute": source.get("GUEST_AUDITS_GLOBAL_PER_MINUTE", 8),
+            "guest_audits_global_per_hour": source.get("GUEST_AUDITS_GLOBAL_PER_HOUR", 60),
+            "guest_global_audits_per_day": source.get("GUEST_GLOBAL_AUDITS_PER_DAY", 250),
+            "guest_audit_max_concurrent": source.get("GUEST_AUDIT_MAX_CONCURRENT", 2),
+            "guest_audit_concurrent_per_visitor": source.get("GUEST_AUDIT_CONCURRENT_PER_VISITOR", 1),
+            "guest_request_body_timeout_seconds": source.get("GUEST_REQUEST_BODY_TIMEOUT_SECONDS", 5.0),
+            "guest_analysis_timeout_seconds": source.get("GUEST_ANALYSIS_TIMEOUT_SECONDS", 15.0),
+            "guest_session_max_keys": source.get("GUEST_SESSION_MAX_KEYS", 2_048),
+            "guest_ip_max_keys": source.get("GUEST_IP_MAX_KEYS", 1_024),
+            "guest_response_size_bytes": source.get("GUEST_RESPONSE_SIZE_BYTES", 262_144),
+            "guest_turnstile_sitekey": source.get("GUEST_TURNSTILE_SITEKEY") or None,
+            "guest_turnstile_secret_key": source.get("GUEST_TURNSTILE_SECRET_KEY") or None,
+            "guest_turnstile_expected_hostname": source.get("GUEST_TURNSTILE_EXPECTED_HOSTNAME") or None,
+            "guest_turnstile_action": source.get("GUEST_TURNSTILE_ACTION") or None,
+            "guest_turnstile_test_mode": source.get("GUEST_TURNSTILE_TEST_MODE", "false"),
+            "guest_process_local_limits_confirmed": source.get("GUEST_PROCESS_LOCAL_LIMITS_CONFIRMED", "false"),
+            "guest_runtime_worker_count": source.get("WEB_CONCURRENCY", source.get("UVICORN_WORKERS", 1)),
         }
 
         auth_is_enabled = (

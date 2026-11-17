@@ -27,6 +27,7 @@ class APIError(Exception):
 
 INVALID_REQUEST = "invalid_request"
 REQUEST_TOO_LARGE = "request_too_large"
+REQUEST_TIMEOUT = "request_timeout"
 UNSUPPORTED_MEDIA_TYPE = "unsupported_media_type"
 INVALID_URL = "invalid_url"
 UNSUPPORTED_URL = "unsupported_url"
@@ -37,10 +38,17 @@ RATE_LIMITED = "rate_limited"
 AUTH_REQUIRED = "auth_required"
 AUTH_INVALID = "auth_invalid"
 INTERNAL_SERVER_ERROR = "internal_server_error"
+GUEST_SESSION_REQUIRED = "guest_session_required"
+ORIGIN_REJECTED = "origin_rejected"
+CSRF_REJECTED = "csrf_rejected"
+BOT_VERIFICATION_FAILED = "bot_verification_failed"
+BOT_VERIFICATION_UNAVAILABLE = "bot_verification_unavailable"
+GUEST_CAPACITY_UNAVAILABLE = "guest_capacity_unavailable"
 
 ERROR_STATUS_CODES = {
     INVALID_REQUEST: 422,
     REQUEST_TOO_LARGE: 413,
+    REQUEST_TIMEOUT: 408,
     UNSUPPORTED_MEDIA_TYPE: 415,
     INVALID_URL: 422,
     UNSUPPORTED_URL: 422,
@@ -51,6 +59,12 @@ ERROR_STATUS_CODES = {
     AUTH_REQUIRED: 401,
     AUTH_INVALID: 401,
     INTERNAL_SERVER_ERROR: 500,
+    GUEST_SESSION_REQUIRED: 401,
+    ORIGIN_REJECTED: 403,
+    CSRF_REJECTED: 403,
+    BOT_VERIFICATION_FAILED: 403,
+    BOT_VERIFICATION_UNAVAILABLE: 503,
+    GUEST_CAPACITY_UNAVAILABLE: 503,
 }
 
 _FETCH_FAILURES_TO_PUBLIC: dict[FetchErrorCode, tuple[str, str, int]] = {

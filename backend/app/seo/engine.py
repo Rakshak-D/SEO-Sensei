@@ -13,6 +13,7 @@ from collections import Counter
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
+from .findings import resolve_findings
 from .models import (
     CategoryScore,
     CheckStatus,
@@ -33,24 +34,18 @@ from .models import (
     StructuredDataInfo,
     TermFrequency,
 )
+from .rules import (
+    CATEGORY_WEIGHTS,
+    DESCRIPTION_LONG,
+    DESCRIPTION_SHORT,
+    SCORING_VERSION,
+    TITLE_LONG,
+    TITLE_SHORT,
+    VISIBLE_WORD_PASS,
+    VISIBLE_WORD_WARNING,
+)
 
 
-TITLE_SHORT = 30
-TITLE_LONG = 60
-DESCRIPTION_SHORT = 50
-DESCRIPTION_LONG = 160
-VISIBLE_WORD_WARNING = 100
-VISIBLE_WORD_PASS = 300
-SCORE_WEIGHTS = {
-    SEOCategory.TECHNICAL_INDEXABILITY: 30.0,
-    SEOCategory.METADATA: 20.0,
-    SEOCategory.HEADINGS_CONTENT: 15.0,
-    SEOCategory.LINKS: 10.0,
-    SEOCategory.IMAGES: 10.0,
-    SEOCategory.STRUCTURED_DATA: 5.0,
-    SEOCategory.SOCIAL_METADATA: 5.0,
-    SEOCategory.HTML_SIGNALS: 5.0,
-}
 STOP_WORDS = frozenset("a an and are as at be by for from in is it of on or that the this to with your".split())
 MIXED_CONTENT_RE = re.compile(r"(?:src|href|action)\s*=\s*['\"]http://", re.IGNORECASE)
 HREFLANG_RE = re.compile(r"^(?:[a-z]{2,3}(?:-[A-Z]{2}|-[0-9]{3})?|x-default)$")
@@ -163,6 +158,10 @@ class _SEOHTMLParser(HTMLParser):
 
 def _text(parts: list[str]) -> str:
     return re.sub(r"\s+", " ", " ".join(parts)).strip()
+
+
+def _count_phrase(count: int, singular: str, plural: str) -> str:
+    return f"{count} {singular if count == 1 else plural}"
 
 
 def _meta_value(meta: list[dict[str, str]], name: str) -> str | None:
@@ -294,7 +293,8 @@ def _check(
 def _score(checks: list[SEOCheck]) -> SEOScore:
     categories: list[CategoryScore] = []
     weighted_total = 0.0
-    for category, weight in SCORE_WEIGHTS.items():
+    for category in SEOCategory:
+        weight = CATEGORY_WEIGHTS[category.value]
         category_checks = [check for check in checks if check.category == category]
         raw_max = sum(check.max_points for check in category_checks)
         raw_points = sum(check.points for check in category_checks)
@@ -313,7 +313,12 @@ def _score(checks: list[SEOCheck]) -> SEOScore:
             )
         )
     overall = max(0, min(100, round(weighted_total)))
-    return SEOScore(version="1.0", overall_score=overall, points_earned=round(weighted_total, 2), categories=categories)
+    return SEOScore(
+        version=SCORING_VERSION,
+        overall_score=overall,
+        points_earned=round(weighted_total, 2),
+        categories=categories,
+    )
 
 
 def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis:
@@ -362,6 +367,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
     missing_alt = sum("alt" not in image for image in parser.images)
     empty_alt = sum("alt" in image and not image.get("alt", "").strip() for image in parser.images)
     with_alt = images_total - missing_alt
+    nonempty_alt = sum("alt" in image and bool(image.get("alt", "").strip()) for image in parser.images)
     alt_coverage = round((with_alt / images_total) * 100, 2) if images_total else 0.0
     headings = HeadingSummary(
         h1=parser.headings["h1"][:20],
@@ -400,6 +406,8 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
         missing_alt=missing_alt,
         empty_alt=empty_alt,
         alt_coverage_percent=alt_coverage,
+        nonempty_alt=nonempty_alt,
+        empty_alt_intent_unknown=empty_alt,
     )
     links = LinkStatistics(
         total=total_links,
@@ -485,7 +493,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
             CheckStatus.PASS if fetch.redirect_count == 0 else CheckStatus.WARNING,
             3 if fetch.redirect_count == 0 else 2,
             3,
-            f"Observed {fetch.redirect_count} redirect(s); final URL is {final_url}.",
+            f"Observed {_count_phrase(fetch.redirect_count, 'redirect', 'redirects')}; final URL is {final_url}.",
             "Keep the redirect path short and point directly to the final URL.",
         )
     )
@@ -538,7 +546,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
             title_status,
             title_points,
             8,
-            f"Title length is {len(title)} characters.",
+            f"Title length is {_count_phrase(len(title), 'character', 'characters')}.",
             "Add one clear title; very short or long titles may be less useful in search presentation.",
             len(title),
         )
@@ -561,7 +569,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
             desc_status,
             desc_points,
             8,
-            f"Description length is {len(description)} characters.",
+            f"Description length is {_count_phrase(len(description), 'character', 'characters')}.",
             "Add a concise, useful description; length thresholds are heuristics, not SERP guarantees.",
             len(description),
         )
@@ -606,7 +614,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
             h1_status,
             h1_points,
             6,
-            f"Found {h1_count} H1 element(s); empty headings: {headings.empty_heading_count}.",
+            f"H1 headings: {h1_count}; empty headings: {headings.empty_heading_count}.",
             "Use a clear primary heading and avoid empty heading elements.",
         )
     )
@@ -663,7 +671,8 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
             internal_status,
             6 if internal else 2,
             6,
-            f"Found {internal} internal and {external} external link(s).",
+            f"Found {_count_phrase(internal, 'internal link', 'internal links')} and "
+            f"{_count_phrase(external, 'external link', 'external links')}.",
             "Add useful internal links where they help users navigate related content.",
         )
     )
@@ -695,11 +704,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
 
     if images_total:
         image_status = (
-            CheckStatus.PASS
-            if missing_alt == 0 and empty_alt == 0
-            else CheckStatus.WARNING
-            if alt_coverage >= 80
-            else CheckStatus.FAIL
+            CheckStatus.PASS if missing_alt == 0 else CheckStatus.WARNING if alt_coverage >= 80 else CheckStatus.FAIL
         )
         image_points = 10 if image_status == CheckStatus.PASS else 7 if image_status == CheckStatus.WARNING else 0
         checks.append(
@@ -710,8 +715,9 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
                 image_status,
                 image_points,
                 10,
-                f"{with_alt}/{images_total} images have non-empty alt text ({alt_coverage:.2f}%).",
-                "Add concise alt text to informative images; use empty alt only for genuinely decorative images.",
+                f"Images with non-empty alt text: {nonempty_alt}/{images_total}; "
+                f"empty alt attributes: {empty_alt}; missing alt attributes: {missing_alt}.",
+                "Check images with no alt attribute to determine whether they convey information. Empty alt text may be intentional for decorative images; HTML alone cannot establish that intent.",
             )
         )
     else:
@@ -821,7 +827,7 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
         ]
     )
 
-    return SEOAnalysis(
+    analysis = SEOAnalysis(
         requested_url=fetch.requested_url,
         final_url=final_url,
         fetch=fetch,
@@ -836,3 +842,4 @@ def analyze_html(html: str, final_url: str, fetch: FetchMetadata) -> SEOAnalysis
         social_metadata=social,
         lexical_signals=LexicalSignals(visible_word_count=word_count, frequent_terms=frequent_terms),
     )
+    return resolve_findings(analysis)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { AnalysisOverview } from "../features/analysis/AnalysisOverview";
 import { FindingDetail } from "../features/analysis/FindingDetail";
 import { Findings } from "../features/analysis/Findings";
+import { findingsViewModel } from "../features/analysis/findingsViewModel";
 import { loadLocalFixture, type FixtureBundle } from "../features/analysis/loadFixture";
 import { demoReport, type AnalysisReport } from "../features/analysis/report";
 import { PageEntry } from "../features/analysis/PageEntry";
@@ -78,10 +79,10 @@ function ReportContext({ report, onChangePage }: { report: AnalysisReport; onCha
   );
 }
 
-function ReportNavigation({ route, navigate, checkCount }: {
+function ReportNavigation({ route, navigate, openFindingCount }: {
   route: AppRoute;
   navigate: (route: AppRoute, options?: { replace?: boolean; focus?: FocusRequest }) => void;
-  checkCount: number;
+  openFindingCount: number;
 }) {
   const overview = { ...route, view: "overview" as const, check: "" };
   const findings = findingsParent(route);
@@ -91,7 +92,7 @@ function ReportNavigation({ route, navigate, checkCount }: {
         onClick={(event) => { event.preventDefault(); navigate(overview, { focus: "heading" }); }}>Overview</a>
       <a href={routeSearch(findings)} aria-current={route.view === "findings" || route.view === "detail" ? "page" : undefined}
         onClick={(event) => { event.preventDefault(); navigate(findings, { focus: "heading" }); }}>
-        Findings <span className="nav-count">{checkCount}</span>
+        Findings <span className="nav-count" aria-label={`${openFindingCount} open findings`}>{openFindingCount}</span>
       </a>
     </nav>
   );
@@ -526,7 +527,7 @@ export function App() {
     view = (
       <>
         <ReportContext report={activeReport} onChangePage={openEntry} />
-        <ReportNavigation route={route} navigate={navigate} checkCount={activeReport.analysis.checks.length} />
+        <ReportNavigation route={route} navigate={navigate} openFindingCount={findingsViewModel(activeReport).openCount} />
         {pageView}
       </>
     );

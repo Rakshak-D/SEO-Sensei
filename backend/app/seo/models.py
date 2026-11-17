@@ -8,6 +8,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from typing_extensions import Annotated
 
+from .rules import AnatomyPart, Effort, Impact, SCORING_VERSION
+
 
 Text = Annotated[str, StringConstraints(max_length=500)]
 LongText = Annotated[str, StringConstraints(max_length=2_000)]
@@ -49,6 +51,16 @@ class SEOCheck(BaseModel):
     max_points: float = Field(ge=0, le=100)
     evidence: Evidence
     recommendation: LongText
+    impact: Impact | None = None
+    effort: Effort | None = None
+    finding_title: Text | None = None
+    finding_reason: LongText | None = None
+    fix_snippet: Annotated[str, StringConstraints(max_length=2_000)] | None = None
+    snippet_requires_review: bool = False
+    is_actionable: bool = False
+    optional_note: LongText | None = None
+    exclusion_reason: LongText | None = None
+    anatomy_part: AnatomyPart | None = None
 
 
 class FetchMetadata(BaseModel):
@@ -103,6 +115,8 @@ class ImageStatistics(BaseModel):
     missing_alt: int = Field(ge=0)
     empty_alt: int = Field(ge=0)
     alt_coverage_percent: float = Field(ge=0, le=100)
+    nonempty_alt: int = Field(default=0, ge=0)
+    empty_alt_intent_unknown: int = Field(default=0, ge=0)
 
 
 class LinkStatistics(BaseModel):
@@ -182,11 +196,55 @@ class CategoryScore(BaseModel):
 class SEOScore(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: str = "1.0"
+    version: str = SCORING_VERSION
     overall_score: int = Field(ge=0, le=100)
     points_earned: float = Field(ge=0, le=100)
     max_points: float = Field(default=100, gt=0, le=100)
     categories: list[CategoryScore] = Field(max_length=8)
+
+
+class FindingsImpactCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    blocking: int = Field(ge=0, le=100)
+    high: int = Field(ge=0, le=100)
+    medium: int = Field(ge=0, le=100)
+    low: int = Field(ge=0, le=100)
+
+
+class FindingsEffortCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    quick: int = Field(ge=0, le=100)
+    moderate: int = Field(ge=0, le=100)
+    larger_job: int = Field(ge=0, le=100)
+
+
+class FindingExclusion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    check_id: Annotated[str, StringConstraints(min_length=1, max_length=80)]
+    status: CheckStatus
+    reason: LongText
+
+
+class FindingsSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    total_checks: int = Field(ge=0, le=100)
+    raw_passes: int = Field(ge=0, le=100)
+    raw_warnings: int = Field(ge=0, le=100)
+    raw_failures: int = Field(ge=0, le=100)
+    raw_not_applicable: int = Field(ge=0, le=100)
+    actionable_count: int = Field(ge=0, le=100)
+    optional_note_count: int = Field(ge=0, le=100)
+    by_impact: FindingsImpactCounts
+    by_effort: FindingsEffortCounts
+    prioritized_check_ids: list[Annotated[str, StringConstraints(min_length=1, max_length=80)]] = Field(
+        default_factory=list, max_length=100
+    )
+    verdict: Annotated[str, StringConstraints(min_length=1, max_length=500)]
+    exclusions: list[FindingExclusion] = Field(default_factory=list, max_length=100)
 
 
 class SEOAnalysis(BaseModel):
@@ -205,3 +263,4 @@ class SEOAnalysis(BaseModel):
     hreflang: HreflangInfo
     social_metadata: SocialMetadata
     lexical_signals: LexicalSignals
+    findings_summary: FindingsSummary | None = None

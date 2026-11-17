@@ -1,8 +1,9 @@
-import { StatusTag } from "../../components/StatusTag";
+import { ImpactTag, StatusTag } from "../../components/StatusTag";
 import { SourceMarker } from "../../components/SourceMarker";
 import { categoryLabels, statusLabels, type CheckStatus, type SeoCheck } from "./schema";
 import type { AnalysisReport } from "./report";
 import { routeSearch, type AppRoute, type StatusFilter } from "../../app/route";
+import { findingsViewModel } from "./findingsViewModel";
 
 type IndexedCheck = { check: SeoCheck; sourceIndex: number };
 type Props = {
@@ -30,6 +31,8 @@ function FindingRow({ route, check, reportSource, onOpenFinding }: {
   reportSource: AnalysisReport["source"];
   onOpenFinding: (check: SeoCheck) => void;
 }) {
+  const title = check.finding_title ?? check.title;
+  const reason = check.finding_reason ?? check.recommendation;
   const sourceLabel = reportSource === "demo" && check.id === "robots_directives"
     ? "Fictional fixture · static HTML observation"
     : reportSource === "demo" ? "Fixture-backed analyzer evidence" : "Analyzer-returned evidence text";
@@ -38,12 +41,16 @@ function FindingRow({ route, check, reportSource, onOpenFinding }: {
       <a className="finding-open" href={rowHref(route, check)} data-finding-id={check.id}
         onClick={(event) => { event.preventDefault(); onOpenFinding(check); }}>
         <span className="finding-main">
-          <span className="finding-name">{check.title}</span>
+          <span className="finding-name">{title}</span>
           <StatusTag status={check.status} />
+          {check.impact && <ImpactTag impact={check.impact} />}
           <span className="finding-category">{categoryLabels[check.category]}</span>
         </span>
         <span className="finding-evidence">
-          <span className="finding-observed">{check.evidence.observed}</span>
+          <span className="finding-observed">{reason}</span>
+          {check.evidence.observed.trim() !== reason.trim() && (
+            <span className="finding-observed">Observed: {check.evidence.observed}</span>
+          )}
           <span className="finding-source"><SourceMarker>{sourceLabel}</SourceMarker></span>
         </span>
       </a>
@@ -53,17 +60,24 @@ function FindingRow({ route, check, reportSource, onOpenFinding }: {
 
 export function Findings({ report, route, onRouteChange, onOpenFinding }: Props) {
   const checks = report.analysis.checks;
-  const ordered = orderedChecks(checks, route.mode);
+  const model = findingsViewModel(report);
+  const indexedById = new Map(checks.map((check, sourceIndex) => [check.id, { check, sourceIndex }]));
+  const ordered = route.mode === "all"
+    ? orderedChecks(checks, route.mode)
+    : model.prioritized.flatMap((check) => {
+      const indexed = indexedById.get(check.id);
+      return indexed ? [indexed] : [];
+    });
   const scoped = ordered.filter(({ check }) => route.status === "all" || check.status === route.status);
   const query = route.q.trim().toLocaleLowerCase();
   const visible = scoped.filter(({ check }) => {
     if (!query) return true;
-    const searchable = [check.id, check.title, categoryLabels[check.category], check.evidence.observed, check.recommendation]
+    const searchable = [check.id, check.finding_title, check.finding_reason, check.title, categoryLabels[check.category], check.evidence.observed, check.recommendation]
       .join(" ").toLocaleLowerCase();
     return searchable.includes(query);
   });
   const modeCounts = {
-    review: checks.filter((check) => check.status === "fail" || check.status === "warning").length,
+    review: model.openCount,
     all: checks.length,
   };
 
@@ -73,7 +87,7 @@ export function Findings({ report, route, onRouteChange, onOpenFinding }: Props)
     onRouteChange(next, { focus: "heading" });
   };
   const groups: { status: CheckStatus; checks: SeoCheck[] }[] = [];
-  if (route.mode === "review" && route.status === "all") {
+  if (route.mode === "review" && route.status === "all" && !report.analysis.findings_summary) {
     for (const status of ["fail", "warning"] as const) {
       const members = visible.filter(({ check }) => check.status === status).map(({ check }) => check);
       if (members.length > 0) groups.push({ status, checks: members });
@@ -87,6 +101,7 @@ export function Findings({ report, route, onRouteChange, onOpenFinding }: Props)
           <p className="eyebrow">{report.source === "demo" ? "Fictional example · deterministic rule results" : "Deterministic rule results"}</p>
           <h1 id="findings-title" tabIndex={-1}>Findings investigation</h1>
           <p className="findings-intro">{checks.length} {checks.length === 1 ? "check is" : "checks are"} included in this response. Search findings and use rule status to narrow the list.</p>
+          <p className="findings-count-line" data-testid="findings-count-line">{model.statusLine}</p>
         </div>
         <p className="status-semantics">Fail and warning are analyzer statuses. They are not severity, urgency, or business value.</p>
       </div>
@@ -105,7 +120,9 @@ export function Findings({ report, route, onRouteChange, onOpenFinding }: Props)
       </nav>
 
       <p className="ordering-note">
-        {route.mode === "review"
+        {route.mode === "review" && report.analysis.findings_summary
+          ? "Open findings follow the server's deterministic impact and effort priority. Rule status remains a separate result."
+          : route.mode === "review"
           ? "Failed rules appear first, followed by warnings. Order within each status follows the analyzer response."
             : `All checks follow the ${report.source === "demo" ? "fixture’s" : "server’s"} original response order, including pass and not-applicable results.`}
       </p>
@@ -131,7 +148,7 @@ export function Findings({ report, route, onRouteChange, onOpenFinding }: Props)
       </div>
 
       <p className="result-count" role="status" aria-live="polite">
-        Showing {visible.length} of {scoped.length} {route.mode === "all" ? "available" : "review"} checks
+        Showing {visible.length} of {scoped.length} {route.mode === "all" ? "available" : "actionable"} checks
         {query ? " matching “" + route.q + "”" : ""}
       </p>
 
@@ -156,9 +173,16 @@ export function Findings({ report, route, onRouteChange, onOpenFinding }: Props)
           ))}
         </div>
       ) : (
-        <ul className="finding-list all-finding-list" aria-label={route.mode === "all" ? `All analyzer checks in ${report.source === "demo" ? "fixture" : "response"} order` : "Filtered analyzer checks"}>
+        <ul className="finding-list all-finding-list" aria-label={route.mode === "all" ? `All analyzer checks in ${report.source === "demo" ? "fixture" : "response"} order` : report.analysis.findings_summary ? "Actionable findings in server priority order" : "Filtered analyzer checks"}>
           {visible.map(({ check }) => <FindingRow key={check.id} route={route} check={check} reportSource={report.source} onOpenFinding={onOpenFinding} />)}
         </ul>
+      )}
+
+      {route.mode === "review" && model.optionalNotes.length > 0 && (
+        <details className="findings-optional-notes">
+          <summary>Optional notes ({model.optionalNotes.length})</summary>
+          <ul>{model.optionalNotes.map((check) => <li key={check.id}><strong>{check.title}.</strong> {check.optional_note}</li>)}</ul>
+        </details>
       )}
 
       <p className="findings-disclosure">Needs review includes failed and warning rules, in that order. All checks follows the original {report.source === "demo" ? "fixture" : "server response"} order and includes pass and not-applicable results. Status does not represent severity or business priority.</p>

@@ -67,7 +67,7 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
   expect(noindexData.requested_url).toBe("https://phase2d.test/pages/noindex");
   expect(noindexData.checks.find((check) => check.id === "robots_directives")?.status).toBe("fail");
   await expect(page.getByRole("heading", { name: "Home Solar Project Planning Guide for Owners" })).toBeVisible();
-  await expect(page.getByText("Detected directives: noindex, follow.")).toBeVisible();
+  await expect(page.getByText(/The fetched HTML or response headers include a noindex directive/)).toBeVisible();
   expect(new URL(page.url()).searchParams.get("url")).toBeNull();
   expect(new URL(page.url()).searchParams.get("requested_url")).toBeNull();
   await page.screenshot({ path: `${evidenceDir}/live-noindex-overview-1440x900.png`, fullPage: true });

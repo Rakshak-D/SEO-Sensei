@@ -67,7 +67,7 @@ def test_caddy_routes_the_spa_and_browser_api_separately_without_credentials() -
     assert "root * /srv" in caddy
     assert "try_files {path} /index.html" in caddy
     assert "request_body" in caddy and "max_size 8KB" in caddy
-    assert caddy.count("reverse_proxy api:8000") == 2
+    assert caddy.count("reverse_proxy api:8000") == 4
     assert 'respond "Not found." 404' in caddy
     assert "dashboard:8501" not in caddy
     assert "Authorization delete" in caddy
@@ -75,6 +75,35 @@ def test_caddy_routes_the_spa_and_browser_api_separately_without_credentials() -
     assert "delete token" in caddy
     assert "token delete" not in caddy
     assert "Bearer" not in caddy
+
+
+def test_caddy_guest_ingress_is_same_origin_scoped_and_turnstile_csp_is_narrow() -> None:
+    for name in ("Caddyfile", "Caddyfile.integration"):
+        caddy = text(name)
+        assert "@guest_session path /api/guest/v1/session" in caddy
+        assert "@guest_analysis path /api/guest/v1/analyse-url" in caddy
+        assert caddy.count("https://challenges.cloudflare.com") == 2
+        assert "frame-src https://challenges.cloudflare.com" in caddy
+        assert "script-src 'self' https://challenges.cloudflare.com" in caddy
+        assert "unsafe-inline" not in caddy
+        assert "unsafe-eval" not in caddy
+        api_site = (
+            caddy[caddy.index("{$API_DOMAIN}") :]
+            if name == "Caddyfile"
+            else caddy[caddy.index("https://seo-sensei-api.localhost") :]
+        )
+        guest_deny = api_site.index("@guest_api path /api/guest/v1 /api/guest/v1/*")
+        browser_match = api_site.index("@browser_api", guest_deny)
+        guest_block = api_site[guest_deny:browser_match]
+        assert 'respond "Not found." 404' in guest_block
+        assert "reverse_proxy" not in guest_block
+        app_site = (
+            caddy[: caddy.index("{$API_DOMAIN}")]
+            if name == "Caddyfile"
+            else caddy[: caddy.index("https://seo-sensei-api.localhost")]
+        )
+        assert app_site.count('header Cache-Control "no-store"') >= 2
+        assert "max_size 4KB" in app_site
 
 
 def test_browser_session_namespace_is_private_on_the_api_host() -> None:

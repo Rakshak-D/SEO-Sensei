@@ -3,13 +3,10 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $webRoot = Join-Path $repoRoot "web"
 $projectName = "seo-sensei-p2d-$PID"
-$composeArgs = @("compose", "--project-name", $projectName, "-f", "compose.integration.yaml")
-$tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-$taskTemp = Join-Path $tempRoot "seo-sensei-phase2d-$PID"
+$composeArgs = @("compose", "--project-name", $projectName, "-f", "compose.integration.yaml", "-f", "tests/integration/guest-test.compose.yaml")
+$tempRoot = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+$taskTemp = Join-Path $tempRoot ".seo-sensei-phase2d-$PID"
 $caPem = Join-Path $taskTemp "caddy-root.pem"
-$caCer = Join-Path $taskTemp "caddy-root.cer"
-$certificate = $null
-$certificateAdded = $false
 $stackStarted = $false
 $repoLocationPushed = $false
 
@@ -38,7 +35,7 @@ if (-not (Test-Path (Join-Path $webRoot "node_modules"))) { throw "Install the w
 New-Item -ItemType Directory -Path $taskTemp | Out-Null
 $resolvedTaskTemp = [IO.Path]::GetFullPath($taskTemp)
 if (-not $resolvedTaskTemp.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "The temporary workspace is outside the system temporary directory."
+    throw "The temporary workspace is outside the integration test directory."
 }
 
 $randomBytes = [byte[]]::new(32)
@@ -55,7 +52,7 @@ try {
     $repoLocationPushed = $true
     Invoke-CheckedDocker ($composeArgs + @("config", "--quiet"))
     $stackStarted = $true
-    Invoke-CheckedDocker ($composeArgs + @("up", "--build", "--detach"))
+    Invoke-CheckedDocker ($composeArgs + @("up", "--build", "--detach", "--wait", "--wait-timeout", "180"))
 
     $apiIdArgs = $composeArgs + @("ps", "-q", "api")
     $apiId = (& docker @apiIdArgs).Trim()
@@ -68,19 +65,18 @@ try {
     $caddyId = (& docker @caddyIdArgs).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $caddyId) { throw "The isolated Caddy container is unavailable." }
     Invoke-CheckedDocker @("cp", "${caddyId}:/data/caddy/pki/authorities/local/root.crt", $caPem)
-    $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem([IO.File]::ReadAllText($caPem))
-    [IO.File]::WriteAllBytes($caCer, $certificate.Export([Security.Cryptography.X509Certificates.X509ContentType]::Cert))
-    Import-Certificate -FilePath $caCer -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
-    $certificateAdded = $true
     $env:NODE_EXTRA_CA_CERTS = $caPem
 
     $apiHost = "seo-sensei-api.localhost"
     $extensionOrigin = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
     $preflightHeaders = & curl.exe --silent --show-error --ssl-no-revoke --resolve "${apiHost}:8443:127.0.0.1" --cacert $caPem `
-        --output NUL --dump-header - --write-out "`n%{http_code}" --request OPTIONS `
+        --output NUL --dump-header - --write-out "HTTP_STATUS:%{http_code}" --request OPTIONS `
         --header "Origin: $extensionOrigin" --header "Access-Control-Request-Method: POST" `
         --header "Access-Control-Request-Headers: authorization,content-type" "https://${apiHost}:8443/analyse-url"
-    if ($LASTEXITCODE -ne 0 -or $preflightHeaders -notmatch '(?im)^access-control-allow-origin:\s*chrome-extension://abcdefghijklmnopabcdefghijklmnop\s*$' -or $preflightHeaders -notmatch '(?m)^200\s*$') {
+    $preflightText = $preflightHeaders -join "`n"
+    $preflightAllowsConfiguredOrigin = $preflightText -match '(?im)^access-control-allow-origin:\s*chrome-extension://abcdefghijklmnopabcdefghijklmnop\s*$'
+    $preflightSucceeded = $preflightText -match 'HTTP_STATUS:200'
+    if ($LASTEXITCODE -ne 0 -or -not $preflightAllowsConfiguredOrigin -or -not $preflightSucceeded) {
         throw "The existing extension CORS preflight did not return its configured origin and HTTP 200."
     }
     $originBody = Join-Path $taskTemp "origin-rejected.json"
@@ -107,12 +103,6 @@ try {
         Pop-Location
     }
 } finally {
-    if ($certificateAdded -and $certificate) {
-        & certutil.exe -user -delstore Root $certificate.Thumbprint | Out-Null
-        if ($LASTEXITCODE -ne 0) { Write-Warning "Could not remove the task-owned local CA from the current-user trust store." }
-        $remaining = Get-ChildItem Cert:\CurrentUser\Root | Where-Object Thumbprint -eq $certificate.Thumbprint
-        if ($remaining) { Write-Warning "The task-owned local CA remains in the current-user trust store." }
-    }
     if ($stackStarted) {
         $downArgs = $composeArgs + @("down", "--volumes", "--remove-orphans")
         & docker @downArgs

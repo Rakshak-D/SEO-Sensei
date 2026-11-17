@@ -41,7 +41,7 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
   page.on("request", (request) => requests.push(request.url()));
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?view=entry");
+  await page.goto("/?view=entry&access=operator");
   await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
   await page.screenshot({ path: `${evidenceDir}/login-1440x900.png`, fullPage: true });
 

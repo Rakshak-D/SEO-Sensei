@@ -7,6 +7,11 @@ import { loadLocalFixture, type FixtureBundle } from "../features/analysis/loadF
 import { demoReport, type AnalysisReport } from "../features/analysis/report";
 import { PageEntry } from "../features/analysis/PageEntry";
 import { sampleUrl, type SeoCheck } from "../features/analysis/schema";
+import { GuestFixList } from "../features/guest/GuestFixList";
+import { GuestHome } from "../features/guest/GuestHome";
+import { GuestNavigation } from "../features/guest/GuestNavigation";
+import { GuestSummary } from "../features/guest/GuestSummary";
+import { useGuestFlow } from "../features/guest/useGuestFlow";
 import { SignIn } from "../features/auth/SignIn";
 import {
   analyzeUrl,
@@ -130,6 +135,17 @@ function LostLiveReport({ onChangePage }: { onChangePage: () => void }) {
   );
 }
 
+function LostGuestReport({ onNewAudit }: { onNewAudit: () => void }) {
+  return (
+    <section className="guest-report-page guest-lost-report" aria-labelledby="lost-guest-title">
+      <p className="guest-summary-kicker">Report not stored</p>
+      <h1 id="lost-guest-title" tabIndex={-1}>Start a new audit to see this page again.</h1>
+      <p>This browser does not hold the previous result. The server does not save guest reports or page addresses.</p>
+      <button type="button" className="guest-primary-button" onClick={onNewAudit}>New audit</button>
+    </section>
+  );
+}
+
 function LoadingState({ title, message }: { title: string; message: string }) {
   return (
     <section className="entry-shell" aria-labelledby="loading-title">
@@ -146,6 +162,7 @@ function readRoute() {
 
 export function App() {
   const [route, setRoute] = useState<AppRoute>(readRoute);
+  const guestFlow = useGuestFlow(!route.operator && route.source !== "demo");
   const [auth, setAuth] = useState<AuthState>({ status: "checking", session: null, message: "Checking the secure sign-in service." });
   const [demo, setDemo] = useState<DemoState>({ state: "idle" });
   const [report, setReport] = useState<AnalysisReport | null>(null);
@@ -233,9 +250,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!route.operator) return;
     const timer = window.setTimeout(() => { void refreshSession(false, false); }, 0);
     return () => window.clearTimeout(timer);
-  }, [refreshSession]);
+  }, [refreshSession, route.operator]);
 
   useEffect(() => {
     if (route.view !== "entry" && route.source === "demo" && demo.state === "idle") {
@@ -284,7 +302,24 @@ export function App() {
     setAnalysisMessage("");
     const currentReport = route.source === "demo" && demo.state === "ready" ? demoReport(demo.bundle) : report;
     if (currentReport) setEntryValue(currentReport.analysis.requested_url);
-    navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { focus: "url" });
+    const operator = route.operator || auth.status === "authenticated";
+    navigate({ ...route, view: "entry", source: "live", operator, check: "", q: "", status: "all" }, { focus: "url" });
+  };
+
+  const openGuestHome = () => {
+    cameFromFindings.current = false;
+    setEntryError("");
+    setAnalysisMessage("");
+    guestFlow.startNewAudit();
+    navigate({ ...route, operator: false, source: "live", view: "entry", check: "", q: "", status: "all" }, { focus: "url" });
+  };
+
+  const openOperatorEntry = () => {
+    guestFlow.startNewAudit();
+    setEntryError("");
+    navigate({ ...route, operator: true, source: "live", view: "entry", check: "", q: "", status: "all" }, {
+      focus: auth.status === "authenticated" ? "url" : "username",
+    });
   };
 
   const openDemo = () => {
@@ -293,6 +328,7 @@ export function App() {
     setAnalysisMessage("");
     setEntryValue(sampleUrl);
     setLiveReport(null);
+    guestFlow.startNewAudit();
     navigate({ ...route, source: "demo", view: "overview", mode: "review", q: "", status: "all", check: "" }, { focus: "heading" });
   };
 
@@ -303,7 +339,7 @@ export function App() {
     setDemo({ state: "idle" });
     setGlobalMessage("");
     setEntryError("");
-    currentRoute.current = { ...currentRoute.current, view: "entry", source: "live", check: "", q: "", status: "all" };
+    currentRoute.current = { ...currentRoute.current, operator: true, view: "entry", source: "live", check: "", q: "", status: "all" };
     window.history.replaceState({}, "", routeSearch(currentRoute.current));
     setRoute(currentRoute.current);
     focusRequest.current = "username";
@@ -322,7 +358,7 @@ export function App() {
       if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return;
       setAuth({ status: "authenticated", session, message: "" });
       setGlobalMessage("");
-      navigate({ ...route, view: "entry", source: "live", check: "", q: "", status: "all" }, { replace: true, focus: "url" });
+      navigate({ ...route, operator: true, view: "entry", source: "live", check: "", q: "", status: "all" }, { replace: true, focus: "url" });
     } catch (error) {
       if (epoch !== authEpoch.current || generation !== bootstrapGeneration.current) return;
       if (error instanceof BrowserApiError && error.status === 401 && error.code === "auth_required") {
@@ -467,13 +503,61 @@ export function App() {
 
   const changeView = (next: AppRoute, replace = false) => navigate(next, { replace, focus: "heading" });
 
+  const guestReport: AnalysisReport | null = guestFlow.state.report
+    ? { source: "guest", analysis: guestFlow.state.report }
+    : null;
   let activeReport: AnalysisReport | null = report;
   if (route.source === "demo" && demo.state === "ready") activeReport = demoReport(demo.bundle);
   else if (route.source === "demo") activeReport = null;
-  else if (auth.status !== "authenticated" || report?.source !== "live") activeReport = null;
+  else if (route.source === "guest") activeReport = guestReport;
+  else if (!route.operator || auth.status !== "authenticated" || report?.source !== "live") activeReport = null;
 
   let view: ReactNode;
-  if (route.view === "entry") {
+  const guestJourney = !route.operator;
+  if (guestJourney) {
+    if (route.view === "entry") {
+      view = <GuestHome
+        flow={guestFlow.state}
+        onAnalyze={(url) => {
+          setEntryValue(url);
+          void guestFlow.analyze(url).then((analysis) => {
+            if (!analysis) return;
+            setEntryValue(analysis.requested_url);
+            navigate({ ...currentRoute.current, operator: false, source: "guest", view: "overview", check: "", mode: "review", status: "all", q: "" }, { focus: "heading" });
+          });
+        }}
+        onCancel={guestFlow.cancel}
+        onRetry={guestFlow.retry}
+        onChallengeReady={guestFlow.challengeStarted}
+        onChallenge={guestFlow.acceptChallenge}
+        onChallengeExpired={guestFlow.challengeExpired}
+        onChallengeFailed={guestFlow.challengeFailed}
+        onOpenExample={openDemo}
+      />;
+    } else if (route.source === "guest" && !activeReport) {
+      view = <LostGuestReport onNewAudit={openGuestHome} />;
+    } else if (route.source === "demo" && demo.state === "loading") {
+      view = <LoadingState title="Opening the Northstar example." message="Loading the bundled fictional page and its analysis. No website request is made." />;
+    } else if (route.source === "demo" && demo.state === "error") {
+      view = <FixtureRecovery route={route} message={demo.message} onRetry={() => void loadDemo()} onChangePage={openGuestHome} />;
+    } else if (activeReport && route.view === "overview") {
+      view = <GuestSummary
+        report={activeReport}
+        onSeeFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })}
+        onReviewAll={() => navigate({ ...route, view: "findings", check: "", mode: "review", q: "", status: "all" }, { focus: "heading" })}
+      />;
+    } else if (activeReport && route.view === "findings") {
+      view = <GuestFixList key={route.check} report={activeReport} route={route} onNavigate={navigate} />;
+    } else if (activeReport) {
+      view = <section className="guest-report-page guest-lost-report" aria-labelledby="guest-page-unavailable">
+        <p className="guest-summary-kicker">Page unavailable</p>
+        <h1 id="guest-page-unavailable" tabIndex={-1}>This report page is not part of this review.</h1>
+        <button type="button" className="guest-primary-button" onClick={() => navigate({ ...route, view: "overview", check: "" }, { focus: "heading" })}>Return to Summary</button>
+      </section>;
+    } else {
+      view = <LoadingState title="Preparing the report." message="The result is being validated before it is shown." />;
+    }
+  } else if (route.view === "entry") {
     if (auth.status === "checking") {
       view = <LoadingState title="Checking the sign-in service." message={auth.message} />;
     } else if (auth.status === "signingOut") {
@@ -541,6 +625,26 @@ export function App() {
     : isDemoRoute ? demo.state === "error" ? "Example unavailable" : "Fictional example"
       : route.view === "entry" ? auth.status === "authenticated" ? "Protected analysis" : "Sign in"
         : route.source === "live" ? "Live analysis" : "Report unavailable";
+
+  if (guestJourney) {
+    return (
+      <div className="guest-app">
+        <a className="skip-link" href="#main-content">Skip to page content</a>
+        <GuestNavigation
+          route={route}
+          openCount={activeReport ? findingsViewModel(activeReport).openCount : 0}
+          hasReport={route.view !== "entry" && Boolean(activeReport)}
+          onNavigate={navigate}
+          onNewAudit={openGuestHome}
+          onOperator={openOperatorEntry}
+        >{view}</GuestNavigation>
+        <footer className="guest-footer">
+          <span>Reports are kept in memory only.</span>
+          <span>Guest audits use deterministic page checks; no AI request is made.</span>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <>

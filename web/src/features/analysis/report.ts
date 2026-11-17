@@ -9,7 +9,7 @@ export type DemoReport = {
 };
 
 export type LiveReport = {
-  source: "live";
+  source: "live" | "guest";
   analysis: LiveSeoAnalysis;
 };
 

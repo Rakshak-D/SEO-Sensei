@@ -12,10 +12,28 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
-		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data:; connect-src 'self'"
 		Cache-Control "no-store"
 	}
 	route {
+		@guest_session path /api/guest/v1/session
+		handle @guest_session {
+			request_body {
+				max_size 1KB
+			}
+			header Cache-Control "no-store"
+			reverse_proxy api:8000
+		}
+
+		@guest_analysis path /api/guest/v1/analyse-url
+		handle @guest_analysis {
+			request_body {
+				max_size 4KB
+			}
+			header Cache-Control "no-store"
+			reverse_proxy api:8000
+		}
+
 		@browser_api path /api/browser/v1 /api/browser/v1/*
 		handle @browser_api {
 			request_body {
@@ -42,6 +60,10 @@
 
 {$API_DOMAIN} {
 	encode gzip zstd
+	@guest_api path /api/guest/v1 /api/guest/v1/*
+	handle @guest_api {
+		respond "Not found." 404
+	}
 	@browser_api path /api/browser/v1*
 	handle @browser_api {
 		respond "Not found." 404

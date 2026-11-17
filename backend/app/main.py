@@ -345,6 +345,8 @@ class RequestContextMiddleware:
 path_body_limits = {"/api/browser/v1/analyse-url": MAX_ANALYSIS_BODY_BYTES}
 path_receive_timeouts: dict[str, float] = {}
 if settings.guest_audits_enabled:
+    path_body_limits["/api/guest/v1/session"] = 0
+    path_receive_timeouts["/api/guest/v1/session"] = settings.guest_request_body_timeout_seconds
     path_body_limits["/api/guest/v1/analyse-url"] = GUEST_ANALYSIS_BODY_BYTES
     path_receive_timeouts["/api/guest/v1/analyse-url"] = settings.guest_request_body_timeout_seconds
 app.add_middleware(

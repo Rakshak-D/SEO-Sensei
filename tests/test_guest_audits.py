@@ -173,6 +173,60 @@ def _error(response, *, status: int, code: str) -> None:
     assert response.headers.get("cache-control") == "no-store"
 
 
+def _asgi_scope(client, headers: list[tuple[bytes, bytes]]) -> dict[str, object]:
+    return {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "https",
+        "path": GUEST_SESSION_PATH,
+        "raw_path": GUEST_SESSION_PATH.encode("ascii"),
+        "query_string": b"",
+        "root_path": "",
+        "headers": [(b"host", b"app.example.test"), *headers],
+        "client": ("testclient", 50_000),
+        "server": ("app.example.test", 443),
+        "state": {},
+        "app": client.app,
+    }
+
+
+async def _run_guest_middleware(client, receive, headers: list[tuple[bytes, bytes]]) -> list[dict[str, object]]:
+    import backend.app.main as main
+
+    middleware = main.RequestContextMiddleware(
+        client.app,
+        max_body_size=main.settings.max_request_body_size_bytes,
+        path_body_limits=main.path_body_limits,
+        path_receive_timeouts=main.path_receive_timeouts,
+    )
+    messages: list[dict[str, object]] = []
+
+    async def send(message: dict[str, object]) -> None:
+        messages.append(message)
+
+    await middleware(_asgi_scope(client, headers), receive, send)
+    return messages
+
+
+def _assert_asgi_error(messages: list[dict[str, object]], *, status: int, code: str) -> None:
+    start = next(message for message in messages if message["type"] == "http.response.start")
+    assert start["status"] == status
+    response_headers = dict(start["headers"])
+    assert response_headers[b"cache-control"] == b"no-store"
+    assert response_headers[b"x-request-id"]
+    body = b"".join(message.get("body", b"") for message in messages if message["type"] == "http.response.body")
+    error = json.loads(body)["error"]
+    assert set(error) == {"code", "message", "request_id"}
+    assert error["code"] == code
+    assert error["request_id"] == response_headers[b"x-request-id"].decode("ascii")
+
+
+def _bootstrap_admission_count(limits) -> int:
+    return sum(len(record.bootstrap) for record in limits._ip_records.values())
+
+
 def test_guest_routes_are_absent_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     main = _load_main(monkeypatch, enabled=False)
     with TestClient(main.app, base_url=ORIGIN) as client:
@@ -214,6 +268,7 @@ def test_repeated_bootstrap_recovers_the_same_identity_and_csrf(guest_client) ->
     client, _fetcher = guest_client
     first = _bootstrap(client)
     first_csrf = first.json().get("csrf_token")
+    initial_session_count = len(client.app.state.guest_sessions)
     second = _bootstrap(client)
     second_csrf = second.json().get("csrf_token")
 
@@ -222,6 +277,113 @@ def test_repeated_bootstrap_recovers_the_same_identity_and_csrf(guest_client) ->
     if first_csrf != second_csrf:
         raise AssertionError("Repeated bootstrap changed the live session context")
     assert len(client.cookies) == 1
+    assert len(client.app.state.guest_sessions) == initial_session_count == 1
+
+
+def test_guest_bootstrap_body_policy_is_zero_bytes_with_a_finite_deadline(guest_client) -> None:
+    client, _fetcher = guest_client
+    import backend.app.main as main
+
+    assert main.path_body_limits.get(GUEST_SESSION_PATH) == 0
+    assert (
+        main.path_receive_timeouts.get(GUEST_SESSION_PATH)
+        == client.app.state.settings.guest_request_body_timeout_seconds
+    )
+
+
+def test_guest_bootstrap_accepts_explicit_zero_content_length(guest_client) -> None:
+    client, _fetcher = guest_client
+    response = client.get(GUEST_SESSION_PATH, headers={"Content-Length": "0"})
+
+    assert response.status_code == 200
+    assert len(client.app.state.guest_sessions) == 1
+
+
+def test_guest_bootstrap_positive_content_length_is_rejected_before_receive_or_admission(guest_client) -> None:
+    client, _fetcher = guest_client
+    receive_called = False
+    session_count = len(client.app.state.guest_sessions)
+    bootstrap_count = _bootstrap_admission_count(client.app.state.guest_analysis_limits)
+
+    async def receive() -> dict[str, object]:
+        nonlocal receive_called
+        receive_called = True
+        raise AssertionError("Positive bootstrap Content-Length must be rejected before receive")
+
+    messages = asyncio.run(_run_guest_middleware(client, receive, [(b"content-length", b"1")]))
+
+    _assert_asgi_error(messages, status=413, code="request_too_large")
+    assert not receive_called
+    assert len(client.app.state.guest_sessions) == session_count
+    assert _bootstrap_admission_count(client.app.state.guest_analysis_limits) == bootstrap_count
+
+
+def test_guest_bootstrap_rejects_streamed_nonempty_body_before_session_creation(guest_client) -> None:
+    client, _fetcher = guest_client
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.request", "body": b"x", "more_body": False}
+
+    messages = asyncio.run(_run_guest_middleware(client, receive, []))
+
+    _assert_asgi_error(messages, status=413, code="request_too_large")
+    assert len(client.app.state.guest_sessions) == 0
+    assert _bootstrap_admission_count(client.app.state.guest_analysis_limits) == 0
+
+
+def test_guest_bootstrap_rejects_malformed_or_conflicting_framing_before_receive(guest_client) -> None:
+    client, _fetcher = guest_client
+    malformed_headers = (
+        [(b"content-length", b"not-a-number")],
+        [(b"content-length", b"0"), (b"content-length", b"0")],
+        [(b"content-length", b"0"), (b"transfer-encoding", b"chunked")],
+    )
+    for headers in malformed_headers:
+        receive_called = False
+
+        async def receive() -> dict[str, object]:
+            nonlocal receive_called
+            receive_called = True
+            raise AssertionError("Malformed framing must be rejected before receive")
+
+        messages = asyncio.run(_run_guest_middleware(client, receive, headers))
+        _assert_asgi_error(messages, status=400, code="invalid_request")
+        assert not receive_called
+    assert len(client.app.state.guest_sessions) == 0
+    assert _bootstrap_admission_count(client.app.state.guest_analysis_limits) == 0
+
+
+def test_guest_bootstrap_incomplete_chunked_body_times_out_without_admission(monkeypatch: pytest.MonkeyPatch) -> None:
+    main = _load_main(monkeypatch, settings={"GUEST_REQUEST_BODY_TIMEOUT_SECONDS": "0.01"})
+    with TestClient(main.app, base_url=ORIGIN) as client:
+        receive_calls = 0
+        receive_cancelled = False
+
+        async def receive() -> dict[str, object]:
+            nonlocal receive_calls, receive_cancelled
+            receive_calls += 1
+            if receive_calls == 1:
+                return {"type": "http.request", "body": b"", "more_body": True}
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                receive_cancelled = True
+                raise
+            raise AssertionError("An incomplete bootstrap stream unexpectedly completed")
+
+        messages = asyncio.run(
+            asyncio.wait_for(
+                _run_guest_middleware(client, receive, [(b"transfer-encoding", b"chunked")]),
+                timeout=0.2,
+            )
+        )
+
+        _assert_asgi_error(messages, status=408, code="request_timeout")
+        assert receive_calls == 2
+        assert receive_cancelled
+        assert len(client.app.state.guest_sessions) == 0
+        assert _bootstrap_admission_count(client.app.state.guest_analysis_limits) == 0
+    get_settings.cache_clear()
 
 
 def test_bootstrap_rejects_cross_origin_and_wrong_host_before_creating_session(guest_client) -> None:

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "phase-2d.integration.spec.ts",
+  testMatch: ["phase-2d.integration.spec.ts", "phase-s2a.integration.spec.ts"],
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
@@ -12,7 +12,9 @@ export default defineConfig({
     baseURL: process.env.PHASE2D_BASE_URL ?? "https://seo-sensei.localhost:8443",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    ignoreHTTPSErrors: false,
+    // The local Caddy CA is validated by the harness's curl and Node requests.
+    // Chromium still exercises HTTPS but does not modify the developer trust store.
+    ignoreHTTPSErrors: true,
     ...devices["Desktop Chrome"],
   },
 });

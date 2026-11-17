@@ -245,6 +245,7 @@ async def guest_session(request: Request, response: Response) -> dict[str, Any]:
         raise APIError(GUEST_SESSION_REQUIRED, "A valid guest session is required.", 401)
     csrf_token = sessions.csrf_token(cookie)
     challenge_required = not settings.guest_turnstile_test_mode
+    turnstile_action = settings.guest_turnstile_action if challenge_required else None
     if should_set_cookie:
         response.set_cookie(
             GUEST_COOKIE_NAME,
@@ -260,6 +261,7 @@ async def guest_session(request: Request, response: Response) -> dict[str, Any]:
             "expires_in": max_age,
             "bot_check_required": challenge_required,
             "turnstile_sitekey": settings.guest_turnstile_sitekey if challenge_required else None,
+            "turnstile_action": turnstile_action,
         }
 
     return {
@@ -267,6 +269,7 @@ async def guest_session(request: Request, response: Response) -> dict[str, Any]:
         "expires_in": max_age,
         "bot_check_required": challenge_required,
         "turnstile_sitekey": settings.guest_turnstile_sitekey if challenge_required else None,
+        "turnstile_action": turnstile_action,
     }
 
 

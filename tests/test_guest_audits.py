@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from backend.app.config import get_settings
 from backend.app.security.errors import FetchErrorCode
 from backend.app.security.fetcher import FetchResult
+from backend.app.security.turnstile import TurnstileVerifier
 from backend.app.seo.models import SEOAnalysis
 
 
@@ -244,9 +245,16 @@ def test_guest_bootstrap_sets_secure_host_cookie_and_returns_minimum_data(guest_
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"csrf_token", "expires_in", "bot_check_required", "turnstile_sitekey"}
+    assert set(body) == {
+        "csrf_token",
+        "expires_in",
+        "bot_check_required",
+        "turnstile_sitekey",
+        "turnstile_action",
+    }
     assert body["bot_check_required"] is False
     assert body["turnstile_sitekey"] is None
+    assert body["turnstile_action"] is None
     assert body["expires_in"] == 3_600
     csrf = body["csrf_token"]
     if not isinstance(csrf, str) or not csrf:
@@ -278,6 +286,30 @@ def test_repeated_bootstrap_recovers_the_same_identity_and_csrf(guest_client) ->
         raise AssertionError("Repeated bootstrap changed the live session context")
     assert len(client.cookies) == 1
     assert len(client.app.state.guest_sessions) == initial_session_count == 1
+    assert first.json()["turnstile_action"] is None
+    assert second.json()["turnstile_action"] is None
+
+
+def test_bootstrap_returns_configured_turnstile_action_on_new_and_recovered_sessions(guest_client) -> None:
+    client, _fetcher = guest_client
+    configured_action = "s2_public_audit"
+    client.app.state.settings = client.app.state.settings.model_copy(
+        update={
+            "guest_turnstile_test_mode": False,
+            "guest_turnstile_sitekey": "guest-test-public-sitekey",
+            "guest_turnstile_action": configured_action,
+        }
+    )
+
+    fresh = _bootstrap(client)
+    recovered = _bootstrap(client)
+
+    assert fresh.status_code == recovered.status_code == 200
+    assert fresh.json()["bot_check_required"] is True
+    assert fresh.json()["turnstile_sitekey"] == "guest-test-public-sitekey"
+    assert fresh.json()["turnstile_action"] == configured_action
+    assert recovered.json()["turnstile_action"] == configured_action
+    assert fresh.json()["csrf_token"] == recovered.json()["csrf_token"]
 
 
 def test_guest_bootstrap_body_policy_is_zero_bytes_with_a_finite_deadline(guest_client) -> None:
@@ -542,6 +574,7 @@ def test_guest_fetch_error_contract_does_not_overstate_policy_blocks(
     [
         {"url": SAMPLE_URL, "include_ai_recommendations": True},
         {"url": SAMPLE_URL, "api_key": "secret"},
+        {"url": SAMPLE_URL, "action": "client_preference"},
         {"url": SAMPLE_URL, "unexpected": "field"},
         {"challenge_token": "token-without-url"},
         {"url": SAMPLE_URL, "challenge_token": 42},
@@ -783,6 +816,86 @@ def test_guest_bot_verification_success_allows_one_deterministic_fetch(guest_cli
     assert response.status_code == 200
     assert verifier.calls == 1
     assert fetcher.calls == [SAMPLE_URL]
+
+
+def test_configured_action_flows_from_bootstrap_through_siteverify_before_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import backend.app.security.turnstile as turnstile
+
+    configured_action = "s2_public_audit"
+    verifier_options: list[tuple[str, str]] = []
+    real_verifier = TurnstileVerifier
+
+    def make_verifier(secret: str, *, expected_hostname: str, expected_action: str) -> TurnstileVerifier:
+        verifier_options.append((expected_hostname, expected_action))
+        return real_verifier(
+            secret,
+            expected_hostname=expected_hostname,
+            expected_action=expected_action,
+            transport=httpx.MockTransport(
+                lambda _request: httpx.Response(
+                    200,
+                    json={"success": True, "hostname": "app.example.test", "action": configured_action},
+                )
+            ),
+        )
+
+    monkeypatch.setattr(turnstile, "TurnstileVerifier", make_verifier)
+    main = _load_main(monkeypatch, test_mode=False, settings={"GUEST_TURNSTILE_ACTION": configured_action})
+
+    with TestClient(main.app, base_url=ORIGIN) as client:
+        fetcher = FakeSafeFetcher()
+        client.app.state.safe_fetcher = fetcher
+        bootstrap = _bootstrap(client)
+        assert bootstrap.json()["turnstile_action"] == configured_action
+        response = client.post(
+            GUEST_ANALYSIS_PATH,
+            json={"url": SAMPLE_URL, "challenge_token": TURNSTILE_TOKEN},
+            headers=_post_headers(bootstrap),
+        )
+
+        assert response.status_code == 200
+        assert fetcher.calls == [SAMPLE_URL]
+        assert verifier_options == [("app.example.test", configured_action)]
+
+
+@pytest.mark.parametrize("provider_action", [None, "different_action"])
+def test_missing_or_mismatched_siteverify_action_never_fetches(guest_client, provider_action: str | None) -> None:
+    client, fetcher = guest_client
+    configured_action = "s2_public_audit"
+    settings = client.app.state.settings.model_copy(
+        update={
+            "guest_turnstile_test_mode": False,
+            "guest_turnstile_sitekey": "guest-test-public-sitekey",
+            "guest_turnstile_expected_hostname": "app.example.test",
+            "guest_turnstile_action": configured_action,
+        }
+    )
+    client.app.state.settings = settings
+    provider_result: dict[str, object] = {"success": True, "hostname": "app.example.test"}
+    if provider_action is not None:
+        provider_result["action"] = provider_action
+    verifier = TurnstileVerifier(
+        TURNSTILE_SECRET,
+        expected_hostname=settings.guest_turnstile_expected_hostname,
+        expected_action=configured_action,
+        transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=provider_result)),
+    )
+    client.app.state.guest_turnstile_verifier = verifier
+    bootstrap = _bootstrap(client)
+
+    try:
+        response = client.post(
+            GUEST_ANALYSIS_PATH,
+            json={"url": SAMPLE_URL, "challenge_token": TURNSTILE_TOKEN},
+            headers=_post_headers(bootstrap),
+        )
+    finally:
+        asyncio.run(verifier.aclose())
+
+    _error(response, status=403, code="bot_verification_failed")
+    assert fetcher.calls == []
 
 
 def test_guest_bot_attempt_budget_is_enforced_before_body_validation_or_fetch(guest_client) -> None:

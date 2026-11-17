@@ -1,0 +1,7 @@
+# Test-only opt-in for the loopback HTTPS guest-flow integration suite.
+services:
+  api:
+    environment:
+      GUEST_AUDITS_ENABLED: "true"
+      GUEST_APP_ORIGIN: "https://seo-sensei.localhost:8443"
+      GUEST_TURNSTILE_TEST_MODE: "true"

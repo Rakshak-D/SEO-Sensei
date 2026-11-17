@@ -40,6 +40,9 @@ const yaml = [
   "    environment:",
   `      ALLOWED_CORS_ORIGINS: ${JSON.stringify(originList)}`,
   '      API_ACCESS_TOKEN: "${PHASE2E_TEST_API_TOKEN:?Set a disposable runtime-test token}"',
+  '      GUEST_AUDITS_ENABLED: "true"',
+  '      GUEST_APP_ORIGIN: "https://seo-sensei.localhost:8443"',
+  '      GUEST_TURNSTILE_TEST_MODE: "true"',
   "",
 ].join("\n");
 writeFileSync(composeOverride, yaml, { flag: "wx" });

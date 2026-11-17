@@ -130,7 +130,7 @@ async function signInAs(user: ReturnType<typeof userEvent.setup>, username: stri
 
 describe("Evidence Ledger authenticated application", () => {
   beforeEach(() => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?access=operator");
     vi.unstubAllGlobals();
   });
 

@@ -136,7 +136,7 @@ test("supports demo navigation, keyboard focus, filter state, and browser histor
   await installAnonymousSession(page);
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?view=entry");
+  await page.goto("/?view=entry&access=operator");
   await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to review" })).toBeFocused();
@@ -183,7 +183,7 @@ test("uses the protected API for live submission and keeps the local example exp
     if (new URL(request.url()).origin !== "http://127.0.0.1:4173") externalRequests.push(request.url());
   });
   await installAuthenticatedSession(page);
-  await page.goto("/?view=entry");
+  await page.goto("/?view=entry&access=operator");
   await expect(page.getByRole("heading", { name: "Inspect what a page returns." })).toBeVisible();
   await page.getByLabel("Page address").fill("https://not-contacted.example/page/");
   await page.getByLabel("Page address").press("Enter");
@@ -212,7 +212,7 @@ test("recovers from an unavailable fixture on a direct demo-detail route", async
 
 test("has no automated axe violations on sign-in and local report views", async ({ page }) => {
   await installAnonymousSession(page);
-  await page.goto("/");
+  await page.goto("/?access=operator");
   await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
   const loginResults = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(loginResults.violations).toEqual([]);
@@ -233,7 +233,7 @@ test("captures demo and authentication browser review screenshots", async ({ pag
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await installAnonymousSession(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?view=entry");
+  await page.goto("/?view=entry&access=operator");
   await expect(page.getByRole("heading", { name: "Sign in to analyze a page." })).toBeVisible();
   await page.screenshot({ path: "review/evidence/phase-2d/login-1440x900.png", fullPage: true });
   await showLocalExample(page);
@@ -332,7 +332,7 @@ test("renders v1.1 verdicts, shared counts, priority order, and severity colors 
   }
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/?view=entry");
+  await page.goto("/?view=entry&access=operator");
   await expect(page.getByRole("heading", { name: "Inspect what a page returns." })).toBeVisible();
 
   for (const next of ["normal", "high", "noindex"] as const) {

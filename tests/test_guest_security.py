@@ -408,6 +408,7 @@ def test_turnstile_server_verification_uses_fixed_endpoint_and_checks_host_actio
         {"success": False, "hostname": "app.example.test", "action": "guest_analysis"},
         {"success": True, "hostname": "attacker.example", "action": "guest_analysis"},
         {"success": True, "hostname": "app.example.test", "action": "other_action"},
+        {"success": True, "hostname": "app.example.test"},
         {"success": "true", "hostname": "app.example.test", "action": "guest_analysis"},
     ],
 )

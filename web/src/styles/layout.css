@@ -123,7 +123,7 @@
 .summary-identity { margin-bottom: 12px; }
 .summary-verdict-row { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
 .summary-verdict-copy { min-width: 0; }
-.summary-verdict { max-width: 28ch; margin: 3px 0 0; color: var(--ink); font: 700 clamp(28px, 3vw, 36px)/1.12 var(--sans); letter-spacing: -.02em; }
+.summary-verdict { max-width: 28ch; margin: 3px 0 0; color: #14130F; font: 700 clamp(28px, 3vw, 36px)/1.12 var(--sans); letter-spacing: -.02em; }
 .score-note { flex: none; width: 190px; padding-left: var(--space-4); border-left: 1px solid var(--rule); }
 .score-label { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
 .score-value { display: block; margin-top: 2px; color: var(--ink); font: 700 24px/1.2 var(--sans); }

@@ -32,6 +32,7 @@ def _facts(analysis: SEOAnalysis, check: SEOCheck) -> dict[str, Any]:
     return {
         "status": check.status.value,
         "status_code": analysis.fetch.status_code,
+        "redirect_count": analysis.fetch.redirect_count,
         "robots_noindex": "noindex" in analysis.metadata.robots_directives,
         "title_missing": not bool(analysis.metadata.title.strip()),
         "title_length": title_length,

@@ -2,18 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from backend.app.config import Settings
 from backend.app.seo.rules import CATEGORY_WEIGHTS, CHECK_POLICIES, Effort, Impact
 from backend.app.seo.engine import analyze_html
 from backend.app.seo.models import CheckStatus, FetchMetadata, SEOAnalysis
 
 
-def analyze(html: str, redirect_count: int = 0):
-    url = "https://example.test/page/"
+def analyze(
+    html: str,
+    redirect_count: int = 0,
+    status_code: int = 200,
+    url: str = "https://example.test/page/",
+):
     size = len(html.encode("utf-8"))
     fetch = FetchMetadata(
         requested_url=url,
         final_url=url,
-        status_code=200,
+        status_code=status_code,
         content_type="text/html",
         content_length=size,
         bytes_read=size,
@@ -362,3 +367,118 @@ def test_observed_evidence_uses_readable_count_grammar() -> None:
         "Images with non-empty alt text: 1/1; empty alt attributes: 0; missing alt attributes: 0."
     )
     assert by_id["json_ld"].finding_reason == "The fetched HTML contains 1 JSON-LD block could not be parsed."
+
+
+def test_final_non_2xx_http_status_is_blocking_without_changing_score_status() -> None:
+    for status_code in (200, 204):
+        result = analyze(all_pass_html(), status_code=status_code)
+        http_check = check(result, "http_status")
+
+        assert http_check.status == CheckStatus.PASS
+        assert http_check.is_actionable is False
+        assert http_check.impact is None
+        assert http_check.points == 5
+
+    for status_code in (301, 302, 307, 404, 500):
+        result = analyze(all_pass_html(), status_code=status_code)
+        http_check = check(result, "http_status")
+
+        assert http_check.status == (CheckStatus.WARNING if status_code < 400 else CheckStatus.FAIL)
+        assert http_check.is_actionable is True
+        assert http_check.impact == Impact.BLOCKING
+        assert http_check.points == (3 if status_code < 400 else 0)
+        assert result.findings_summary.verdict == "The page returned an unsuccessful HTTP response."
+
+    redirected_success = analyze(all_pass_html(), redirect_count=1, status_code=200)
+    assert check(redirected_success, "http_status").is_actionable is False
+    assert check(redirected_success, "redirects").impact == Impact.LOW
+    assert all(item.impact != Impact.BLOCKING for item in redirected_success.checks)
+
+
+def test_redirect_priority_uses_count_without_changing_effort_or_http_status() -> None:
+    counts = sorted({0, 1, 2, 3, Settings().max_redirects, 10})
+    for redirect_count in counts:
+        result = analyze(all_pass_html(), redirect_count=redirect_count)
+        redirect_check = check(result, "redirects")
+
+        if redirect_count == 0:
+            assert redirect_check.status == CheckStatus.PASS
+            assert redirect_check.is_actionable is False
+            assert redirect_check.impact is None
+        else:
+            expected_impact = Impact.HIGH if redirect_count >= 3 else Impact.LOW
+            assert redirect_check.status == CheckStatus.WARNING
+            assert redirect_check.is_actionable is True
+            assert redirect_check.impact == expected_impact
+            assert redirect_check.effort == Effort.QUICK
+        assert check(result, "http_status").is_actionable is False
+
+    long_chain = analyze(all_pass_html(), redirect_count=3)
+    assert long_chain.findings_summary.prioritized_check_ids[0] == "redirects"
+    assert long_chain.findings_summary.verdict == "1 fix. The long redirect chain matters most."
+
+
+def test_visible_word_boundaries_set_review_priority_but_not_score_points() -> None:
+    expected = {
+        0: (CheckStatus.FAIL, Impact.HIGH, 0),
+        1: (CheckStatus.WARNING, Impact.HIGH, 3),
+        99: (CheckStatus.WARNING, Impact.HIGH, 3),
+        100: (CheckStatus.WARNING, Impact.MEDIUM, 4),
+        299: (CheckStatus.WARNING, Impact.MEDIUM, 4),
+        300: (CheckStatus.PASS, None, 5),
+    }
+
+    for word_count, (status, impact, points) in expected.items():
+        words = " ".join("word" for _ in range(word_count))
+        result = analyze(f"<html><body><p>{words}</p></body></html>")
+        text_check = check(result, "visible_text")
+
+        assert result.lexical_signals.visible_word_count == word_count
+        assert text_check.status == status
+        assert text_check.points == points
+        assert text_check.impact == impact
+        assert text_check.is_actionable is (word_count < 300)
+        if 0 < word_count < 300:
+            assert "may be appropriate for its purpose" in text_check.finding_reason
+            assert "rank" not in text_check.finding_reason.lower()
+
+
+def test_priority_order_uses_impact_effort_and_original_check_order() -> None:
+    html = (
+        '<html><head><meta name="robots" content="noindex"><title>T</title>'
+        "</head><body><h2>Section</h2><p>word</p>"
+        '<a href="/related"></a><img src="/chart.svg"></body></html>'
+    )
+    result = analyze(html, redirect_count=1, url="http://example.test/page/")
+
+    assert result.findings_summary.prioritized_check_ids == [
+        "robots_directives",
+        "meta_description",
+        "h1_structure",
+        "https",
+        "visible_text",
+        "title",
+        "anchor_text",
+        "html_lang",
+        "viewport",
+        "canonical",
+        "image_alt",
+        "redirects",
+        "open_graph",
+        "twitter_metadata",
+        "charset",
+    ]
+
+
+def test_multiple_blocking_findings_select_one_stable_plain_verdict() -> None:
+    html = all_pass_html().replace("<head>", '<head><meta name="robots" content="noindex">')
+    first = analyze(html, status_code=404)
+    second = analyze(html, status_code=404)
+
+    assert first.findings_summary.prioritized_check_ids[:3] == [
+        "robots_directives",
+        "http_status",
+        "retrieval_success",
+    ]
+    assert first.findings_summary.verdict == "This page tells search engines not to index it."
+    assert second.findings_summary.verdict == first.findings_summary.verdict

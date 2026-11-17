@@ -11,7 +11,7 @@ async function installAnonymousSession(page: Page) {
   });
 }
 
-type ReportScenario = "normal" | "high" | "noindex" | "clear";
+type ReportScenario = "normal" | "high" | "noindex" | "two" | "clear";
 
 function resolvedAnalysis(scenario: ReportScenario) {
   const details = scenario === "noindex"
@@ -26,7 +26,11 @@ function resolvedAnalysis(scenario: ReportScenario) {
         ["title", "metadata", "warning", "medium", "quick", "Make the page title more descriptive", "The title is 12 characters. Check that it clearly identifies this page.", "title"],
         ["h1_structure", "headings_content_structure", "warning", "medium", "moderate", "Review the main heading", "The fetched HTML contains more than one H1 heading.", "heading"],
       ]
-      : scenario === "clear" ? [] : [
+      : scenario === "two" ? [
+        ["title", "metadata", "warning", "medium", "quick", "Make the page title more descriptive", "The title is 12 characters. Check that it clearly identifies this page.", "title"],
+        ["internal_links", "links", "warning", "low", "moderate", "Add useful links to related pages", "No internal links were detected in the fetched HTML.", "links"],
+      ]
+        : scenario === "clear" ? [] : [
         ["title", "metadata", "warning", "medium", "quick", "Make the page title more descriptive", "The title is 12 characters. Check that it clearly identifies this page.", "title"],
         ["meta_description", "metadata", "warning", "medium", "quick", "Make the page description more useful", "The description is 24 characters. Check that it accurately summarizes the page.", "description"],
         ["internal_links", "links", "warning", "low", "moderate", "Add useful links to related pages", "No internal links were detected in the fetched HTML.", "links"],
@@ -51,6 +55,13 @@ function resolvedAnalysis(scenario: ReportScenario) {
     evidence: { observed: "The test response returned an HTML document.", value: 200 }, recommendation: "No action is required.",
     fix_snippet: null, snippet_requires_review: false, is_actionable: false, optional_note: null, exclusion_reason: null,
   });
+  checks.push({
+    id: "link_relationships", category: "links", status: "not_applicable", impact: null, effort: null,
+    finding_title: null, finding_reason: null, anatomy_part: null, title: "Link relationship details", points: 0, max_points: 1,
+    evidence: { observed: "No relevant link relationships were available.", value: null },
+    recommendation: "No action is required.", fix_snippet: null, snippet_requires_review: false,
+    is_actionable: false, optional_note: null, exclusion_reason: null,
+  });
   const impactCounts = { blocking: 0, high: 0, medium: 0, low: 0 };
   for (const check of checks.filter((item) => item.is_actionable)) impactCounts[check.impact as keyof typeof impactCounts] += 1;
   const statusCounts = { pass: 0, warning: 0, fail: 0, not_applicable: 0 };
@@ -64,7 +75,7 @@ function resolvedAnalysis(scenario: ReportScenario) {
       status_code: 200, content_type: "text/html", content_length: 1200, bytes_read: 1200,
       redirect_count: 0, elapsed_time: 0.2, x_robots_tag: null,
     },
-    deterministic_score: { version: "1.1", overall_score: scenario === "normal" ? 86 : scenario === "high" ? 64 : 91,
+    deterministic_score: { version: "1.1", overall_score: scenario === "normal" ? 86 : scenario === "high" ? 64 : scenario === "two" ? 79 : 91,
       points_earned: 86, max_points: 100, categories: [] },
     checks,
     metadata: { title: "A useful guide to this page" },
@@ -81,6 +92,7 @@ function resolvedAnalysis(scenario: ReportScenario) {
       prioritized_check_ids: prioritizedIds,
       verdict: scenario === "noindex" ? "This page tells search engines not to index it."
         : scenario === "high" ? "3 fixes. The missing page description matters most."
+          : scenario === "two" ? "2 small fixes."
           : scenario === "clear" ? "Nothing to fix in these checks." : "3 small fixes.",
       exclusions: [{ check_id: "json_ld", status: "warning", reason: "Missing optional JSON-LD is not a confirmed defect." }],
     },
@@ -278,13 +290,14 @@ test("renders v1.1 verdicts, shared counts, priority order, and severity colors 
     await page.getByRole("button", { name: "Analyze page" }).click();
     const expected = next === "noindex" ? "This page tells search engines not to index it."
       : next === "high" ? "3 fixes. The missing page description matters most."
+        : next === "two" ? "2 small fixes."
         : next === "clear" ? "Nothing to fix in these checks." : "3 small fixes.";
     await expect(page.getByTestId("report-verdict")).toHaveText(expected);
   }
 
   async function assertColorPolicy() {
     const verdict = page.getByTestId("report-verdict");
-    expect(await verdict.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(36, 48, 43)");
+    expect(await verdict.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(20, 19, 15)");
     const offenders = await page.locator("body *").evaluateAll((elements) => {
       const isVermilion = (value: string) => {
         const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -326,6 +339,9 @@ test("renders v1.1 verdicts, shared counts, priority order, and severity colors 
     await openScenario(next);
     await assertColorPolicy();
     expect(await page.locator(".nav-count").innerText()).toBe("3");
+    if (next === "normal") {
+      await expect(page.getByTestId("summary-count-line")).toHaveText("3 to fix · 1 passed · 1 not applicable");
+    }
     const priorityNumbers = await page.locator("[data-priority-card] .priority-number").allTextContents();
     expect(priorityNumbers).toEqual(["1", "2", "3"]);
     expect(await page.locator("[data-priority-card]").count()).toBe(3);
@@ -378,7 +394,7 @@ test("renders v1.1 verdicts, shared counts, priority order, and severity colors 
   }
 
   await page.getByRole("button", { name: "Review all checks" }).click();
-  await expect(page.getByTestId("findings-count-line")).toHaveText("3 to fix · 1 passed · 0 not applicable");
+  await expect(page.getByTestId("findings-count-line")).toHaveText("3 to fix · 1 passed · 1 not applicable");
   expect(await page.locator(".nav-count").innerText()).toBe("3");
   await expect(page.getByRole("link", { name: /Needs review/ })).toBeVisible();
   const blockingBadge = page.locator(".finding-item .impact-blocking").first();
@@ -394,11 +410,25 @@ test("renders v1.1 verdicts, shared counts, priority order, and severity colors 
   expect(await page.locator(".report-nav a").allTextContents()).toEqual(["Overview", "Findings 3"]);
 
   await page.getByRole("button", { name: "Change page" }).click();
+  scenario = "two";
+  await page.getByLabel("Page address").fill("https://example.test/two/");
+  await page.getByRole("button", { name: "Analyze page" }).click();
+  await expect(page.getByTestId("report-verdict")).toHaveText("2 small fixes.");
+  await expect(page.getByTestId("summary-count-line")).toHaveText("2 to fix · 1 passed · 1 not applicable");
+  expect(await page.locator(".nav-count").innerText()).toBe("2");
+  await page.getByRole("button", { name: "Review all checks" }).click();
+  await expect(page.getByTestId("findings-count-line")).toHaveText("2 to fix · 1 passed · 1 not applicable");
+  expect(await page.locator(".nav-count").innerText()).toBe("2");
+  await expect(page.locator(".findings-optional-notes summary")).toHaveText("Optional notes (1)");
+  expect(await page.locator("[data-finding-id='json_ld']").count()).toBe(0);
+
+  await page.getByRole("button", { name: "Change page" }).click();
   scenario = "clear";
   await page.getByLabel("Page address").fill("https://example.test/clear/");
   await page.getByRole("button", { name: "Analyze page" }).click();
   await expect(page.getByTestId("report-verdict")).toHaveText("Nothing to fix in these checks.");
-  await expect(page.getByTestId("summary-count-line")).toHaveText("0 to fix · 1 passed · 0 not applicable");
+  await assertColorPolicy();
+  await expect(page.getByTestId("summary-count-line")).toHaveText("0 to fix · 1 passed · 1 not applicable");
   expect(await page.locator(".nav-count").innerText()).toBe("0");
   expect(await page.locator("[data-priority-card]").count()).toBe(0);
   expect(externalRequests).toEqual([]);

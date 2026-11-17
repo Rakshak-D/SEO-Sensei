@@ -6,7 +6,7 @@ type Props = {
   openCount: number;
   hasReport: boolean;
   children: ReactNode;
-  onNavigate: (route: AppRoute, options?: { focus?: "heading" }) => void;
+  onNavigate: (route: AppRoute, options?: { focus?: "heading" | "xray" | "finding" }) => void;
   onNewAudit: () => void;
   onOperator: () => void;
 };
@@ -21,6 +21,7 @@ const sections = [
 function routeFor(item: string, current: AppRoute): AppRoute | null {
   if (item === "Summary") return { ...current, view: "overview", check: "" };
   if (item === "Fix list") return { ...current, view: "findings", check: "" };
+  if (item === "Page X-ray") return { ...current, view: "xray", check: "" };
   return null;
 }
 
@@ -32,12 +33,16 @@ function PageLink({ item, route, openCount, onNavigate }: {
 }) {
   const target = routeFor(item, route);
   if (!target) return <span className="guest-nav-disabled" aria-disabled="true">{item}<small>Coming later</small></span>;
-  const active = item === "Summary" ? route.view === "overview" : route.view === "findings" || route.view === "detail";
+  const active = item === "Summary"
+    ? route.view === "overview"
+    : item === "Fix list"
+      ? route.view === "findings" || route.view === "detail"
+      : item === "Page X-ray" && route.view === "xray";
   return (
     <a className="guest-nav-link" href={routeSearch(target)} aria-current={active ? "page" : undefined}
-      onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: "heading" }); }}>
+      onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: item === "Page X-ray" ? "xray" : "heading" }); }}>
       <span>{item}</span>
-      <span className="guest-nav-count" aria-label={`${openCount} open problems`}>{openCount}</span>
+      {(item === "Summary" || item === "Fix list") && <span className="guest-nav-count" aria-label={`${openCount} open problems`}>{openCount}</span>}
     </a>
   );
 }
@@ -48,6 +53,7 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
   const dialog = useRef<HTMLDivElement>(null);
   const summary = { ...route, view: "overview" as const, check: "" };
   const fixes = { ...route, view: "findings" as const, check: "" };
+  const xray = { ...route, view: "xray" as const, check: "" };
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -79,9 +85,9 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [moreOpen]);
 
-  const closeMore = () => {
+  const closeMore = (restoreFocus = true) => {
     setMoreOpen(false);
-    window.requestAnimationFrame(() => moreTrigger.current?.focus());
+    if (restoreFocus) window.requestAnimationFrame(() => moreTrigger.current?.focus());
   };
 
   const handleBackdrop = (event: MouseEvent<HTMLDivElement>) => {
@@ -130,7 +136,10 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
               onClick={(event) => { event.preventDefault(); onNavigate(fixes, { focus: "heading" }); }}>
               <span>Fix list</span><small>{openCount}</small>
             </a>
-            <button type="button" disabled aria-disabled="true" className="guest-mobile-xray">X-ray</button>
+            <a href={routeSearch(xray)} aria-current={route.view === "xray" ? "page" : undefined}
+              onClick={(event) => { event.preventDefault(); onNavigate(xray, { focus: "xray" }); }}>
+              <span>X-ray</span>
+            </a>
             <button type="button" ref={moreTrigger} aria-expanded={moreOpen} aria-haspopup="dialog" onClick={() => setMoreOpen(true)}>More</button>
           </nav>
         )}
@@ -139,19 +148,19 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
       {moreOpen && (
         <div className="guest-more-backdrop" onMouseDown={handleBackdrop}>
           <div className="guest-more-sheet" role="dialog" aria-modal="true" aria-labelledby="guest-more-title" tabIndex={-1} ref={dialog}>
-            <div className="guest-more-heading"><h2 id="guest-more-title">Pages</h2><button type="button" className="guest-text-button" onClick={closeMore}>Close</button></div>
+            <div className="guest-more-heading"><h2 id="guest-more-title">Pages</h2><button type="button" className="guest-text-button" onClick={() => closeMore()}>Close</button></div>
             {sections.map((section) => (
               <section key={section.title} aria-labelledby={`guest-more-${section.title.toLowerCase()}`}>
                 <h3 id={`guest-more-${section.title.toLowerCase()}`}>{section.title}</h3>
                 <ul>{section.items.map((item) => {
                   const target = routeFor(item, route);
                   if (!target) return <li key={item}><button type="button" className="guest-more-disabled" disabled aria-disabled="true">{item}<span>Coming later</span></button></li>;
-                  const active = item === "Summary" ? route.view === "overview" : route.view === "findings" || route.view === "detail";
-                  return <li key={item}><a href={routeSearch(target)} aria-current={active ? "page" : undefined} onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: "heading" }); closeMore(); }}>{item}</a></li>;
+                  const active = item === "Summary" ? route.view === "overview" : item === "Fix list" ? route.view === "findings" || route.view === "detail" : route.view === "xray";
+                  return <li key={item}><a href={routeSearch(target)} aria-current={active ? "page" : undefined} onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: item === "Page X-ray" ? "xray" : "heading" }); closeMore(false); }}>{item}</a></li>;
                 })}</ul>
               </section>
             ))}
-            <button type="button" className="guest-more-operator" onClick={() => { closeMore(); onOperator(); }}>Operator sign in</button>
+            <button type="button" className="guest-more-operator" onClick={() => { closeMore(false); onOperator(); }}>Operator sign in</button>
           </div>
         </div>
       )}

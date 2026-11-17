@@ -4,12 +4,14 @@ import type { FindingImpact, SeoCheck } from "../analysis/schema";
 import { findingsViewModel } from "../analysis/findingsViewModel";
 import { ImpactTag } from "../../components/StatusTag";
 import type { AppRoute } from "../../app/route";
+import { buildXrayModel } from "./xrayModel";
 
 type Filter = "all" | "blocking" | "high" | "quick";
 type Props = {
   report: AnalysisReport;
   route: AppRoute;
-  onNavigate: (route: AppRoute, options?: { replace?: boolean; focus?: "heading" | "finding" }) => void;
+  onNavigate: (route: AppRoute, options?: { replace?: boolean; focus?: "heading" | "finding" | "xray" }) => void;
+  onShowOnXray: (checkId: string) => void;
 };
 
 const filterLabels: Record<Filter, string> = {
@@ -31,8 +33,10 @@ function matchesFilter(check: SeoCheck, filter: Filter): boolean {
   return check.impact === filter;
 }
 
-export function GuestFixList({ report, route, onNavigate }: Props) {
+export function GuestFixList({ report, route, onNavigate, onShowOnXray }: Props) {
   const model = findingsViewModel(report);
+  const xray = buildXrayModel(report.analysis, model.prioritized);
+  const xrayCheckIds = new Set(xray.priorities.filter((priority) => priority.regionId !== null).map((priority) => priority.check.id));
   const [filter, setFilter] = useState<Filter>("all");
   const [expandedId, setExpandedId] = useState(route.check);
   const [copyMessage, setCopyMessage] = useState("");
@@ -107,6 +111,7 @@ export function GuestFixList({ report, route, onNavigate }: Props) {
                         <p><strong>Why:</strong> {check.finding_reason ?? check.recommendation}</p>
                         <p><strong>Observed:</strong> {check.evidence.observed}</p>
                         <p><strong>Next step:</strong> {check.recommendation}</p>
+                        {xrayCheckIds.has(check.id) && <button type="button" className="guest-xray-fix-action" onClick={() => onShowOnXray(check.id)}>Show on X-ray</button>}
                         {check.fix_snippet ? (
                           <div className="guest-snippet-block">
                             {check.snippet_requires_review && <p className="guest-template-note">Editable template, not your real copy.</p>}

@@ -92,6 +92,7 @@ const guestAnalysis = {
       is_actionable: true,
       optional_note: null,
       exclusion_reason: null,
+      anatomy_part: "description",
     },
     {
       id: "retrieval_success",
@@ -161,7 +162,43 @@ const guestAnalysis = {
       exclusion_reason: null,
     },
   ],
-  metadata: { title: "A guide to home solar planning" },
+  metadata: {
+    title: "A guide to home solar planning",
+    title_length: 33,
+    title_count: 1,
+    description: "A practical guide to planning a home solar project.",
+    description_length: 52,
+    canonical: "https://northstar.example/guides/home-solar/",
+    canonical_resolved: "https://northstar.example/guides/home-solar/",
+    canonical_relationship: "valid_same_host",
+    robots_directives: [],
+    language: "en",
+    viewport: "width=device-width, initial-scale=1",
+    charset: "utf-8",
+    mixed_content_reference_count: 0,
+  },
+  headings: {
+    h1: ["Plan a home solar project"],
+    h2: ["Compare installation plans", "Prepare questions for an installer"],
+    h3: [],
+    empty_heading_count: 0,
+    hierarchy_jumps: [],
+  },
+  images: { total: 1, with_alt: 1, missing_alt: 0, empty_alt: 0, alt_coverage_percent: 100, nonempty_alt: 1, empty_alt_intent_unknown: 0 },
+  links: { total: 2, internal: 2, external: 0, empty_anchors: 0, nofollow: 0, sponsored: 0, ugc: 0 },
+  structured_data: { block_count: 0, valid_blocks: 0, malformed_blocks: 0, types: [] },
+  hreflang: { links: [], malformed_count: 0 },
+  social_metadata: {
+    og_title: null,
+    og_description: null,
+    og_image: null,
+    og_url: null,
+    twitter_card: null,
+    twitter_title: null,
+    twitter_description: null,
+    twitter_image: null,
+  },
+  lexical_signals: { visible_word_count: 241, frequent_terms: [{ term: "solar", count: 8 }] },
   findings_summary: {
     total_checks: 4,
     raw_passes: 1,
@@ -310,6 +347,41 @@ describe("public guest audit journey", () => {
     expect(
       screen.getByText("Editable template, not your real copy."),
     ).toBeVisible();
+  });
+  it("opens observed X-ray regions and returns each numbered pin to its matching fix", async () => {
+    installGuestServices();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Check a web page for SEO problems." });
+    await user.type(screen.getByLabelText("Page address"), "https://northstar.example/guides/home-solar/");
+    await user.click(screen.getByRole("button", { name: "Check page" }));
+    await screen.findByRole("heading", { name: "Summary" });
+    expect(screen.getByRole("region", { name: "HTML X-ray" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Open Page X-ray" }));
+
+    expect(await screen.findByRole("heading", { name: "Page X-ray" })).toBeVisible();
+    expect(window.location.search).toContain("view=xray");
+    expect(window.location.search).toContain("source=guest");
+    expect(window.location.search).not.toContain("northstar.example");
+    await user.click(screen.getByText("HTML head metadata"));
+    expect(screen.getByText("A guide to home solar planning")).toBeVisible();
+    expect(screen.getByText("Plan a home solar project")).toBeVisible();
+    expect(screen.getByText("241 visible words found.")).toBeVisible();
+    expect(screen.getByText("Not assessed. No header or navigation content was returned.")).toBeVisible();
+    expect(screen.getByText("Not assessed. No footer content was returned.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Page X-ray" })).toHaveAttribute("aria-current", "page");
+
+    const pin = screen.getByRole("button", { name: "Priority 1: Add a page description.; open matching fix" });
+    await user.click(pin);
+    expect(await screen.findByRole("heading", { name: "Fix list" })).toBeVisible();
+    expect(window.location.search).toContain("view=findings");
+    expect(window.location.search).toContain("check=meta_description");
+    expect(screen.getByRole("button", { name: "Add a page description. High Quick" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Show on X-ray" }));
+    expect(await screen.findByRole("heading", { name: "Page X-ray" })).toBeVisible();
+    expect(window.location.search).toContain("check=meta_description");
+    expect(screen.getByRole("button", { name: "Priority 1: Add a page description.; open matching fix" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Add a page description." })).toBeVisible();
   });
   it("copies only the server-provided snippet and reports success only when clipboard write succeeds", async () => {
     installGuestServices();

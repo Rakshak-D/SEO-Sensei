@@ -3,11 +3,13 @@ import type { AnalysisReport } from "../analysis/report";
 import { categoryLabels } from "../analysis/schema";
 import { findingsViewModel } from "../analysis/findingsViewModel";
 import { ImpactTag } from "../../components/StatusTag";
+import { buildXrayModel } from "./xrayModel";
 
 type Props = {
   report: AnalysisReport;
   onSeeFix: (checkId: string) => void;
   onReviewAll: () => void;
+  onOpenXray: () => void;
 };
 
 function hostAndPath(value: string) {
@@ -19,13 +21,14 @@ function hostAndPath(value: string) {
   }
 }
 
-export function GuestSummary({ report, onSeeFix, onReviewAll }: Props) {
+export function GuestSummary({ report, onSeeFix, onReviewAll, onOpenXray }: Props) {
   const [showAllGood, setShowAllGood] = useState(false);
   const { analysis } = report;
   const model = findingsViewModel(report);
   const identity = hostAndPath(analysis.final_url);
   const verdict = analysis.findings_summary?.verdict ?? "Review the findings returned for this page.";
   const priorities = model.prioritized.slice(0, 3);
+  const xray = buildXrayModel(analysis, model.prioritized);
   const passing = analysis.checks.filter((check) => check.status === "pass");
   const optionalCount = analysis.findings_summary?.optional_note_count ?? model.optionalNotes.length;
 
@@ -91,6 +94,41 @@ export function GuestSummary({ report, onSeeFix, onReviewAll }: Props) {
         ) : (
           <p className="guest-no-fixes">No actionable fixes were returned by these checks.</p>
         )}
+
+        <section className="guest-xray-preview" aria-labelledby="guest-xray-preview-title" data-testid="xray-preview">
+          <div className="guest-xray-preview-heading">
+            <div><p className="guest-summary-kicker">Page structure</p><h2 id="guest-xray-preview-title">HTML X-ray</h2></div>
+            <button type="button" className="guest-secondary-button" onClick={onOpenXray}>Open Page X-ray</button>
+          </div>
+          <div className="guest-xray-preview-frame" aria-label="Compact schematic from observed HTML">
+            <div className="guest-xray-preview-head">
+              <span>HTML metadata</span>
+              <strong>{xray.headMetadata.find((region) => region.id === "head-title")?.value}</strong>
+            </div>
+            <div className="guest-xray-preview-body">
+              <span className="guest-xray-preview-unassessed">Header not assessed</span>
+              <strong>{xray.regions.find((region) => region.id === "primary-heading")?.items[0] ?? "H1 not assessed"}</strong>
+              <span>{xray.regions.find((region) => region.id === "visible-content")?.value}</span>
+              <div className="guest-xray-preview-facts">
+                <span>{xray.regions.find((region) => region.id === "images")?.value}</span>
+                <span>{xray.regions.find((region) => region.id === "links")?.value}</span>
+              </div>
+              <span className="guest-xray-preview-unassessed">Footer not assessed</span>
+            </div>
+          </div>
+          {xray.priorities.slice(0, 3).some((item) => item.regionId) && (
+            <ol className="guest-xray-preview-pins" aria-label="Priority marks">
+              {xray.priorities.slice(0, 3).filter((item) => item.regionId).map((item) => (
+                <li key={item.check.id}><button type="button" onClick={() => onSeeFix(item.check.id)} aria-label={`Priority ${item.number}: ${item.check.finding_title ?? item.check.title}; see the fix`}>
+                  <span>{item.number}</span>{item.check.finding_title ?? item.check.title}
+                </button></li>
+              ))}
+            </ol>
+          )}
+          {xray.priorities.slice(0, 3).filter((item) => !item.regionId).map((item) => (
+            <p className="guest-xray-unplaced-note" key={item.check.id}>Priority {item.number} cannot be placed on the page drawing. <button type="button" className="guest-text-button" onClick={() => onSeeFix(item.check.id)}>See the fix</button></p>
+          ))}
+        </section>
       </section>
 
       <section className="guest-categories" aria-labelledby="guest-category-title">

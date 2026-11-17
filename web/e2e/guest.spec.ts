@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import "./phase-s2b1-xray.spec";
 const auditFixture = JSON.parse(
   readFileSync(resolve(process.cwd(), "public/fixtures/audit.json"), "utf8"),
 ) as unknown;

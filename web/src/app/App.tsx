@@ -10,6 +10,7 @@ import { sampleUrl, type SeoCheck } from "../features/analysis/schema";
 import { GuestFixList } from "../features/guest/GuestFixList";
 import { GuestHome } from "../features/guest/GuestHome";
 import { GuestNavigation } from "../features/guest/GuestNavigation";
+import { GuestPageXray } from "../features/guest/GuestPageXray";
 import { GuestSummary } from "../features/guest/GuestSummary";
 import { useGuestFlow } from "../features/guest/useGuestFlow";
 import { SignIn } from "../features/auth/SignIn";
@@ -35,7 +36,7 @@ type DemoState =
   | { state: "loading" }
   | { state: "ready"; bundle: FixtureBundle }
   | { state: "error"; message: string };
-type FocusRequest = "heading" | "url" | "finding" | "error" | "search" | "username";
+type FocusRequest = "heading" | "url" | "finding" | "xray" | "error" | "search" | "username";
 
 function Wordmark({ onOpenEntry }: { onOpenEntry: () => void }) {
   return (
@@ -199,7 +200,10 @@ export function App() {
   }, []);
 
   const navigate = useCallback((next: AppRoute, options: { replace?: boolean; focus?: FocusRequest } = {}) => {
-    if (options.focus) focusRequest.current = options.focus;
+    if (options.focus) {
+      focusRequest.current = options.focus;
+      if (options.focus === "finding" || options.focus === "xray") focusFindingId.current = next.check;
+    }
     const search = routeSearch(next);
     if (options.replace) window.history.replaceState({}, "", search);
     else window.history.pushState({}, "", search);
@@ -271,6 +275,12 @@ export function App() {
       if (previous.view === "detail" && next.view === "findings") {
         focusRequest.current = "finding";
         focusFindingId.current = previous.check;
+      } else if ((previous.view === "xray" || previous.view === "overview") && next.view === "findings" && next.check) {
+        focusRequest.current = "finding";
+        focusFindingId.current = next.check;
+      } else if (next.view === "xray" && next.check) {
+        focusRequest.current = "xray";
+        focusFindingId.current = next.check;
       } else if (previous.view !== next.view || previous.source !== next.source) {
         focusRequest.current = "heading";
       }
@@ -288,11 +298,17 @@ export function App() {
     if (request === "username") target = document.getElementById("login-username");
     if (request === "finding") {
       target = Array.from(document.querySelectorAll<HTMLElement>("[data-finding-id]"))
-        .find((element) => element.dataset.findingId === focusFindingId.current) ?? null;
+        .find((element) => element.dataset.findingId === (focusFindingId.current || route.check)) ?? null;
+    }
+    if (request === "xray") {
+      const selectedPin = Array.from(document.querySelectorAll<HTMLElement>("[data-xray-check]"))
+        .find((element) => element.dataset.xrayCheck === (focusFindingId.current || route.check));
+      target = selectedPin ?? document.getElementById("guest-xray-title");
+      target?.scrollIntoView?.({ block: "center", inline: "nearest" });
     }
     if (request === "search") target = document.getElementById("finding-search");
     if (request === "heading" || request === "error") target = document.querySelector("main h1[tabindex='-1']");
-    target?.focus();
+    target?.focus({ preventScroll: request === "xray" });
     focusRequest.current = null;
   }, [route, auth.status, demo, report]);
 
@@ -545,9 +561,18 @@ export function App() {
         report={activeReport}
         onSeeFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })}
         onReviewAll={() => navigate({ ...route, view: "findings", check: "", mode: "review", q: "", status: "all" }, { focus: "heading" })}
+        onOpenXray={() => navigate({ ...route, view: "xray", check: "" }, { focus: "xray" })}
       />;
     } else if (activeReport && route.view === "findings") {
-      view = <GuestFixList key={route.check} report={activeReport} route={route} onNavigate={navigate} />;
+      view = <GuestFixList key={route.check} report={activeReport} route={route} onNavigate={navigate}
+        onShowOnXray={(checkId) => navigate({ ...route, view: "xray", check: checkId }, { focus: "xray" })} />;
+    } else if (activeReport && route.view === "xray") {
+      view = <GuestPageXray
+        report={activeReport}
+        route={route}
+        onOpenFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })}
+        onNavigate={navigate}
+      />;
     } else if (activeReport) {
       view = <section className="guest-report-page guest-lost-report" aria-labelledby="guest-page-unavailable">
         <p className="guest-summary-kicker">Page unavailable</p>

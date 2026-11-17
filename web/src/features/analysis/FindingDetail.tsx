@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { StatusTag } from "../../components/StatusTag";
+import { ImpactTag, StatusTag } from "../../components/StatusTag";
 import type { AnalysisReport } from "./report";
 import { categoryLabels, type SeoCheck } from "./schema";
 import { filteredChecks } from "./findingSelection";
@@ -23,11 +23,14 @@ export function FindingDetail({ report, route, finding, onBack, onSelect }: Prop
   const demo = report.source === "demo" ? report : null;
   const note = demo?.fixture.review_notes[finding.id];
   const excerpt = demo && finding.id === "robots_directives" ? sourceExcerpt(demo.html) : null;
-  const nearby = useMemo(() => filteredChecks(report.analysis.checks, route), [report.analysis.checks, route]);
+  const title = finding.finding_title ?? finding.title;
+  const priorityIds = report.analysis.findings_summary?.prioritized_check_ids;
+  const nearby = useMemo(() => filteredChecks(report.analysis.checks, route, priorityIds), [report.analysis.checks, route, priorityIds]);
   const selectedIndex = nearby.findIndex((check) => check.id === finding.id);
   const previous = selectedIndex > 0 ? nearby[selectedIndex - 1] : undefined;
   const next = selectedIndex >= 0 && selectedIndex < nearby.length - 1 ? nearby[selectedIndex + 1] : undefined;
-  const interpretation = note?.why_it_matters
+  const interpretation = finding.finding_reason
+    ?? note?.why_it_matters
     ?? `The deterministic analyzer classified the “${finding.id}” rule as ${finding.status}. This records a page signal; consider its purpose and context before acting.`;
   const suggestedAction = note?.fix ?? finding.recommendation;
   const verification = note?.verify
@@ -39,9 +42,10 @@ export function FindingDetail({ report, route, finding, onBack, onSelect }: Prop
       <header className="detail-header">
         <div>
           <p className="eyebrow">{categoryLabels[finding.category]}</p>
-          <h1 id="detail-title" tabIndex={-1}>{finding.title}</h1>
+          <h1 id="detail-title" tabIndex={-1}>{title}</h1>
         </div>
         <StatusTag status={finding.status} />
+        {finding.impact && <ImpactTag impact={finding.impact} />}
       </header>
       <p className="detail-meta">Rule status describes this check only; no severity or business priority is supplied.</p>
 
@@ -77,6 +81,12 @@ export function FindingDetail({ report, route, finding, onBack, onSelect }: Prop
             <span className="suggestion-label">Suggested · not applied</span>
             <h2 className="step-title" id="suggestion-title"><span>03</span> Possible next step</h2>
             <p>{suggestedAction}</p>
+            {finding.fix_snippet && (
+              <div className="resolved-snippet">
+                <pre><code>{finding.fix_snippet}</code></pre>
+                {finding.snippet_requires_review && <p className="snippet-review-note">Editable template. Review it against this page's purpose before use.</p>}
+              </div>
+            )}
             <p className="not-applied">SEO Sensei has not changed the page or its publishing settings.</p>
           </section>
           <section className="detail-section" aria-labelledby="verification-title">
@@ -85,10 +95,10 @@ export function FindingDetail({ report, route, finding, onBack, onSelect }: Prop
           </section>
           <nav className="detail-adjacent" aria-label="Other matching findings">
             {previous ? (
-              <button className="adjacent-link" type="button" onClick={() => onSelect(previous)}>← {previous.title}</button>
+              <button className="adjacent-link" type="button" onClick={() => onSelect(previous)}>← {previous.finding_title ?? previous.title}</button>
             ) : <span className="adjacent-empty">No earlier match</span>}
             {next ? (
-              <button className="adjacent-link adjacent-next" type="button" onClick={() => onSelect(next)}>{next.title} →</button>
+              <button className="adjacent-link adjacent-next" type="button" onClick={() => onSelect(next)}>{next.finding_title ?? next.title} →</button>
             ) : <span className="adjacent-empty">No later match</span>}
           </nav>
         </aside>

@@ -67,14 +67,14 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
   expect(noindexData.requested_url).toBe("https://phase2d.test/pages/noindex");
   expect(noindexData.checks.find((check) => check.id === "robots_directives")?.status).toBe("fail");
   await expect(page.getByRole("heading", { name: "Home Solar Project Planning Guide for Owners" })).toBeVisible();
-  await expect(page.getByText("Detected directives: noindex, follow.")).toBeVisible();
+  await expect(page.getByText(/The fetched HTML or response headers include a noindex directive/)).toBeVisible();
   expect(new URL(page.url()).searchParams.get("url")).toBeNull();
   expect(new URL(page.url()).searchParams.get("requested_url")).toBeNull();
   await page.screenshot({ path: `${evidenceDir}/live-noindex-overview-1440x900.png`, fullPage: true });
 
   await page.getByRole("link", { name: /Findings/ }).click();
   await expect(page.getByRole("heading", { name: "Findings investigation" })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText(/of \d+ review checks/);
+  await expect(page.getByRole("status")).toContainText(/of \d+ actionable checks/);
   const allList = page.getByRole("link", { name: /All checks/ });
   await allList.click();
   await expect(page.getByRole("list", { name: "All analyzer checks in response order" }).getByRole("listitem")).toHaveCount(23);
@@ -82,8 +82,8 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
     .toHaveCount(noindexData.checks.filter((check) => check.status === "not_applicable").length);
   await page.getByRole("link", { name: /Needs review/ }).click();
   await page.screenshot({ path: `${evidenceDir}/live-findings-needs-review-1440x900.png`, fullPage: true });
-  await page.getByRole("link", { name: /Robots directives are reported/ }).click();
-  await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeFocused();
+  await page.getByRole("link", { name: /Review the noindex directive/ }).click();
+  await expect(page.getByRole("heading", { name: "Review the noindex directive" })).toBeFocused();
   await expect(page.getByText(/analyzer-returned checks\[\]\.evidence\.observed/i)).toBeVisible();
   await expect(page.getByText(/fictional fixture/i)).toHaveCount(0);
   await page.screenshot({ path: `${evidenceDir}/live-evidence-1440x900.png`, fullPage: true });
@@ -91,14 +91,14 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
   await expect(page.getByRole("heading", { name: "Findings investigation" })).toBeVisible();
   await expect(page.locator("[data-finding-id='robots_directives']")).toBeFocused();
   await page.goForward();
-  await expect(page.getByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Review the noindex directive" })).toBeVisible();
   await page.getByRole("button", { name: "Change page" }).click();
 
   const allPassResponse = await analyze(page, "https://phase2d.test/pages/all-pass");
   const allPassData = await allPassResponse.json() as { checks: Array<{ status: string }> };
   expect(allPassData.checks).toHaveLength(23);
   expect(allPassData.checks.every((check) => check.status === "pass" || check.status === "not_applicable")).toBe(true);
-  await expect(page.getByText("No failed rules in this response.")).toBeVisible();
+  await expect(page.getByText("Nothing to fix in these checks.")).toBeVisible();
   await expect(page.getByRole("heading", { name: /noindex directive is present/i })).toHaveCount(0);
   await page.screenshot({ path: `${evidenceDir}/live-all-pass-overview-1440x900.png`, fullPage: true });
 
@@ -122,7 +122,7 @@ test("authenticated HTTPS analysis, live reports, budget errors, session recover
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   await page.screenshot({ path: `${evidenceDir}/live-findings-320x844.png`, fullPage: true });
   await page.getByRole("link", { name: /Needs review/ }).click();
-  await page.getByRole("link", { name: /Title is present and reasonably bounded/ }).click();
+  await page.getByRole("link", { name: /Make the page title more descriptive/ }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   await page.screenshot({ path: `${evidenceDir}/live-evidence-390x844.png`, fullPage: true });

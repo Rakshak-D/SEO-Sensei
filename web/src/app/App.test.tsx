@@ -164,7 +164,7 @@ describe("Evidence Ledger authenticated application", () => {
     const reviewList = document.querySelector(".finding-groups")!;
     expect(Array.from(reviewList.querySelectorAll("[data-finding-id]")).map((row) => row.getAttribute("data-finding-id")))
       .toEqual(["robots_directives", "visible_text", "open_graph", "twitter_metadata"]);
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 4 of 4 review checks");
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 4 of 4 actionable checks");
 
     await userEvent.setup().click(screen.getByRole("link", { name: /All checks/ }));
     const allChecks = await screen.findByRole("list", { name: "All analyzer checks in fixture order" });
@@ -182,14 +182,14 @@ describe("Evidence Ledger authenticated application", () => {
     await screen.findByRole("heading", { name: "Findings investigation" });
     await user.type(screen.getByRole("searchbox", { name: "Search findings" }), "twitter");
     await user.selectOptions(screen.getByLabelText("Rule status"), "warning");
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 review checks");
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 actionable checks");
     await user.click(screen.getByRole("link", { name: /Twitter metadata/ }));
     expect(await screen.findByRole("heading", { name: "Twitter metadata is reported" })).toBeVisible();
     await user.click(screen.getByRole("link", { name: /Back to findings/ }));
     await screen.findByRole("heading", { name: "Findings investigation" });
     expect(screen.getByRole("searchbox", { name: "Search findings" })).toHaveValue("twitter");
     expect(screen.getByLabelText("Rule status")).toHaveValue("warning");
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 review checks");
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 actionable checks");
   });
 
   it("keeps fixture excerpts clearly fictional and renders hostile strings as text", async () => {
@@ -240,7 +240,7 @@ describe("Evidence Ledger authenticated application", () => {
     await user.click(screen.getByRole("button", { name: "Analyze page" }));
 
     expect(await screen.findByRole("heading", { name: "A different page title" })).toBeVisible();
-    expect(screen.getByText("No failed rules in this response.")).toBeVisible();
+    expect(screen.getByText("Nothing to fix in these checks.")).toBeVisible();
     expect(screen.getByText("100 / 100")).toBeVisible();
     expect(screen.getByText(/Observed fetch context/)).toBeVisible();
     expect(screen.queryByText(/Northstar Solar/)).not.toBeInTheDocument();
@@ -260,7 +260,7 @@ describe("Evidence Ledger authenticated application", () => {
     await screen.findByRole("heading", { name: "Inspect what a page returns." });
     await user.type(screen.getByLabelText("Page address"), live.requested_url);
     await user.click(screen.getByRole("button", { name: "Analyze page" }));
-    await user.click(await screen.findByRole("button", { name: "Review 1 checks" }));
+    await user.click(await screen.findByRole("button", { name: "Review all checks" }));
     await user.click(await screen.findByRole("link", { name: /Robots directives are reported/ }));
     expect(await screen.findByRole("heading", { name: "Robots directives are reported" })).toBeVisible();
     expect(screen.getByText(/Analyzer-returned checks\[\]\.evidence\.observed/i)).toBeVisible();

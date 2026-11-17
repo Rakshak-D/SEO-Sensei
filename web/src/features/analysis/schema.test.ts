@@ -3,6 +3,57 @@ import fixtureData from "../../../public/fixtures/audit.json";
 import { fixtureSchema, liveSeoAnalysisSchema } from "./schema";
 import { filteredChecks } from "./findingSelection";
 import { routeFromSearch } from "../../app/route";
+import { findingsViewModel } from "./findingsViewModel";
+import type { AnalysisReport } from "./report";
+import type { FindingsSummary, SeoAnalysis } from "./schema";
+
+function version11LiveAnalysis(): SeoAnalysis {
+  const analysis = structuredClone(fixtureData.analysis) as unknown as SeoAnalysis;
+  const candidates = [
+    ["meta_description", "fail", "high", "quick", "Add a page description", "No meta description was found."],
+    ["title", "warning", "medium", "quick", "Make the page title more descriptive", "The title is short."],
+    ["visible_text", "warning", "medium", "moderate", "Check the page's main question", "The fetched HTML has about 232 words."],
+    ["json_ld", "warning", null, null, null, null],
+  ] as const;
+  const exclusions: FindingsSummary["exclusions"] = [];
+  analysis.checks = candidates.map(([id, status, impact, effort, findingTitle, findingReason]) => {
+    const original = analysis.checks.find((check) => check.id === id)!;
+    const actionable = findingTitle !== null;
+    if (!actionable) {
+      exclusions.push({ check_id: id, status, reason: "No optional JSON-LD was found; its absence alone is not a confirmed defect." });
+    }
+    return {
+      ...original,
+      status,
+      impact,
+      effort,
+      finding_title: findingTitle,
+      finding_reason: findingReason,
+      fix_snippet: null,
+      snippet_requires_review: false,
+      is_actionable: actionable,
+      optional_note: actionable ? null : "No JSON-LD was found. It is optional for this page.",
+      exclusion_reason: actionable ? null : "Missing optional JSON-LD is not a confirmed defect.",
+      anatomy_part: actionable ? (id === "meta_description" ? "description" : id === "title" ? "title" : "content") : null,
+    };
+  });
+  analysis.deterministic_score.version = "1.1";
+  analysis.findings_summary = {
+    total_checks: 4,
+    raw_passes: 0,
+    raw_warnings: 3,
+    raw_failures: 1,
+    raw_not_applicable: 0,
+    actionable_count: 3,
+    optional_note_count: 1,
+    by_impact: { blocking: 0, high: 1, medium: 2, low: 0 },
+    by_effort: { quick: 2, moderate: 1, larger_job: 0 },
+    prioritized_check_ids: ["meta_description", "title", "visible_text"],
+    verdict: "3 fixes. The missing page description matters most.",
+    exclusions,
+  };
+  return analysis;
+}
 
 describe("Northstar fixture contract", () => {
   it("validates the full 23-check example and expected status totals", () => {
@@ -74,5 +125,23 @@ describe("Northstar fixture contract", () => {
     const malformed = structuredClone(fixtureData.analysis);
     malformed.fetch.bytes_read = -1;
     expect(liveSeoAnalysisSchema.safeParse(malformed).success).toBe(false);
+  });
+
+  it("requires a reconciled v1.1 summary and uses it for the shared open count", () => {
+    const analysis = version11LiveAnalysis();
+    const parsed = liveSeoAnalysisSchema.parse(analysis);
+    const report = { source: "live", analysis: parsed } as AnalysisReport;
+    const view = findingsViewModel(report);
+
+    expect(view.openCount).toBe(3);
+    expect(view.statusLine).toBe("3 to fix · 0 passed · 0 not applicable");
+    expect(view.prioritized.map((check) => check.id)).toEqual(["meta_description", "title", "visible_text"]);
+    expect(view.optionalNotes.map((check) => check.id)).toEqual(["json_ld"]);
+    expect(view.categories.reduce((total, category) => total + category.actionableCount, 0)).toBe(view.openCount);
+    expect(liveSeoAnalysisSchema.safeParse({ ...analysis, findings_summary: undefined }).success).toBe(false);
+    expect(liveSeoAnalysisSchema.safeParse({
+      ...analysis,
+      findings_summary: { ...analysis.findings_summary, actionable_count: 4 },
+    }).success).toBe(false);
   });
 });

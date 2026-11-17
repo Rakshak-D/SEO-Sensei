@@ -202,7 +202,11 @@ def test_valid_session_and_csrf_returns_deterministic_typed_result_without_ai(an
     parsed = SEOAnalysis.model_validate(first.json())
     assert parsed.requested_url == SAMPLE_URL
     assert parsed.metadata.title == "Solar installation guide"
+    assert parsed.deterministic_score.version == "1.1"
     assert parsed.checks
+    assert parsed.findings_summary is not None
+    assert parsed.findings_summary.total_checks == len(parsed.checks) == 23
+    assert parsed.findings_summary.actionable_count == sum(check.is_actionable for check in parsed.checks)
     assert "ai_recommendations" not in first.json()
     assert first.json() == second.json()
     assert len(fetcher.calls) == 2
@@ -310,6 +314,8 @@ def test_health_readiness_and_legacy_bearer_contract_remain_available(analysis_h
         headers={"Authorization": f"Bearer {BEARER_TOKEN}"},
     )
     assert legacy.status_code == 200
+    assert legacy.json()["deterministic_score"]["version"] == "1.1"
+    assert legacy.json()["findings_summary"]["total_checks"] == len(legacy.json()["checks"]) == 23
     assert fetcher.calls == [(SAMPLE_URL, None)]
 
 

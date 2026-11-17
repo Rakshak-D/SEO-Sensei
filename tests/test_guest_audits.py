@@ -4,6 +4,7 @@ import importlib
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 import pytest
 import httpx
@@ -835,6 +836,8 @@ def test_browser_cookie_alone_does_not_authenticate_guest_route(
         json.dumps({"version": 1, "users": [{"username": "alice", "password_hash": hasher.hash(password)}]}),
         encoding="utf-8",
     )
+    if os.name == "posix":
+        account_file.chmod(0o600)
     main = _load_main(monkeypatch, browser_auth=True, accounts_file=account_file)
     with TestClient(main.app, base_url=ORIGIN) as client:
         login = client.post(

@@ -8,6 +8,7 @@ const guestSession = {
   expires_in: 3600,
   bot_check_required: false,
   turnstile_sitekey: null,
+  turnstile_action: null,
 };
 const guestAnalysis = {
   requested_url: "https://northstar.example/guides/home-solar/",
@@ -195,6 +196,7 @@ function response(
 function installGuestServices(
   options: {
     challenge?: boolean;
+    challengeAction?: string;
     analysisStatus?: number;
   } = {},
 ) {
@@ -206,6 +208,7 @@ function installGuestServices(
     ...guestSession,
     bot_check_required: options.challenge ?? false,
     turnstile_sitekey: options.challenge ? "1x00000000000000000000AA" : null,
+    turnstile_action: options.challenge ? options.challengeAction ?? "s2_public_audit" : null,
   };
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -256,6 +259,7 @@ describe("public guest audit journey", () => {
         name: "Check a web page for SEO problems.",
       }),
     ).toBeVisible();
+    expect(document.querySelector("script[data-guest-turnstile]")).toBeNull();
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Username")).not.toBeInTheDocument();
     await user.type(
@@ -403,6 +407,7 @@ describe("public guest audit journey", () => {
   it("keeps challenge tokens in memory, submits once, and does not repeat an expired-session audit", async () => {
     const { calls } = installGuestServices({
       challenge: true,
+      challengeAction: "s2_public_audit",
       analysisStatus: 401,
     });
     let callbacks:
@@ -429,6 +434,7 @@ describe("public guest audit journey", () => {
     const user = userEvent.setup();
     const { unmount } = render(<App />);
     await waitFor(() => expect(api.render).toHaveBeenCalledTimes(1));
+    expect(api.render.mock.calls[0]?.[1].action).toBe("s2_public_audit");
     expect(calls[0]?.url).toBe("/api/guest/v1/session");
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(callbacks).not.toBeNull();

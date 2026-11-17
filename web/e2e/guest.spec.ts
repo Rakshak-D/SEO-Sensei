@@ -169,12 +169,18 @@ test("renders an honest unavailable state without falling back to fictional live
 });
 
 test("keeps guest Home, Summary, and Fix list within the viewport with usable touch targets", async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).origin !== appOrigin)
+      externalRequests.push(new URL(request.url()).origin);
+  });
   await page.route("**/api/guest/v1/session", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
       csrf_token: csrfToken,
       expires_in: 3600,
       bot_check_required: false,
       turnstile_sitekey: null,
+      turnstile_action: null,
     }) });
   });
   await page.route("**/api/guest/v1/analyse-url", async (route) => {
@@ -182,6 +188,9 @@ test("keeps guest Home, Summary, and Fix list within the viewport with usable to
   });
 
   await page.goto("/");
+  await expect(page.getByRole("button", { name: "Check page" })).toBeEnabled();
+  expect(await page.locator("script[data-guest-turnstile]").count()).toBe(0);
+  expect(externalRequests).toEqual([]);
   const widths = [320, 390, 768, 1024, 1440];
   const measured: Array<{ width: number; home: number; summary: number; fixes: number; minTarget: number }> = [];
   for (const width of widths) {
@@ -266,6 +275,7 @@ test("recovers from a controlled Turnstile error and submits a fresh one-use tok
         expires_in: 3600,
         bot_check_required: true,
         turnstile_sitekey: "1x00000000000000000000AA",
+        turnstile_action: "s2_public_audit",
       }),
     });
   });
@@ -306,6 +316,16 @@ test("recovers from a controlled Turnstile error and submits a fresh one-use tok
       ),
     )
     .toBe(1);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __testTurnstileOptions?: Record<string, unknown>;
+          }
+        ).__testTurnstileOptions?.action,
+    ),
+  ).toBe("s2_public_audit");
   await page.getByLabel("Page address").fill(reviewUrl);
   await page.getByRole("button", { name: "Check page" }).click();
   await expect(

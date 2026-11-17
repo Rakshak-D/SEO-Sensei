@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 type TurnstileWidgetOptions = {
   sitekey: string;
+  action: string;
   callback: (token: string) => void;
   "error-callback": () => void;
   "expired-callback": () => void;
@@ -94,6 +95,7 @@ function loadTurnstile(): Promise<TurnstileApi> {
 
 type Props = {
   sitekey: string;
+  action: string;
   epoch: number;
   onReady: () => void;
   onSuccess: (token: string) => void;
@@ -101,7 +103,7 @@ type Props = {
   onFailure: () => void;
 };
 
-export function TurnstileWidget({ sitekey, epoch, onReady, onSuccess, onExpired, onFailure }: Props) {
+export function TurnstileWidget({ sitekey, action, epoch, onReady, onSuccess, onExpired, onFailure }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<{ api: TurnstileApi; id: string } | null>(null);
 
@@ -114,6 +116,7 @@ export function TurnstileWidget({ sitekey, epoch, onReady, onSuccess, onExpired,
         try {
           const id = api.render(containerRef.current, {
             sitekey,
+            action,
             theme: "light",
             size: "flexible",
             callback: (token) => { if (active && token) onSuccess(token); },
@@ -140,7 +143,7 @@ export function TurnstileWidget({ sitekey, epoch, onReady, onSuccess, onExpired,
       }
       cancelPendingTurnstileLoad();
     };
-  }, [sitekey, onReady, onSuccess, onExpired, onFailure]);
+  }, [sitekey, action, onReady, onSuccess, onExpired, onFailure]);
 
   useEffect(() => {
     const widget = widgetRef.current;

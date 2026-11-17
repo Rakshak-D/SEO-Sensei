@@ -10,6 +10,7 @@ const session = {
   expires_in: 3600,
   bot_check_required: false,
   turnstile_sitekey: null,
+  turnstile_action: null,
 };
 
 const analysis = {
@@ -76,6 +77,32 @@ describe("guest API client", () => {
 
     await expect(getGuestSession()).rejects.toMatchObject({ code: "contract_error" });
     await expect(analyzeGuestUrl("https://example.test/", session.csrf_token)).rejects.toMatchObject({ code: "contract_error" });
+  });
+
+  it.each([
+    { bot_check_required: true, turnstile_sitekey: "public-sitekey", turnstile_action: null },
+    { bot_check_required: true, turnstile_sitekey: "public-sitekey", turnstile_action: "bad action" },
+    { bot_check_required: true, turnstile_sitekey: "public-sitekey" },
+    { bot_check_required: false, turnstile_sitekey: null, turnstile_action: "guest_analysis" },
+  ])("rejects an incomplete or inconsistent Turnstile action contract", async (challengeFields) => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({ ...session, ...challengeFields })));
+    await expect(getGuestSession()).rejects.toMatchObject({ code: "contract_error" });
+    vi.unstubAllGlobals();
+  });
+
+  it("retains the backend-configured public action unchanged", async () => {
+    const configuredAction = "s2_public_audit";
+    vi.stubGlobal("fetch", vi.fn(async () => json({
+      ...session,
+      bot_check_required: true,
+      turnstile_sitekey: "public-sitekey",
+      turnstile_action: configuredAction,
+    })));
+
+    await expect(getGuestSession()).resolves.toMatchObject({
+      bot_check_required: true,
+      turnstile_action: configuredAction,
+    });
   });
 
   it("shows bounded retry guidance from a 429 response", async () => {

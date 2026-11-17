@@ -15,8 +15,11 @@ const guestSessionSchema = z.object({
   expires_in: z.number().int().min(1).max(86_400),
   bot_check_required: z.boolean(),
   turnstile_sitekey: z.string().min(1).max(255).nullable(),
-}).refine((session) => !session.bot_check_required || Boolean(session.turnstile_sitekey), {
-  message: "A required security challenge needs a public sitekey.",
+  turnstile_action: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).nullable(),
+}).refine((session) => session.bot_check_required
+  ? Boolean(session.turnstile_sitekey && session.turnstile_action)
+  : session.turnstile_action === null, {
+  message: "The guest security challenge configuration is incomplete.",
 });
 
 export type GuestSession = z.infer<typeof guestSessionSchema>;

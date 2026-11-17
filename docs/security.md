@@ -104,6 +104,15 @@ is HMAC-derived and is not stored. Sessions expire after one hour by default;
 the table admits at most 2,048 live entries and does not evict a live session.
 Restarting the process invalidates all guest sessions.
 
+The guest-session bootstrap response includes the public `turnstile_action`
+alongside `bot_check_required` and `turnstile_sitekey`. When challenge
+verification is required, the action is the validated server configuration;
+when verification is disabled for the restricted test mode, both the sitekey
+and action are `null`. The action is public widget metadata, not an
+authorization value. The analysis POST still accepts only `url` and the
+optional `challenge_token`; the verifier compares Siteverify's result against
+the server-held expected hostname and action.
+
 The POST accepts only `url` and, when production verification is enabled,
 `challenge_token`. The body ceiling is 4,096 actual ASGI bytes, duplicate JSON
 keys and extra fields are rejected, and the URL is validated by the existing

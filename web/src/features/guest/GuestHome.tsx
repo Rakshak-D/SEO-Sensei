@@ -30,6 +30,11 @@ export function GuestHome({
   const [keywordOpen, setKeywordOpen] = useState(false);
   const [urlError, setUrlError] = useState("");
   const sessionReady = flow.session !== null;
+  const challengeConfig = flow.session?.bot_check_required
+    && flow.session.turnstile_sitekey
+    && flow.session.turnstile_action
+    ? { sitekey: flow.session.turnstile_sitekey, action: flow.session.turnstile_action }
+    : null;
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,7 +56,7 @@ export function GuestHome({
     onAnalyze(value);
   };
 
-  const challengeVisible = Boolean(flow.session?.bot_check_required && flow.session.turnstile_sitekey);
+  const challengeVisible = challengeConfig !== null;
 
   return (
     <section className="guest-home" aria-labelledby="guest-home-title">
@@ -93,10 +98,11 @@ export function GuestHome({
           <button className="guest-text-button guest-keyword-toggle" type="button" onClick={() => setKeywordOpen(true)}>Add a target keyword</button>
         )}
 
-        {challengeVisible && flow.session && (flow.phase === "verifying" || flow.phase === "ready" || flow.phase === "error" || flow.phase === "submitting") && (
+        {challengeVisible && challengeConfig && (flow.phase === "verifying" || flow.phase === "ready" || flow.phase === "error" || flow.phase === "submitting") && (
           <TurnstileWidget
             key={flow.widgetEpoch}
-            sitekey={flow.session.turnstile_sitekey!}
+            sitekey={challengeConfig.sitekey}
+            action={challengeConfig.action}
             epoch={flow.widgetEpoch}
             onReady={onChallengeReady}
             onSuccess={onChallenge}

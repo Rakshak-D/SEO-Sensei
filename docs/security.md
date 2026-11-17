@@ -79,6 +79,102 @@ Admitted browser analysis is limited to 6 requests/minute and 30/hour per config
 
 The browser namespace rejects requests carrying an Origin other than the configured browser origin before the global CORS middleware can expose a response. This prevents the legacy extension CORS allowlist from exposing browser-session bootstrap data; CORS is not authentication. The browser-analysis route exposes only deterministic `SEOAnalysis` fields, not AI recommendations, business severity, ranking/index status, DOM locations, saved reports, or external performance measurements. `blocked_destination` is returned only for fetcher categories that explicitly identify blocked destinations or unsafe redirects; other fetch failures use a generic unavailable response.
 
+## Opt-in anonymous guest audits
+
+The guest contract is a separate, deterministic-only capability. It is disabled
+by default. When `GUEST_AUDITS_ENABLED=false`, neither
+`/api/guest/v1/session` nor `/api/guest/v1/analyse-url` is mounted, and no guest
+session store, limiter, replay guard, or Turnstile verifier is created. This
+does not change the legacy bearer or authenticated browser contracts.
+
+When enabled, `GUEST_APP_ORIGIN` must be one canonical HTTPS origin. The
+bootstrap route checks trusted HTTPS, the configured Host, and any supplied
+Origin; the analysis POST requires the exact configured Origin, a valid guest
+cookie, and its `X-CSRF-Token` synchronizer value. A path-specific middleware
+rejects foreign origins and preflights before the general CORS middleware, so a
+configured extension origin cannot read the guest namespace. Origin and CORS
+are not treated as authentication.
+
+The server issues a cryptographically random 32-byte cookie named
+`__Host-seo_sensei_guest`. It is Secure, HttpOnly, SameSite=Lax, host-only, and
+Path=/. The cookie is not an API credential and cannot authorize any existing
+operator or browser-session route. The server retains only a SHA-256 digest and
+expiry in a fixed-capacity in-memory session table. The CSRF synchronizer value
+is HMAC-derived and is not stored. Sessions expire after one hour by default;
+the table admits at most 2,048 live entries and does not evict a live session.
+Restarting the process invalidates all guest sessions.
+
+The POST accepts only `url` and, when production verification is enabled,
+`challenge_token`. The body ceiling is 4,096 actual ASGI bytes, duplicate JSON
+keys and extra fields are rejected, and the URL is validated by the existing
+URL policy. A literal unsafe IP is rejected before fetching; hostname DNS,
+address pinning, redirects, response caps, and connection safety remain the
+responsibility of the existing `SafeFetcher`. The existing crawler and typed
+`SEOAnalysis` v1.1 response are used. The response is capped at 256 KiB by
+default, request-body receipt has a five-second deadline, and the guest
+operation has a 15-second overall deadline. No raw HTML,
+AI recommendation, paid operation, or arbitrary proxy action is exposed.
+
+### Default in-process budgets
+
+| Budget | Default |
+| --- | ---: |
+| Session bootstrap per trusted client IP | 20/minute, 120/hour |
+| Bot-verification attempts per trusted client IP | 5/minute, 30/hour |
+| Accepted audits per visitor | 2/minute, 8/hour |
+| Accepted audits per trusted client IP | 5/minute, 20/hour |
+| Accepted audits process-wide | 8/minute, 60/hour, 250/rolling 24 hours |
+| Concurrent audits | 2 process-wide, 1 per visitor |
+| Live sessions / visitor keys / IP keys | 2,048 / 2,048 / 1,024 |
+
+Admission is atomic, does not queue, and returns `429 rate_limited` with
+`Retry-After` when a budget or concurrency slot is exhausted. Bot attempts are
+counted before token verification. Audit reservations are rolled back if
+verification fails; once verified, the request consumes the audit budget even
+if the remote fetch later fails. Every success, failure, timeout, and
+cancellation releases its concurrency slot. IP attribution uses the existing
+trusted-proxy implementation; direct `X-Forwarded-For` spoofing is ignored.
+
+All guest session, quota, replay, and concurrency state is process-local. These
+limits are **not global across workers, containers, or replicas**. Production
+configuration therefore requires `WEB_CONCURRENCY=1` and the explicit
+`GUEST_PROCESS_LOCAL_LIMITS_CONFIRMED=true` operator attestation. That setting
+does not inspect an orchestrator: before enabling production traffic, the
+operator must separately verify exactly one API worker and one replica, or use
+a separately reviewed shared coordination system. The normal Compose
+configuration does not enable guest audits. Public enablement remains blocked
+until the deployment topology and capacity have been reviewed.
+
+The current Caddyfile does not forward `/api/guest/v1/*` on the application
+host. The backend contract is therefore not reachable through the hosted web
+application until a separately reviewed same-origin ingress route is added.
+
+### Turnstile and cost boundary
+
+Outside explicit local/test mode, every audit requires a Turnstile token. The
+browser receives only `GUEST_TURNSTILE_SITEKEY`; the server-held secret is a
+`SecretStr` and is sent only to the fixed Cloudflare Siteverify endpoint with a
+three-second timeout, no redirects, no environment proxy, and a 16 KiB response
+cap. Verification requires `success: true` and exact configured hostname and
+action. A bounded five-minute digest replay guard rejects token reuse. Provider
+errors, timeouts, replay, mismatched host/action, and failed challenges are
+handled before any page fetch. Test bypass is restricted to `APP_ENV=test`, or
+development with a loopback HTTPS origin; it cannot be selected in production.
+
+S1-C exposes no Gemini, PageSpeed Insights, article, boost, or other paid route.
+Guest paid-feature budget is zero. The 250/day deterministic request ceiling is
+a request-count resource budget, not a dollar-accurate hosting-cost meter.
+Turnstile's [server-side validation guidance](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+requires verification at the server; the [getting-started guide](https://developers.cloudflare.com/turnstile/get-started/)
+describes the public sitekey/server secret distinction.
+
+Audited URLs and reports are not persisted in guest session or limiter state.
+Guest application logs use only the fixed route path, request ID, status, and
+duration. They do not include the submitted URL/query, cookie, CSRF value,
+challenge token, provider secret, fetched content, or analysis report. The
+typed success response necessarily includes the requested/final URL fields of
+the established `SEOAnalysis` contract; those fields are never placed in logs.
+
 ## Same-origin browser ingress
 
 The production Caddyfile serves the built React assets on `APP_DOMAIN`. It forwards `/api/browser/v1` and nested paths to FastAPI without stripping the prefix and applies an 8 KiB proxy body ceiling; FastAPI still enforces the stricter 4 KiB actual streamed-body limit for URL analysis. Unknown `/api/*` paths on the app host return 404 rather than the SPA fallback. Static HTML and browser API responses use `Cache-Control: no-store`; fingerprinted Vite assets may be cached as immutable.

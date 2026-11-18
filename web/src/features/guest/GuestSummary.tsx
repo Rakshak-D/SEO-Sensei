@@ -119,8 +119,8 @@ export function GuestSummary({ report, onSeeFix, onReviewAll, onOpenXray }: Prop
           {xray.priorities.slice(0, 3).some((item) => item.regionId) && (
             <ol className="guest-xray-preview-pins" aria-label="Priority marks">
               {xray.priorities.slice(0, 3).filter((item) => item.regionId).map((item) => (
-                <li key={item.check.id}><button type="button" onClick={() => onSeeFix(item.check.id)} aria-label={`Priority ${item.number}: ${item.check.finding_title ?? item.check.title}; see the fix`}>
-                  <span>{item.number}</span>{item.check.finding_title ?? item.check.title}
+                <li key={item.check.id}><button type="button" onClick={() => onSeeFix(item.check.id)} aria-label={`${item.number} ${item.check.finding_title ?? item.check.title}; priority ${item.number}; see the fix`}>
+                  <span>{item.number}</span>{" "}{item.check.finding_title ?? item.check.title}
                 </button></li>
               ))}
             </ol>

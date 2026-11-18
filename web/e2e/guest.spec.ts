@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import "./phase-s2b1-xray.spec";
 import "./phase-s2b2-specialists.spec";
+import "./phase-s2c1-quality.spec";
 const auditFixture = JSON.parse(
   readFileSync(resolve(process.cwd(), "public/fixtures/audit.json"), "utf8"),
 ) as unknown;

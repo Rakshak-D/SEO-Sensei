@@ -1,0 +1,126 @@
+[
+  {
+    "fileName": "r2-home-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-home-1440x900.png",
+    "query": "?state=home",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-home-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-home-390x844.png",
+    "query": "?state=home",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+    "viewport": "390x844",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-summary-northstar-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-summary-northstar-1440x900.png",
+    "query": "?state=summary&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-summary-northstar-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-summary-northstar-390x844.png",
+    "query": "?state=summary&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=northstar",
+    "viewport": "390x844",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-summary-weak-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-summary-weak-1440x900.png",
+    "query": "?state=summary&sample=weak",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=weak",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-summary-noindex-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-summary-noindex-1440x900.png",
+    "query": "?state=summary&sample=noindex",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=noindex",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-fix-list-expanded-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-fix-list-expanded-1440x900.png",
+    "query": "?state=fix-list&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=fix-list&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true
+  },
+  {
+    "fileName": "r2-fix-list-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-fix-list-390x844.png",
+    "query": "?state=fix-list&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=fix-list&sample=northstar",
+    "viewport": "390x844",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-on-page-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-on-page-1440x900.png",
+    "query": "?state=on-page&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=on-page&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-previews-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-previews-1440x900.png",
+    "query": "?state=previews&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=previews&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-xray-hover-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-xray-hover-1440x900.png",
+    "query": "?state=xray&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=xray&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true
+  },
+  {
+    "fileName": "r2-loading-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-loading-1440x900.png",
+    "query": "?state=loading&sample=northstar",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=loading&sample=northstar",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-errors-four-causes-1440x900.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-errors-four-causes-1440x900.png",
+    "query": "?state=error&reason=all",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=error&reason=all",
+    "viewport": "1440x900",
+    "captured": true,
+    "interactionResult": null
+  },
+  {
+    "fileName": "r2-focus-ring-390x844.png",
+    "relativePath": "docs/design/s1-a/screenshots/r2-focus-ring-390x844.png",
+    "query": "?state=home",
+    "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+    "viewport": "390x844",
+    "captured": true,
+    "interactionResult": true
+  }
+]

@@ -1,0 +1,4806 @@
+{
+  "milestone": "S1-A-R2",
+  "browserEngine": "Playwright-bundled Chromium",
+  "browserVersion": "158.0.8127.18",
+  "profile": "Task-owned in-memory browser context; no user profile used",
+  "baseOrigin": "http://127.0.0.1:50062",
+  "requestCount": 904,
+  "requestHosts": [
+    "127.0.0.1:50062"
+  ],
+  "externalRequestCount": 0,
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0,
+  "rawOutputHashes": {
+    "audit-weak.json": "6b5ab639b111c52f581fa15c7a778a62fd08043b70812630a5b5bf9eb676acea",
+    "audit-basic.json": "374f9a081d34770534de68051402d6b4c6b871a60b2c0acc6e7d018ee9504a2d",
+    "audit-noindex-test.json": "018e54337646fc047177c1ab64c9198e19f7f3710d07f1a6cb79d63c48dff89c"
+  },
+  "dataset": {
+    "scores": {
+      "audit-weak.json": 55,
+      "audit-basic.json": 84,
+      "audit-noindex-test.json": 50
+    },
+    "checkCounts": {
+      "audit-weak.json": 23,
+      "audit-basic.json": 23,
+      "audit-noindex-test.json": 23
+    },
+    "northstarScore": 78,
+    "northstarCheckCount": 23,
+    "northstarPasses": 17,
+    "northstarActionable": 5,
+    "actionability": {
+      "audit-weak.json": {
+        "raw": {
+          "pass": 8,
+          "warning": 11,
+          "fail": 3,
+          "not_applicable": 1
+        },
+        "actionable": 13,
+        "exclusions": [
+          {
+            "id": "json_ld",
+            "reason": "No structured-data block was returned. Its absence is optional, so no fix is assumed."
+          }
+        ],
+        "notApplicable": [
+          {
+            "id": "link_relationships",
+            "reason": "The analyzer did not apply this check to the returned links."
+          }
+        ]
+      },
+      "audit-basic.json": {
+        "raw": {
+          "pass": 14,
+          "warning": 7,
+          "not_applicable": 2
+        },
+        "actionable": 6,
+        "exclusions": [
+          {
+            "id": "json_ld",
+            "reason": "No structured-data block was returned. Its absence is optional, so no fix is assumed."
+          }
+        ],
+        "notApplicable": [
+          {
+            "id": "link_relationships",
+            "reason": "The analyzer did not apply this check to the returned links."
+          },
+          {
+            "id": "image_alt",
+            "reason": "No action rule is defined for this returned check."
+          }
+        ]
+      },
+      "audit-noindex-test.json": {
+        "raw": {
+          "pass": 7,
+          "fail": 4,
+          "warning": 11,
+          "not_applicable": 1
+        },
+        "actionable": 14,
+        "exclusions": [
+          {
+            "id": "json_ld",
+            "reason": "No structured-data block was returned. Its absence is optional, so no fix is assumed."
+          }
+        ],
+        "notApplicable": [
+          {
+            "id": "link_relationships",
+            "reason": "The analyzer did not apply this check to the returned links."
+          }
+        ]
+      },
+      "audit-northstar.json": {
+        "raw": {
+          "pass": 17,
+          "fail": 2,
+          "not_applicable": 1,
+          "warning": 3
+        },
+        "actionable": 5,
+        "exclusions": [],
+        "notApplicable": [
+          {
+            "id": "link_relationships",
+            "reason": "The analyzer did not apply this check to the returned links."
+          }
+        ]
+      }
+    },
+    "countMismatchExplanation": "The old 3 fails + 11 warnings included one optional empty-JSON-LD warning excluded from actions; link_relationships was not_applicable. The central R2 model reports raw statuses and excluded actions separately."
+  },
+  "fontComparison": {
+    "1440x900": {
+      "A": {
+        "uiFontLoaded": true,
+        "monoFontLoaded": true,
+        "title": {
+          "width": 1008,
+          "height": 32.46875
+        },
+        "titleStyle": {
+          "family": "\"Hanken Grotesk\", sans-serif",
+          "size": "28px",
+          "lineHeight": "32.48px"
+        },
+        "body": {
+          "width": 593.5,
+          "height": 22.390625
+        },
+        "bodyStyle": {
+          "family": "\"Hanken Grotesk\", sans-serif",
+          "size": "16px",
+          "lineHeight": "22.4px"
+        },
+        "monoStyle": {
+          "family": "\"JetBrains Mono\", monospace",
+          "size": "13px",
+          "lineHeight": "19.5px"
+        },
+        "priorityHeights": [
+          32.46875,
+          22.5,
+          22.5,
+          22.5
+        ],
+        "documentWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "B": {
+        "uiFontLoaded": true,
+        "monoFontLoaded": true,
+        "title": {
+          "width": 1008,
+          "height": 32.46875
+        },
+        "titleStyle": {
+          "family": "\"Schibsted Grotesk\", sans-serif",
+          "size": "28px",
+          "lineHeight": "32.48px"
+        },
+        "body": {
+          "width": 593.5,
+          "height": 22.390625
+        },
+        "bodyStyle": {
+          "family": "\"Schibsted Grotesk\", sans-serif",
+          "size": "16px",
+          "lineHeight": "22.4px"
+        },
+        "monoStyle": {
+          "family": "\"IBM Plex Mono\", monospace",
+          "size": "13px",
+          "lineHeight": "19.5px"
+        },
+        "priorityHeights": [
+          32.46875,
+          22.5,
+          22.5,
+          22.5
+        ],
+        "documentWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    "390x844": {
+      "A": {
+        "uiFontLoaded": true,
+        "monoFontLoaded": true,
+        "title": {
+          "width": 358,
+          "height": 30.15625
+        },
+        "titleStyle": {
+          "family": "\"Hanken Grotesk\", sans-serif",
+          "size": "26px",
+          "lineHeight": "30.16px"
+        },
+        "body": {
+          "width": 302,
+          "height": 44.78125
+        },
+        "bodyStyle": {
+          "family": "\"Hanken Grotesk\", sans-serif",
+          "size": "16px",
+          "lineHeight": "22.4px"
+        },
+        "monoStyle": {
+          "family": "\"JetBrains Mono\", monospace",
+          "size": "12px",
+          "lineHeight": "18px"
+        },
+        "priorityHeights": [
+          30.15625,
+          21.25,
+          21.25,
+          21.25
+        ],
+        "documentWidth": 390,
+        "viewportWidth": 390
+      },
+      "B": {
+        "uiFontLoaded": true,
+        "monoFontLoaded": true,
+        "title": {
+          "width": 358,
+          "height": 30.15625
+        },
+        "titleStyle": {
+          "family": "\"Schibsted Grotesk\", sans-serif",
+          "size": "26px",
+          "lineHeight": "30.16px"
+        },
+        "body": {
+          "width": 302,
+          "height": 44.78125
+        },
+        "bodyStyle": {
+          "family": "\"Schibsted Grotesk\", sans-serif",
+          "size": "16px",
+          "lineHeight": "22.4px"
+        },
+        "monoStyle": {
+          "family": "\"IBM Plex Mono\", monospace",
+          "size": "12px",
+          "lineHeight": "18px"
+        },
+        "priorityHeights": [
+          30.15625,
+          21.25,
+          21.25,
+          21.25
+        ],
+        "documentWidth": 390,
+        "viewportWidth": 390
+      }
+    }
+  },
+  "interaction": {
+    "summaryState": "summary",
+    "scoreHelp": {
+      "affordances": 1,
+      "panels": 1,
+      "heuristicVisibleElsewhere": 0
+    },
+    "summaryTitles": [
+      "Add a page description",
+      "Add alt text to informative images",
+      "Declare the page language"
+    ],
+    "summaryPriorityCount": 3,
+    "summaryExplainerWords": 90,
+    "summaryCounts": {
+      "rawOpen": "5",
+      "actionable": "5",
+      "remaining": "5",
+      "passed": "17",
+      "excluded": "0",
+      "all": "23",
+      "score": "78"
+    },
+    "navItems": 10,
+    "unbuiltDisabled": 5,
+    "disabledPrevented": true,
+    "builtRouteStates": [
+      "summary",
+      "fix-list",
+      "xray",
+      "on-page",
+      "previews"
+    ],
+    "builtRoutesValid": true,
+    "browserBackState": "summary",
+    "browserForwardState": "fix-list",
+    "fixCountBadge": "5",
+    "expansion": "true",
+    "titleCopies": [
+      "Add a page description",
+      "Add alt text to informative images",
+      "Declare the page language",
+      "Complete the sharing preview details",
+      "Complete the X preview details"
+    ],
+    "expandedCount": 1,
+    "collapsedCount": 4,
+    "doneCountBefore": 0,
+    "doneScoreUnchanged": true,
+    "localDoneCount": 1,
+    "doneCountSummary": {
+      "actionable": "5",
+      "remaining": "4"
+    },
+    "doneCountText": "Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 1 · Still open: 4 · Passed: 17 · Not applicable: 1",
+    "doneNote": "Done marks are kept only in this open page session. They do not change the score or say the website was checked again.",
+    "doneCountIsLocalOnly": true,
+    "doneLabel": "Mark as done here: Add a page description",
+    "doneCheckboxState": [
+      {
+        "id": "image_alt",
+        "checked": false,
+        "defaultChecked": false
+      },
+      {
+        "id": "html_lang",
+        "checked": false,
+        "defaultChecked": false
+      },
+      {
+        "id": "open_graph",
+        "checked": false,
+        "defaultChecked": false
+      },
+      {
+        "id": "twitter_metadata",
+        "checked": false,
+        "defaultChecked": false
+      },
+      {
+        "id": "meta_description",
+        "checked": true,
+        "defaultChecked": true
+      }
+    ],
+    "weakActionCount": 13,
+    "highFilter": 2,
+    "quickFilter": 10,
+    "copyFeedback": "Copied.",
+    "copyMatchesSnippet": true,
+    "showOnPage": 1,
+    "xrayKeyboardDetail": 1,
+    "xrayCaption": "A simplified drawing of your page, not an exact layout.",
+    "xrayRegions": 7,
+    "onPagePrimaryVisible": true,
+    "previewPrimaryVisible": true,
+    "fixPrimaryVisible": true,
+    "fixMobileActionVisible": true,
+    "moreCount": 10,
+    "moreDisabledCount": 5,
+    "focusTrappedBackward": true,
+    "focusTrappedForward": true,
+    "moreClosed": true,
+    "focusRestored": true,
+    "activeBeforeClose": "Close",
+    "focusRing": true,
+    "desktopViewport": {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": {
+        "x": 340,
+        "y": 201.921875,
+        "width": 465.25,
+        "height": 38.078125,
+        "top": 201.921875,
+        "bottom": 240,
+        "visible": true
+      },
+      "score": {
+        "x": 1164,
+        "y": 168.96875,
+        "width": 184,
+        "height": 104,
+        "top": 168.96875,
+        "bottom": 272.96875,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 355.96875,
+          "bottom": 484.859375,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        },
+        {
+          "top": 494.859375,
+          "bottom": 623.75,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        },
+        {
+          "top": 633.75,
+          "bottom": 762.640625,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 1021.5,
+        "y": 309.96875,
+        "width": 326.5,
+        "height": 382.5,
+        "top": 309.96875,
+        "bottom": 692.46875,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar"
+    },
+    "mobileViewport": {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": {
+        "x": 16,
+        "y": 153.15625,
+        "width": 256,
+        "height": 71.65625,
+        "top": 153.15625,
+        "bottom": 224.8125,
+        "visible": true
+      },
+      "score": {
+        "x": 282,
+        "y": 153.15625,
+        "width": 92,
+        "height": 115.5,
+        "top": 153.15625,
+        "bottom": 268.65625,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 337.65625,
+          "bottom": 481.9375,
+          "width": 358,
+          "height": 144.28125,
+          "visible": true
+        },
+        {
+          "top": 762.9375,
+          "bottom": 907.21875,
+          "width": 358,
+          "height": 144.28125,
+          "visible": false
+        },
+        {
+          "top": 915.21875,
+          "bottom": 1059.5,
+          "width": 358,
+          "height": 144.28125,
+          "visible": false
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 16,
+        "y": 489.9375,
+        "width": 358,
+        "height": 265,
+        "top": 489.9375,
+        "bottom": 754.9375,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar"
+    },
+    "weakShape": "no-h1|image|links|h2-1",
+    "basicShape": "h1|no-image|no-links|h2-0",
+    "noindexBlocking": "blocking",
+    "noindexVerdict": "This page tells search engines not to index it.",
+    "errorCauses": 4,
+    "errorCauseNames": [
+      "Can't reach the site",
+      "The site blocked the check",
+      "The page took too long",
+      "That address isn't a web page"
+    ],
+    "errorRecovery": true,
+    "loadingSteps": 4,
+    "loadingStepNames": [
+      "Fetching the page",
+      "Reading the HTML",
+      "Running 23 checks",
+      "Building your report"
+    ],
+    "loadingActive": 1,
+    "loadingCancel": 1,
+    "missingRecovery": 1,
+    "fictionalFallback": 0,
+    "keywordRevealed": true,
+    "supportedUrlOpensSample": true,
+    "arbitraryUrlNotInvented": true,
+    "credentialFieldCount": 0,
+    "loadingCancelReturnsHome": true,
+    "errorRetryReturnsHome": true,
+    "errorBackUsesHistory": true
+  },
+  "countConsistency": {
+    "northstar": {
+      "summary": {
+        "rawOpen": 5,
+        "actionable": 5,
+        "remaining": 5,
+        "passed": 17,
+        "excluded": 0,
+        "notApplicable": 1,
+        "total": 23,
+        "score": 78,
+        "countSummary": "Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 0 · Still open: 5 · Passed: 17 · Not applicable: 1",
+        "sidebarCount": 5,
+        "categoryPass": 17,
+        "categoryChecks": 23,
+        "summaryTitles": [
+          "Add a page description",
+          "Add alt text to informative images",
+          "Declare the page language"
+        ],
+        "fixTitles": []
+      },
+      "fix-list": {
+        "rawOpen": 5,
+        "actionable": 5,
+        "remaining": 5,
+        "passed": 17,
+        "excluded": 0,
+        "notApplicable": 1,
+        "total": 23,
+        "score": 78,
+        "countSummary": "Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 0 · Still open: 5 · Passed: 17 · Not applicable: 1",
+        "sidebarCount": 5,
+        "categoryPass": 0,
+        "categoryChecks": 0,
+        "summaryTitles": [],
+        "fixTitles": [
+          "Add a page description",
+          "Add alt text to informative images",
+          "Declare the page language",
+          "Complete the sharing preview details",
+          "Complete the X preview details"
+        ]
+      }
+    },
+    "weak": {
+      "summary": {
+        "rawOpen": 14,
+        "actionable": 13,
+        "remaining": 13,
+        "passed": 8,
+        "excluded": 1,
+        "notApplicable": 1,
+        "total": 23,
+        "score": 55,
+        "countSummary": "Need attention: 14 · Suggested actions: 13 · Set aside: 1 · Marked done here: 0 · Still open: 13 · Passed: 8 · Not applicable: 1",
+        "sidebarCount": 13,
+        "categoryPass": 8,
+        "categoryChecks": 23,
+        "summaryTitles": [
+          "Add a page description",
+          "Add one main heading",
+          "Write a clear page title"
+        ],
+        "fixTitles": []
+      },
+      "fix-list": {
+        "rawOpen": 14,
+        "actionable": 13,
+        "remaining": 13,
+        "passed": 8,
+        "excluded": 1,
+        "notApplicable": 1,
+        "total": 23,
+        "score": 55,
+        "countSummary": "Need attention: 14 · Suggested actions: 13 · Set aside: 1 · Marked done here: 0 · Still open: 13 · Passed: 8 · Not applicable: 1",
+        "sidebarCount": 13,
+        "categoryPass": 0,
+        "categoryChecks": 0,
+        "summaryTitles": [],
+        "fixTitles": [
+          "Add a page description",
+          "Add one main heading",
+          "Write a clear page title",
+          "Add alt text to informative images",
+          "Declare the page language",
+          "Set a responsive viewport",
+          "Confirm the preferred page address",
+          "Review whether the page explains its subject",
+          "Link to related pages",
+          "Make link labels descriptive",
+          "Complete the sharing preview details",
+          "Complete the X preview details",
+          "Declare the character encoding"
+        ]
+      }
+    },
+    "basic": {
+      "summary": {
+        "rawOpen": 7,
+        "actionable": 6,
+        "remaining": 6,
+        "passed": 14,
+        "excluded": 1,
+        "notApplicable": 2,
+        "total": 23,
+        "score": 84,
+        "countSummary": "Need attention: 7 · Suggested actions: 6 · Set aside: 1 · Marked done here: 0 · Still open: 6 · Passed: 14 · Not applicable: 2",
+        "sidebarCount": 6,
+        "categoryPass": 14,
+        "categoryChecks": 23,
+        "summaryTitles": [
+          "Write a clear page title",
+          "Add a page description",
+          "Review whether the page explains its subject"
+        ],
+        "fixTitles": []
+      },
+      "fix-list": {
+        "rawOpen": 7,
+        "actionable": 6,
+        "remaining": 6,
+        "passed": 14,
+        "excluded": 1,
+        "notApplicable": 2,
+        "total": 23,
+        "score": 84,
+        "countSummary": "Need attention: 7 · Suggested actions: 6 · Set aside: 1 · Marked done here: 0 · Still open: 6 · Passed: 14 · Not applicable: 2",
+        "sidebarCount": 6,
+        "categoryPass": 0,
+        "categoryChecks": 0,
+        "summaryTitles": [],
+        "fixTitles": [
+          "Write a clear page title",
+          "Add a page description",
+          "Review whether the page explains its subject",
+          "Link to related pages",
+          "Complete the sharing preview details",
+          "Complete the X preview details"
+        ]
+      }
+    }
+  },
+  "proofAudit": {
+    "findingIssues": [],
+    "grammarIssues": [],
+    "visibleProofUse": [],
+    "pageAudits": [
+      {
+        "state": "home",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "summary",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "fix-list",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "xray",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "on-page",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "previews",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "loading",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      },
+      {
+        "state": "error",
+        "monoViolations": [],
+        "anchorViolations": [],
+        "standaloneUnderlines": [],
+        "smallTextCount": 0,
+        "bodyTextViolations": [],
+        "contrastFailures": 0,
+        "radiusViolations": [],
+        "nestedCards": 0
+      }
+    ]
+  },
+  "signalStates": [
+    {
+      "state": "summary",
+      "sample": "weak",
+      "interaction": null,
+      "signalViolations": [],
+      "redUses": [
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "mini-h1",
+          "allowed": true
+        }
+      ],
+      "invalidSeverityBadges": [],
+      "minContrast": 6.658801993878924
+    },
+    {
+      "state": "summary",
+      "sample": "noindex",
+      "interaction": null,
+      "signalViolations": [],
+      "redUses": [
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "verdict",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--blocking",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "mini-h1",
+          "allowed": true
+        }
+      ],
+      "invalidSeverityBadges": [],
+      "minContrast": 6.405980549885015
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "interaction": "hover",
+      "signalViolations": [],
+      "redUses": [
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "xray-region xray-description-region is-hovered",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "xray-hover-note",
+          "allowed": true
+        },
+        {
+          "className": "xray-hover-note",
+          "allowed": true
+        }
+      ],
+      "invalidSeverityBadges": [],
+      "minContrast": 6.455340969420967
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "interaction": "focus",
+      "signalViolations": [],
+      "redUses": [
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "brand-mark",
+          "allowed": true
+        },
+        {
+          "className": "xray-region xray-description-region is-hovered",
+          "allowed": true
+        },
+        {
+          "className": "severity-badge badge--high",
+          "allowed": true
+        },
+        {
+          "className": "severity-icon",
+          "allowed": true
+        },
+        {
+          "className": {},
+          "allowed": true
+        },
+        {
+          "className": "span",
+          "allowed": true
+        },
+        {
+          "className": "xray-hover-note",
+          "allowed": true
+        },
+        {
+          "className": "xray-hover-note",
+          "allowed": true
+        }
+      ],
+      "invalidSeverityBadges": [],
+      "minContrast": 6.455340969420967
+    }
+  ],
+  "mobileTargets": [
+    {
+      "state": "home",
+      "minimumWidth": 92,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "summary",
+      "minimumWidth": 92,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "fix-list",
+      "minimumWidth": 44,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "xray",
+      "minimumWidth": 92,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "on-page",
+      "minimumWidth": 92,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "previews",
+      "minimumWidth": 92,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "loading",
+      "minimumWidth": 44.34375,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "error",
+      "minimumWidth": 59.359375,
+      "minimumHeight": 44,
+      "violations": []
+    },
+    {
+      "state": "more-sheet",
+      "minimumWidth": 55.4375,
+      "minimumHeight": 44,
+      "violations": []
+    }
+  ],
+  "layouts": [
+    {
+      "state": "home",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": {
+        "x": 524,
+        "y": 165,
+        "width": 378.546875,
+        "height": 162.234375,
+        "top": 165,
+        "bottom": 327.234375,
+        "visible": true
+      },
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "home",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "home-support",
+          "px": 17
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "home-title display",
+          "letterPx": -0.624,
+          "fontPx": 52,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 12.875,
+          "minVisibleWordGapEm": 0.24759615384615385,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "home",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": {
+        "x": 316,
+        "y": 154.4375,
+        "width": 313.03125,
+        "height": 134.203125,
+        "top": 154.4375,
+        "bottom": 288.640625,
+        "visible": true
+      },
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "home",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "home-support",
+          "px": 17
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "home-title display",
+          "letterPx": -0.516096,
+          "fontPx": 43.008,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 10.640625,
+          "minVisibleWordGapEm": 0.24741036551339285,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "home",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": {
+        "x": 64,
+        "y": 238.90625,
+        "width": 262.078125,
+        "height": 112.3125,
+        "top": 238.90625,
+        "bottom": 351.21875,
+        "visible": true
+      },
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "home",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "home-support",
+          "px": 17
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "home-title display",
+          "letterPx": -0.432,
+          "fontPx": 36,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.90625,
+          "minVisibleWordGapEm": 0.24739583333333334,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "home",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": {
+        "x": 16,
+        "y": 125,
+        "width": 358,
+        "height": 74.875,
+        "top": 125,
+        "bottom": 199.875,
+        "visible": true
+      },
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "home",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "home-support",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "home-title display",
+          "letterPx": -0.432,
+          "fontPx": 36,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.90625,
+          "minVisibleWordGapEm": 0.24739583333333334,
+          "measuredWordPairs": 5
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "home",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": {
+        "x": 16,
+        "y": 125,
+        "width": 288,
+        "height": 112.3125,
+        "top": 125,
+        "bottom": 237.3125,
+        "visible": true
+      },
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "home",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "home-support",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "home-title display",
+          "letterPx": -0.432,
+          "fontPx": 36,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.90625,
+          "minVisibleWordGapEm": 0.24739583333333334,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": {
+        "x": 340,
+        "y": 201.921875,
+        "width": 465.25,
+        "height": 38.078125,
+        "top": 201.921875,
+        "bottom": 240,
+        "visible": true
+      },
+      "score": {
+        "x": 1164,
+        "y": 168.96875,
+        "width": 184,
+        "height": 104,
+        "top": 168.96875,
+        "bottom": 272.96875,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 355.96875,
+          "bottom": 484.859375,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        },
+        {
+          "top": 494.859375,
+          "bottom": 623.75,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        },
+        {
+          "top": 633.75,
+          "bottom": 762.640625,
+          "width": 657.5,
+          "height": 128.890625,
+          "visible": true
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 1021.5,
+        "y": 309.96875,
+        "width": 326.5,
+        "height": 382.5,
+        "top": 309.96875,
+        "bottom": 692.46875,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "score-weights",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": null,
+          "minVisibleWordGapEm": null,
+          "measuredWordPairs": 0
+        },
+        {
+          "selector": "verdict",
+          "letterPx": -0.51,
+          "fontPx": 34,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.3125,
+          "minVisibleWordGapEm": 0.24448529411764705,
+          "measuredWordPairs": 4
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 2
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 5
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": {
+        "x": 288.953125,
+        "y": 201.921875,
+        "width": 465.25,
+        "height": 38.078125,
+        "top": 201.921875,
+        "bottom": 240,
+        "visible": true
+      },
+      "score": {
+        "x": 799.046875,
+        "y": 168.96875,
+        "width": 184,
+        "height": 104,
+        "top": 168.96875,
+        "bottom": 272.96875,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 355.96875,
+          "bottom": 507.25,
+          "width": 420.09375,
+          "height": 151.28125,
+          "visible": true
+        },
+        {
+          "top": 517.25,
+          "bottom": 668.53125,
+          "width": 420.09375,
+          "height": 151.28125,
+          "visible": true
+        },
+        {
+          "top": 678.53125,
+          "bottom": 829.8125,
+          "width": 420.09375,
+          "height": 151.28125,
+          "visible": false
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 733.046875,
+        "y": 309.96875,
+        "width": 250,
+        "height": 382.5,
+        "top": 309.96875,
+        "bottom": 692.46875,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "score-weights",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": null,
+          "minVisibleWordGapEm": null,
+          "measuredWordPairs": 0
+        },
+        {
+          "selector": "verdict",
+          "letterPx": -0.51,
+          "fontPx": 34,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.3125,
+          "minVisibleWordGapEm": 0.24448529411764705,
+          "measuredWordPairs": 4
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 2
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 5
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": {
+        "x": 30.71875,
+        "y": 265.921875,
+        "width": 465.25,
+        "height": 38.078125,
+        "top": 265.921875,
+        "bottom": 304,
+        "visible": true
+      },
+      "score": {
+        "x": 553.28125,
+        "y": 232.96875,
+        "width": 184,
+        "height": 104,
+        "top": 232.96875,
+        "bottom": 336.96875,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 419.96875,
+          "bottom": 569.25,
+          "width": 448.859375,
+          "height": 149.28125,
+          "visible": true
+        },
+        {
+          "top": 579.25,
+          "bottom": 728.53125,
+          "width": 448.859375,
+          "height": 149.28125,
+          "visible": true
+        },
+        {
+          "top": 738.53125,
+          "bottom": 887.8125,
+          "width": 448.859375,
+          "height": 149.28125,
+          "visible": true
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 495.578125,
+        "y": 373.96875,
+        "width": 241.6875,
+        "height": 382.5,
+        "top": 373.96875,
+        "bottom": 756.46875,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "score-weights",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": null,
+          "minVisibleWordGapEm": null,
+          "measuredWordPairs": 0
+        },
+        {
+          "selector": "verdict",
+          "letterPx": -0.51,
+          "fontPx": 34,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 8.3125,
+          "minVisibleWordGapEm": 0.24448529411764705,
+          "measuredWordPairs": 4
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 2
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 5
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": {
+        "x": 16,
+        "y": 153.15625,
+        "width": 256,
+        "height": 71.65625,
+        "top": 153.15625,
+        "bottom": 224.8125,
+        "visible": true
+      },
+      "score": {
+        "x": 282,
+        "y": 153.15625,
+        "width": 92,
+        "height": 115.5,
+        "top": 153.15625,
+        "bottom": 268.65625,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 337.65625,
+          "bottom": 481.9375,
+          "width": 358,
+          "height": 144.28125,
+          "visible": true
+        },
+        {
+          "top": 762.9375,
+          "bottom": 907.21875,
+          "width": 358,
+          "height": 144.28125,
+          "visible": false
+        },
+        {
+          "top": 915.21875,
+          "bottom": 1059.5,
+          "width": 358,
+          "height": 144.28125,
+          "visible": false
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 16,
+        "y": 489.9375,
+        "width": 358,
+        "height": 265,
+        "top": 489.9375,
+        "bottom": 754.9375,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "score-weights",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.39,
+          "fontPx": 26,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": null,
+          "minVisibleWordGapEm": null,
+          "measuredWordPairs": 0
+        },
+        {
+          "selector": "verdict",
+          "letterPx": -0.48,
+          "fontPx": 32,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 7.8125,
+          "minVisibleWordGapEm": 0.244140625,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 2
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 5
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "summary",
+      "sample": "northstar",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": {
+        "x": 16,
+        "y": 171.15625,
+        "width": 186,
+        "height": 143.3125,
+        "top": 171.15625,
+        "bottom": 314.46875,
+        "visible": true
+      },
+      "score": {
+        "x": 212,
+        "y": 171.15625,
+        "width": 92,
+        "height": 115.5,
+        "top": 171.15625,
+        "bottom": 286.65625,
+        "visible": true
+      },
+      "firstThreePriorities": [
+        {
+          "top": 383.46875,
+          "bottom": 546.75,
+          "width": 288,
+          "height": 163.28125,
+          "visible": true
+        },
+        {
+          "top": 827.75,
+          "bottom": 1034.421875,
+          "width": 288,
+          "height": 206.671875,
+          "visible": false
+        },
+        {
+          "top": 1042.421875,
+          "bottom": 1228.09375,
+          "width": 288,
+          "height": 185.671875,
+          "visible": false
+        }
+      ],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": {
+        "x": 16,
+        "y": 554.75,
+        "width": 288,
+        "height": 265,
+        "top": 554.75,
+        "bottom": 819.75,
+        "visible": true
+      },
+      "xrayEntry": null,
+      "stateArgument": "summary",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "score-weights",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "priority-reason",
+          "px": 16
+        },
+        {
+          "className": "",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.39,
+          "fontPx": 26,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": null,
+          "minVisibleWordGapEm": null,
+          "measuredWordPairs": 0
+        },
+        {
+          "selector": "verdict",
+          "letterPx": -0.48,
+          "fontPx": 32,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 7.828125,
+          "minVisibleWordGapEm": 0.24462890625,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 2
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 4
+        },
+        {
+          "selector": "priority-title",
+          "letterPx": -0.17,
+          "fontPx": 17,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.234375,
+          "minVisibleWordGapEm": 0.24908088235294118,
+          "measuredWordPairs": 3
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "h2",
+          "letterPx": -0.21,
+          "fontPx": 21,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.234375,
+          "minVisibleWordGapEm": 0.24925595238095238,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "fix-list",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "fix-list",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "fix-list",
+      "sample": "northstar",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "fix-list",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "fix-list",
+      "sample": "northstar",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "fix-list",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "fix-list",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "fix-list",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "fix-list",
+      "sample": "northstar",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "fix-list",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        },
+        {
+          "className": "fix-row-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "xray",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "xray-region-value",
+          "letterPx": -0.22,
+          "fontPx": 22,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.484375,
+          "minVisibleWordGapEm": 0.24928977272727273,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "xray",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "xray-region-value",
+          "letterPx": -0.22,
+          "fontPx": 22,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.484375,
+          "minVisibleWordGapEm": 0.24928977272727273,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "xray",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "xray-region-value",
+          "letterPx": -0.22,
+          "fontPx": 22,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 5.484375,
+          "minVisibleWordGapEm": 0.24928977272727273,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "xray",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.609375,
+          "minVisibleWordGapEm": 0.24479166666666666,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "xray-region-value",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 4
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "xray",
+      "sample": "northstar",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "xray",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.609375,
+          "minVisibleWordGapEm": 0.24479166666666666,
+          "measuredWordPairs": 1
+        },
+        {
+          "selector": "xray-region-value",
+          "letterPx": -0.18,
+          "fontPx": 18,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 4.484375,
+          "minVisibleWordGapEm": 0.24913194444444445,
+          "measuredWordPairs": 3
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "on-page",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 420,
+        "y": 229.46875,
+        "width": 760,
+        "height": 626.890625,
+        "top": 229.46875,
+        "bottom": 856.359375,
+        "visible": true
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "on-page",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        },
+        {
+          "className": "observed-copy is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "on-page",
+      "sample": "northstar",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 288.953125,
+        "y": 229.46875,
+        "width": 694.09375,
+        "height": 626.890625,
+        "top": 229.46875,
+        "bottom": 856.359375,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "on-page",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        },
+        {
+          "className": "observed-copy is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "on-page",
+      "sample": "northstar",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 30.71875,
+        "y": 293.46875,
+        "width": 706.5625,
+        "height": 626.890625,
+        "top": 293.46875,
+        "bottom": 920.359375,
+        "visible": true
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "on-page",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        },
+        {
+          "className": "observed-copy is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "on-page",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 16,
+        "y": 242.8125,
+        "width": 358,
+        "height": 646.6875,
+        "top": 242.8125,
+        "bottom": 889.5,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "on-page",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        },
+        {
+          "className": "observed-copy is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.609375,
+          "minVisibleWordGapEm": 0.24479166666666666,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "on-page",
+      "sample": "northstar",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 16,
+        "y": 260.8125,
+        "width": 288,
+        "height": 694.6875,
+        "top": 260.8125,
+        "bottom": 955.5,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "on-page",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        },
+        {
+          "className": "observed-copy is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "observed-copy",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.609375,
+          "minVisibleWordGapEm": 0.24479166666666666,
+          "measuredWordPairs": 1
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "previews",
+      "sample": "northstar",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 380,
+        "y": 229.46875,
+        "width": 760,
+        "height": 577.328125,
+        "top": 229.46875,
+        "bottom": 806.796875,
+        "visible": true
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "previews",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 3
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "previews",
+      "sample": "northstar",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 288.953125,
+        "y": 229.46875,
+        "width": 694.09375,
+        "height": 616.328125,
+        "top": 229.46875,
+        "bottom": 845.796875,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "previews",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 3
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "previews",
+      "sample": "northstar",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 30.71875,
+        "y": 293.46875,
+        "width": 706.5625,
+        "height": 616.328125,
+        "top": 293.46875,
+        "bottom": 909.796875,
+        "visible": true
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "previews",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 3
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "previews",
+      "sample": "northstar",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 16,
+        "y": 242.8125,
+        "width": 358,
+        "height": 1086.15625,
+        "top": 242.8125,
+        "bottom": 1328.96875,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "previews",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 3
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "previews",
+      "sample": "northstar",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": {
+        "x": 16,
+        "y": 292.125,
+        "width": 288,
+        "height": 1210.9375,
+        "top": 292.125,
+        "bottom": 1503.0625,
+        "visible": false
+      },
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "previews",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "preview-result-description is-empty",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        },
+        {
+          "className": "finding-reason",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "loading",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "loading",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "loading",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "loading",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "loading",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "loading",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "loading",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "loading",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "loading",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "loading",
+      "sampleArgument": "northstar",
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 2
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "error",
+      "viewport": "1440x900",
+      "documentWidth": 1440,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "error",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 6
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "error",
+      "viewport": "1024x768",
+      "documentWidth": 1024,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": 248,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "error",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 6
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "error",
+      "viewport": "768x1024",
+      "documentWidth": 768,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "error",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.42,
+          "fontPx": 28,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.84375,
+          "minVisibleWordGapEm": 0.24441964285714285,
+          "measuredWordPairs": 6
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "error",
+      "viewport": "390x844",
+      "documentWidth": 390,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "error",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 6
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    },
+    {
+      "state": "error",
+      "viewport": "320x844",
+      "documentWidth": 320,
+      "overflow": false,
+      "cls": 0,
+      "textOverlapCount": 0,
+      "textOverlaps": [],
+      "sidebarWidth": null,
+      "verdict": null,
+      "score": null,
+      "firstThreePriorities": [],
+      "homeTitle": null,
+      "primaryContent": null,
+      "xrayPreview": null,
+      "xrayEntry": null,
+      "stateArgument": "error",
+      "sampleArgument": null,
+      "minTextPx": 12,
+      "bodyFontPx": 16,
+      "bodyText": [
+        {
+          "className": "page-subtitle",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        },
+        {
+          "className": "error-explanation",
+          "px": 16
+        },
+        {
+          "className": "error-next",
+          "px": 16
+        }
+      ],
+      "minContrast": 6.658801993878924,
+      "spacing": [
+        {
+          "selector": "page-heading",
+          "letterPx": -0.405,
+          "fontPx": 27,
+          "wordSpacingPx": 0,
+          "wordSpacingEm": 0,
+          "minVisibleWordGapPx": 6.59375,
+          "minVisibleWordGapEm": 0.24421296296296297,
+          "measuredWordPairs": 5
+        }
+      ],
+      "textViolations": 0,
+      "bodyViolations": 0,
+      "contrastViolations": 0
+    }
+  ],
+  "contrast": {
+    "minTextPx": 12,
+    "bodyFontPx": 16,
+    "bodyText": [
+      {
+        "className": "",
+        "px": 16
+      },
+      {
+        "className": "score-weights",
+        "px": 16
+      },
+      {
+        "className": "",
+        "px": 16
+      },
+      {
+        "className": "priority-reason",
+        "px": 16
+      },
+      {
+        "className": "priority-reason",
+        "px": 16
+      },
+      {
+        "className": "priority-reason",
+        "px": 16
+      },
+      {
+        "className": "",
+        "px": 16
+      }
+    ],
+    "minContrast": 6.658801993878924,
+    "contrastPairs": [],
+    "smallText": [],
+    "monospaceViolations": [],
+    "spacing": [
+      {
+        "selector": "page-heading",
+        "letterPx": -0.42,
+        "fontPx": 28,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": null,
+        "minVisibleWordGapEm": null,
+        "measuredWordPairs": 0
+      },
+      {
+        "selector": "verdict",
+        "letterPx": -0.51,
+        "fontPx": 34,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 8.3125,
+        "minVisibleWordGapEm": 0.24448529411764705,
+        "measuredWordPairs": 4
+      },
+      {
+        "selector": "h2",
+        "letterPx": -0.21,
+        "fontPx": 21,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 5.234375,
+        "minVisibleWordGapEm": 0.24925595238095238,
+        "measuredWordPairs": 2
+      },
+      {
+        "selector": "priority-title",
+        "letterPx": -0.18,
+        "fontPx": 18,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 4.484375,
+        "minVisibleWordGapEm": 0.24913194444444445,
+        "measuredWordPairs": 3
+      },
+      {
+        "selector": "priority-title",
+        "letterPx": -0.18,
+        "fontPx": 18,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 4.484375,
+        "minVisibleWordGapEm": 0.24913194444444445,
+        "measuredWordPairs": 5
+      },
+      {
+        "selector": "priority-title",
+        "letterPx": -0.18,
+        "fontPx": 18,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 4.484375,
+        "minVisibleWordGapEm": 0.24913194444444445,
+        "measuredWordPairs": 3
+      },
+      {
+        "selector": "h2",
+        "letterPx": -0.21,
+        "fontPx": 21,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 5.234375,
+        "minVisibleWordGapEm": 0.24925595238095238,
+        "measuredWordPairs": 1
+      },
+      {
+        "selector": "h2",
+        "letterPx": -0.21,
+        "fontPx": 21,
+        "wordSpacingPx": 0,
+        "wordSpacingEm": 0,
+        "minVisibleWordGapPx": 5.234375,
+        "minVisibleWordGapEm": 0.24925595238095238,
+        "measuredWordPairs": 1
+      }
+    ],
+    "interactive": [
+      {
+        "tag": "A",
+        "label": "SEO Sensei home",
+        "className": "sidebar-brand",
+        "width": 130.796875,
+        "height": 48,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "Summary5",
+        "className": "nav-link is-active",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "Fix list5",
+        "className": "nav-link",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "Page X-ray23",
+        "className": "nav-link",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Technical",
+        "className": "nav-link nav-link-disabled",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "On-page1",
+        "className": "nav-link",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Links and images",
+        "className": "nav-link nav-link-disabled",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Structured data",
+        "className": "nav-link nav-link-disabled",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Speed",
+        "className": "nav-link nav-link-disabled",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "Previews3",
+        "className": "nav-link",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "History",
+        "className": "nav-link nav-link-disabled",
+        "width": 215,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "SEO Sensei home",
+        "className": "wordmark",
+        "width": 130.796875,
+        "height": 48,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "+New audit",
+        "className": "new-audit-button button-link",
+        "width": 110.6875,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "About this score",
+        "className": "score-info-trigger",
+        "width": 123.546875,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "See the fix",
+        "className": "text-action",
+        "width": 115.328125,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "See the fix",
+        "className": "text-action",
+        "width": 115.328125,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "See the fix",
+        "className": "text-action",
+        "width": 115.328125,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "A",
+        "label": "Open page X-ray",
+        "className": "button-link xray-open",
+        "width": 290.5,
+        "height": 44,
+        "radius": 8
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show all passed checks",
+        "className": "text-button",
+        "width": 150,
+        "height": 44,
+        "radius": 8
+      }
+    ],
+    "anchorViolations": [],
+    "standaloneUnderlines": [],
+    "redElements": [
+      {
+        "className": "brand-mark",
+        "allowed": true
+      },
+      {
+        "className": "brand-mark",
+        "allowed": true
+      },
+      {
+        "className": "severity-badge badge--high",
+        "allowed": true
+      },
+      {
+        "className": "severity-icon",
+        "allowed": true
+      },
+      {
+        "className": {},
+        "allowed": true
+      },
+      {
+        "className": "span",
+        "allowed": true
+      },
+      {
+        "className": "mini-h1",
+        "allowed": true
+      }
+    ],
+    "signalViolations": [],
+    "nestedCards": 0,
+    "radiusViolations": [],
+    "severityBadges": [
+      {
+        "label": "High",
+        "icon": true,
+        "className": "severity-badge badge--high"
+      },
+      {
+        "label": "Medium",
+        "icon": true,
+        "className": "severity-badge badge--medium"
+      },
+      {
+        "label": "Medium",
+        "icon": true,
+        "className": "severity-badge badge--medium"
+      },
+      {
+        "label": "Passed",
+        "icon": true,
+        "className": "severity-badge badge--passed"
+      },
+      {
+        "label": "Passed",
+        "icon": true,
+        "className": "severity-badge badge--passed"
+      },
+      {
+        "label": "Passed",
+        "icon": true,
+        "className": "severity-badge badge--passed"
+      },
+      {
+        "label": "Passed",
+        "icon": true,
+        "className": "severity-badge badge--passed"
+      },
+      {
+        "label": "Passed",
+        "icon": true,
+        "className": "severity-badge badge--passed"
+      }
+    ],
+    "invalidSeverityBadges": []
+  },
+  "animations": {
+    "animatedProperties": [],
+    "animationViolations": [],
+    "transitionProperties": [
+      {
+        "selector": ".button-primary, .button-secondary, .button-link, .ghost-action",
+        "property": "transform"
+      },
+      {
+        "selector": ".button-primary, .button-secondary, .button-link, .ghost-action",
+        "property": "opacity"
+      },
+      {
+        "selector": ".xray-hover-note",
+        "property": "opacity"
+      }
+    ],
+    "transitionViolations": [],
+    "reducedMotion": {
+      "preference": true,
+      "transitionProperty": "none",
+      "animationName": "none"
+    }
+  },
+  "checks": [
+    {
+      "name": "unchanged deterministic v1.0 outputs",
+      "status": "PASS",
+      "detail": "{\"scores\":[55,84,50],\"checks\":[23,23,23],\"sha256Match\":true}"
+    },
+    {
+      "name": "Northstar sample comes from generated engine output",
+      "status": "PASS",
+      "detail": "{\"score\":78,\"checks\":23,\"passes\":17,\"actionable\":5}"
+    },
+    {
+      "name": "all engine checks have enrichment",
+      "status": "PASS",
+      "detail": "23 enrichment rules for 23 engine checks"
+    },
+    {
+      "name": "Northstar has 3–5 real actions and at least 9 passes",
+      "status": "PASS",
+      "detail": "5 actionable; 17 pass"
+    },
+    {
+      "name": "raw and actionable weak-page counts reconcile with explicit exclusions",
+      "status": "PASS",
+      "detail": "{\"rawFails\":3,\"rawWarnings\":11,\"actionable\":13,\"exclusions\":[{\"id\":\"json_ld\",\"reason\":\"No structured-data block was returned. Its absence is optional, so no fix is assumed.\"}],\"notApplicable\":[{\"id\":\"link_relationships\",\"reason\":\"The analyzer did not apply this check to the returned links.\"}]}"
+    },
+    {
+      "name": "Font comparison: both local pairs load on desktop and mobile",
+      "status": "PASS",
+      "detail": "{\"1440x900\":{\"A\":{\"uiFontLoaded\":true,\"monoFontLoaded\":true,\"title\":{\"width\":1008,\"height\":32.46875},\"titleStyle\":{\"family\":\"\\\"Hanken Grotesk\\\", sans-serif\",\"size\":\"28px\",\"lineHeight\":\"32.48px\"},\"body\":{\"width\":593.5,\"height\":22.390625},\"bodyStyle\":{\"family\":\"\\\"Hanken Grotesk\\\", sans-serif\",\"size\":\"16px\",\"lineHeight\":\"22.4px\"},\"monoStyle\":{\"family\":\"\\\"JetBrains Mono\\\", monospace\",\"size\":\"13px\",\"lineHeight\":\"19.5px\"},\"priorityHeights\":[32.46875,22.5,22.5,22.5],\"documentWidth\":1440,\"viewportWidth\":1440},\"B\":{\"uiFontLoaded\":true,\"monoFontLoaded\":true,\"title\":{\"width\":1008,\"height\":32.46875},\"titleStyle\":{\"family\":\"\\\"Schibsted Grotesk\\\", sans-serif\",\"size\":\"28px\",\"lineHeight\":\"32.48px\"},\"body\":{\"width\":593.5,\"height\":22.390625},\"bodyStyle\":{\"family\":\"\\\"Schibsted Grotesk\\\", sans-serif\",\"size\":\"16px\",\"lineHeight\":\"22.4px\"},\"monoStyle\":{\"family\":\"\\\"IBM Plex Mono\\\", monospace\",\"size\":\"13px\",\"lineHeight\":\"19.5px\"},\"priorityHeights\":[32.46875,22.5,22.5,22.5],\"documentWidth\":1440,\"viewportWidth\":1440}},\"390x844\":{\"A\":{\"uiFontLoaded\":true,\"monoFontLoaded\":true,\"title\":{\"width\":358,\"height\":30.15625},\"titleStyle\":{\"family\":\"\\\"Hanken Grotesk\\\", sans-serif\",\"size\":\"26px\",\"lineHeight\":\"30.16px\"},\"body\":{\"width\":302,\"height\":44.78125},\"bodyStyle\":{\"family\":\"\\\"Hanken Grotesk\\\", sans-serif\",\"size\":\"16px\",\"lineHeight\":\"22.4px\"},\"monoStyle\":{\"family\":\"\\\"JetBrains Mono\\\", monospace\",\"size\":\"12px\",\"lineHeight\":\"18px\"},\"priorityHeights\":[30.15625,21.25,21.25,21.25],\"documentWidth\":390,\"viewportWidth\":390},\"B\":{\"uiFontLoaded\":true,\"monoFontLoaded\":true,\"title\":{\"width\":358,\"height\":30.15625},\"titleStyle\":{\"family\":\"\\\"Schibsted Grotesk\\\", sans-serif\",\"size\":\"26px\",\"lineHeight\":\"30.16px\"},\"body\":{\"width\":302,\"height\":44.78125},\"bodyStyle\":{\"family\":\"\\\"Schibsted Grotesk\\\", sans-serif\",\"size\":\"16px\",\"lineHeight\":\"22.4px\"},\"monoStyle\":{\"family\":\"\\\"IBM Plex Mono\\\", monospace\",\"size\":\"12px\",\"lineHeight\":\"18px\"},\"priorityHeights\":[30.15625,21.25,21.25,21.25],\"documentWidth\":390,\"viewportWidth\":390}}}"
+    },
+    {
+      "name": "R2-1 Typography: labels >=12px, body >=16px, text contrast >=4.5:1",
+      "status": "PASS",
+      "detail": "{\"minTextPx\":12,\"minBodyPx\":16,\"minContrast\":6.658801993878924,\"bodyViolations\":[],\"viewportCases\":40}"
+    },
+    {
+      "name": "R2-2 Monospace is used only for URLs, tags, and code blocks",
+      "status": "PASS",
+      "detail": "{\"violations\":[],\"auditedPages\":8}"
+    },
+    {
+      "name": "R2-3 Display spacing is no tighter than -.02em with measured word gaps >=.2em",
+      "status": "PASS",
+      "detail": "{\"minimumVisibleGapEm\":0.244140625,\"minimumVisibleGapPx\":4.234375,\"measurements\":75,\"violations\":[]}"
+    },
+    {
+      "name": "R2-4 No credentials or bearer code; standalone links use button-like styling",
+      "status": "PASS",
+      "detail": "{\"heading\":\"Check a web page for SEO problems.\",\"supportingCopy\":\"Paste a page address. You get a list of fixes, most important first.\",\"primaryAction\":\"Check page\",\"credentialInputs\":0,\"bearerCodeMatches\":0,\"linkViolations\":[],\"auditedPages\":8}"
+    },
+    {
+      "name": "R2-5 Vermilion is limited to logo, blocking/high marks, and X-ray inspection; severity badges use words/icons",
+      "status": "PASS",
+      "detail": "{\"redUses\":[{\"state\":\"summary\",\"sample\":\"weak\",\"interaction\":null,\"uses\":11},{\"state\":\"summary\",\"sample\":\"noindex\",\"interaction\":null,\"uses\":13},{\"state\":\"xray\",\"sample\":\"northstar\",\"interaction\":\"hover\",\"uses\":9},{\"state\":\"xray\",\"sample\":\"northstar\",\"interaction\":\"focus\",\"uses\":9}],\"signalViolations\":[],\"badgeViolations\":[],\"minContrast\":6.405980549885015}"
+    },
+    {
+      "name": "R2-6 Action-first finding language and one score caveat",
+      "status": "PASS",
+      "detail": "{\"forbiddenFindingCopy\":[],\"phraseOrCaveatViolations\":[],\"noindexVerdict\":\"This page tells search engines not to index it.\"}"
+    },
+    {
+      "name": "R2-7 Rendered analyzer and count copy has no tested plural errors",
+      "status": "PASS",
+      "detail": "{\"findingGrammarViolations\":[],\"countGrammarViolations\":[]}"
+    },
+    {
+      "name": "R2-8 One findings model reconciles raw, actionable, category, sidebar, and Fix list counts",
+      "status": "PASS",
+      "detail": "{\"samples\":{\"northstar\":{\"summary\":{\"rawOpen\":5,\"actionable\":5,\"remaining\":5,\"passed\":17,\"excluded\":0,\"notApplicable\":1,\"total\":23,\"score\":78,\"countSummary\":\"Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 0 · Still open: 5 · Passed: 17 · Not applicable: 1\",\"sidebarCount\":5,\"categoryPass\":17,\"categoryChecks\":23,\"summaryTitles\":[\"Add a page description\",\"Add alt text to informative images\",\"Declare the page language\"],\"fixTitles\":[]},\"fix-list\":{\"rawOpen\":5,\"actionable\":5,\"remaining\":5,\"passed\":17,\"excluded\":0,\"notApplicable\":1,\"total\":23,\"score\":78,\"countSummary\":\"Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 0 · Still open: 5 · Passed: 17 · Not applicable: 1\",\"sidebarCount\":5,\"categoryPass\":0,\"categoryChecks\":0,\"summaryTitles\":[],\"fixTitles\":[\"Add a page description\",\"Add alt text to informative images\",\"Declare the page language\",\"Complete the sharing preview details\",\"Complete the X preview details\"]}},\"weak\":{\"summary\":{\"rawOpen\":14,\"actionable\":13,\"remaining\":13,\"passed\":8,\"excluded\":1,\"notApplicable\":1,\"total\":23,\"score\":55,\"countSummary\":\"Need attention: 14 · Suggested actions: 13 · Set aside: 1 · Marked done here: 0 · Still open: 13 · Passed: 8 · Not applicable: 1\",\"sidebarCount\":13,\"categoryPass\":8,\"categoryChecks\":23,\"summaryTitles\":[\"Add a page description\",\"Add one main heading\",\"Write a clear page title\"],\"fixTitles\":[]},\"fix-list\":{\"rawOpen\":14,\"actionable\":13,\"remaining\":13,\"passed\":8,\"excluded\":1,\"notApplicable\":1,\"total\":23,\"score\":55,\"countSummary\":\"Need attention: 14 · Suggested actions: 13 · Set aside: 1 · Marked done here: 0 · Still open: 13 · Passed: 8 · Not applicable: 1\",\"sidebarCount\":13,\"categoryPass\":0,\"categoryChecks\":0,\"summaryTitles\":[],\"fixTitles\":[\"Add a page description\",\"Add one main heading\",\"Write a clear page title\",\"Add alt text to informative images\",\"Declare the page language\",\"Set a responsive viewport\",\"Confirm the preferred page address\",\"Review whether the page explains its subject\",\"Link to related pages\",\"Make link labels descriptive\",\"Complete the sharing preview details\",\"Complete the X preview details\",\"Declare the character encoding\"]}},\"basic\":{\"summary\":{\"rawOpen\":7,\"actionable\":6,\"remaining\":6,\"passed\":14,\"excluded\":1,\"notApplicable\":2,\"total\":23,\"score\":84,\"countSummary\":\"Need attention: 7 · Suggested actions: 6 · Set aside: 1 · Marked done here: 0 · Still open: 6 · Passed: 14 · Not applicable: 2\",\"sidebarCount\":6,\"categoryPass\":14,\"categoryChecks\":23,\"summaryTitles\":[\"Write a clear page title\",\"Add a page description\",\"Review whether the page explains its subject\"],\"fixTitles\":[]},\"fix-list\":{\"rawOpen\":7,\"actionable\":6,\"remaining\":6,\"passed\":14,\"excluded\":1,\"notApplicable\":2,\"total\":23,\"score\":84,\"countSummary\":\"Need attention: 7 · Suggested actions: 6 · Set aside: 1 · Marked done here: 0 · Still open: 6 · Passed: 14 · Not applicable: 2\",\"sidebarCount\":6,\"categoryPass\":0,\"categoryChecks\":0,\"summaryTitles\":[],\"fixTitles\":[\"Write a clear page title\",\"Add a page description\",\"Review whether the page explains its subject\",\"Link to related pages\",\"Complete the sharing preview details\",\"Complete the X preview details\"]}}},\"mismatches\":[],\"expectedExclusions\":{\"audit-weak.json\":{\"raw\":{\"pass\":8,\"warning\":11,\"fail\":3,\"not_applicable\":1},\"actionable\":13,\"exclusions\":[{\"id\":\"json_ld\",\"reason\":\"No structured-data block was returned. Its absence is optional, so no fix is assumed.\"}],\"notApplicable\":[{\"id\":\"link_relationships\",\"reason\":\"The analyzer did not apply this check to the returned links.\"}]},\"audit-basic.json\":{\"raw\":{\"pass\":14,\"warning\":7,\"not_applicable\":2},\"actionable\":6,\"exclusions\":[{\"id\":\"json_ld\",\"reason\":\"No structured-data block was returned. Its absence is optional, so no fix is assumed.\"}],\"notApplicable\":[{\"id\":\"link_relationships\",\"reason\":\"The analyzer did not apply this check to the returned links.\"},{\"id\":\"image_alt\",\"reason\":\"No action rule is defined for this returned check.\"}]},\"audit-noindex-test.json\":{\"raw\":{\"pass\":7,\"fail\":4,\"warning\":11,\"not_applicable\":1},\"actionable\":14,\"exclusions\":[{\"id\":\"json_ld\",\"reason\":\"No structured-data block was returned. Its absence is optional, so no fix is assumed.\"}],\"notApplicable\":[{\"id\":\"link_relationships\",\"reason\":\"The analyzer did not apply this check to the returned links.\"}]},\"audit-northstar.json\":{\"raw\":{\"pass\":17,\"fail\":2,\"not_applicable\":1,\"warning\":3},\"actionable\":5,\"exclusions\":[],\"notApplicable\":[{\"id\":\"link_relationships\",\"reason\":\"The analyzer did not apply this check to the returned links.\"}]}}}"
+    },
+    {
+      "name": "R2-9 Each finding title appears once per page including expanded rows",
+      "status": "PASS",
+      "detail": "{\"summary\":3,\"fixList\":5,\"duplicates\":[]}"
+    },
+    {
+      "name": "R2-10 Desktop and mobile Summary show verdict and priority work in the first viewport",
+      "status": "PASS",
+      "detail": "{\"desktop\":{\"state\":\"summary\",\"sample\":\"northstar\",\"viewport\":\"1440x900\",\"documentWidth\":1440,\"overflow\":false,\"cls\":0,\"textOverlapCount\":0,\"textOverlaps\":[],\"sidebarWidth\":248,\"verdict\":{\"x\":340,\"y\":201.921875,\"width\":465.25,\"height\":38.078125,\"top\":201.921875,\"bottom\":240,\"visible\":true},\"score\":{\"x\":1164,\"y\":168.96875,\"width\":184,\"height\":104,\"top\":168.96875,\"bottom\":272.96875,\"visible\":true},\"firstThreePriorities\":[{\"top\":355.96875,\"bottom\":484.859375,\"width\":657.5,\"height\":128.890625,\"visible\":true},{\"top\":494.859375,\"bottom\":623.75,\"width\":657.5,\"height\":128.890625,\"visible\":true},{\"top\":633.75,\"bottom\":762.640625,\"width\":657.5,\"height\":128.890625,\"visible\":true}],\"homeTitle\":null,\"primaryContent\":null,\"xrayPreview\":{\"x\":1021.5,\"y\":309.96875,\"width\":326.5,\"height\":382.5,\"top\":309.96875,\"bottom\":692.46875,\"visible\":true},\"xrayEntry\":null,\"stateArgument\":\"summary\",\"sampleArgument\":\"northstar\"},\"mobile\":{\"state\":\"summary\",\"sample\":\"northstar\",\"viewport\":\"390x844\",\"documentWidth\":390,\"overflow\":false,\"cls\":0,\"textOverlapCount\":0,\"textOverlaps\":[],\"sidebarWidth\":null,\"verdict\":{\"x\":16,\"y\":153.15625,\"width\":256,\"height\":71.65625,\"top\":153.15625,\"bottom\":224.8125,\"visible\":true},\"score\":{\"x\":282,\"y\":153.15625,\"width\":92,\"height\":115.5,\"top\":153.15625,\"bottom\":268.65625,\"visible\":true},\"firstThreePriorities\":[{\"top\":337.65625,\"bottom\":481.9375,\"width\":358,\"height\":144.28125,\"visible\":true},{\"top\":762.9375,\"bottom\":907.21875,\"width\":358,\"height\":144.28125,\"visible\":false},{\"top\":915.21875,\"bottom\":1059.5,\"width\":358,\"height\":144.28125,\"visible\":false}],\"homeTitle\":null,\"primaryContent\":null,\"xrayPreview\":{\"x\":16,\"y\":489.9375,\"width\":358,\"height\":265,\"top\":489.9375,\"bottom\":754.9375,\"visible\":true},\"xrayEntry\":null,\"stateArgument\":\"summary\",\"sampleArgument\":\"northstar\"}}"
+    },
+    {
+      "name": "R2-11 Desktop and mobile navigation list ten pages, route five built pages, and disable five others",
+      "status": "PASS",
+      "detail": "{\"desktopPages\":10,\"disabledPages\":5,\"disabledPrevented\":true,\"builtRoutesValid\":true,\"mobileItems\":10,\"mobileDisabled\":5,\"focusTrappedBackward\":true,\"focusTrappedForward\":true,\"focusRestored\":true}"
+    },
+    {
+      "name": "R2-12 Controls/cards have 8px radius minimum; no nested bordered cards",
+      "status": "PASS",
+      "detail": "{\"radiusViolations\":[],\"nestedCardViolations\":[],\"xrayFrameExempt\":true}"
+    },
+    {
+      "name": "R2-13 Mobile controls are >=44x44px without horizontal overflow",
+      "status": "PASS",
+      "detail": "{\"targetMinimums\":[{\"state\":\"home\",\"minimumWidth\":92,\"minimumHeight\":44},{\"state\":\"summary\",\"minimumWidth\":92,\"minimumHeight\":44},{\"state\":\"fix-list\",\"minimumWidth\":44,\"minimumHeight\":44},{\"state\":\"xray\",\"minimumWidth\":92,\"minimumHeight\":44},{\"state\":\"on-page\",\"minimumWidth\":92,\"minimumHeight\":44},{\"state\":\"previews\",\"minimumWidth\":92,\"minimumHeight\":44},{\"state\":\"loading\",\"minimumWidth\":44.34375,\"minimumHeight\":44},{\"state\":\"error\",\"minimumWidth\":59.359375,\"minimumHeight\":44},{\"state\":\"more-sheet\",\"minimumWidth\":55.4375,\"minimumHeight\":44}],\"mobileTargetFailures\":[],\"overflow\":[]}"
+    },
+    {
+      "name": "R2-14 Proof-related wording is confined to one strip below the app",
+      "status": "PASS",
+      "detail": "{\"violations\":[],\"stripPerState\":\"1\"}"
+    },
+    {
+      "name": "R2-15 Four error causes and four named loading steps have working recovery",
+      "status": "PASS",
+      "detail": "{\"causes\":[\"Can't reach the site\",\"The site blocked the check\",\"The page took too long\",\"That address isn't a web page\"],\"recovery\":true,\"loadingSteps\":[\"Fetching the page\",\"Reading the HTML\",\"Running 23 checks\",\"Building your report\"],\"active\":1,\"cancel\":1,\"cancelReturnsHome\":true,\"retryReturnsHome\":true,\"backUsesHistory\":true}"
+    },
+    {
+      "name": "R2-16 Focus ring is visible; only opacity/transform animate; reduced motion disables animation",
+      "status": "PASS",
+      "detail": "{\"focusRingMeasured\":true,\"focusScreenshotRing\":true,\"transitionProperties\":[{\"selector\":\".button-primary, .button-secondary, .button-link, .ghost-action\",\"property\":\"transform\"},{\"selector\":\".button-primary, .button-secondary, .button-link, .ghost-action\",\"property\":\"opacity\"},{\"selector\":\".xray-hover-note\",\"property\":\"opacity\"}],\"transitionViolations\":[],\"animationViolations\":[],\"reducedMotion\":{\"preference\":true,\"transitionProperty\":\"none\",\"animationName\":\"none\"},\"focusScreenshot\":\"r2-focus-ring-390x844.png\"}"
+    },
+    {
+      "name": "retained interaction: finding and X-ray selection work in both directions",
+      "status": "PASS",
+      "detail": "{\"findingToXray\":1,\"xrayToFinding\":1}"
+    },
+    {
+      "name": "retained Summary limit: at most three priority cards, five actions overall, and 120 explanatory words",
+      "status": "PASS",
+      "detail": "{\"summaryPriorityCards\":3,\"allActions\":5,\"explanatoryWords\":90}"
+    },
+    {
+      "name": "retained interaction: supported URL opens only its offline result; arbitrary URL fabricates none",
+      "status": "PASS",
+      "detail": "{\"supportedSample\":true,\"arbitraryUrlNoReport\":true,\"keywordToggle\":true}"
+    },
+    {
+      "name": "retained history behavior: browser Back and Forward preserve route state",
+      "status": "PASS",
+      "detail": "{\"back\":\"summary\",\"forward\":\"fix-list\"}"
+    },
+    {
+      "name": "retained Copy behavior: expanded item copies only its available template",
+      "status": "PASS",
+      "detail": "{\"feedback\":\"Copied.\",\"copiedValueMatchesRenderedSnippet\":true}"
+    },
+    {
+      "name": "R2 local Done state marks only the selected item and does not change analysis",
+      "status": "PASS",
+      "detail": "{\"checkedBefore\":0,\"checkedAfter\":1,\"counts\":{\"actionable\":\"5\",\"remaining\":\"4\"},\"visibleCountSummary\":\"Need attention: 5 · Suggested actions: 5 · Set aside: 0 · Marked done here: 1 · Still open: 4 · Passed: 17 · Not applicable: 1\",\"localOnlyNote\":\"Done marks are kept only in this open page session. They do not change the score or say the website was checked again.\",\"scoreUnchanged\":true}"
+    },
+    {
+      "name": "Fix-list filters show only matching findings",
+      "status": "PASS",
+      "detail": "{\"weakActions\":13,\"high\":2,\"quick\":10}"
+    },
+    {
+      "name": "retained CLS, no overlap, and no narrow-layout overflow",
+      "status": "PASS",
+      "detail": "{\"cases\":40,\"nonzeroCLS\":[],\"overlaps\":[],\"overflow\":[]}"
+    },
+    {
+      "name": "retained raw engine outputs remain v1.0 with original scores and check counts",
+      "status": "PASS",
+      "detail": "{\"hashesUnchanged\":true,\"scores\":{\"audit-weak.json\":55,\"audit-basic.json\":84,\"audit-noindex-test.json\":50}}"
+    },
+    {
+      "name": "local request boundary and runtime errors",
+      "status": "PASS",
+      "detail": "{\"requestCount\":904,\"hosts\":[\"127.0.0.1:50062\"],\"externalRequestCount\":0,\"consoleErrorCount\":0,\"pageErrorCount\":0}"
+    },
+    {
+      "name": "exact R2 screenshot set",
+      "status": "PASS",
+      "detail": "14 uniquely named Chromium viewport captures"
+    }
+  ],
+  "captures": [
+    {
+      "fileName": "r2-home-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-home-1440x900.png",
+      "query": "?state=home",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-home-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-home-390x844.png",
+      "query": "?state=home",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+      "viewport": "390x844",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-summary-northstar-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-summary-northstar-1440x900.png",
+      "query": "?state=summary&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-summary-northstar-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-summary-northstar-390x844.png",
+      "query": "?state=summary&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=northstar",
+      "viewport": "390x844",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-summary-weak-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-summary-weak-1440x900.png",
+      "query": "?state=summary&sample=weak",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=weak",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-summary-noindex-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-summary-noindex-1440x900.png",
+      "query": "?state=summary&sample=noindex",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=summary&sample=noindex",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-fix-list-expanded-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-fix-list-expanded-1440x900.png",
+      "query": "?state=fix-list&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=fix-list&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true
+    },
+    {
+      "fileName": "r2-fix-list-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-fix-list-390x844.png",
+      "query": "?state=fix-list&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=fix-list&sample=northstar",
+      "viewport": "390x844",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-on-page-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-on-page-1440x900.png",
+      "query": "?state=on-page&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=on-page&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-previews-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-previews-1440x900.png",
+      "query": "?state=previews&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=previews&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-xray-hover-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-xray-hover-1440x900.png",
+      "query": "?state=xray&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=xray&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true
+    },
+    {
+      "fileName": "r2-loading-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-loading-1440x900.png",
+      "query": "?state=loading&sample=northstar",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=loading&sample=northstar",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-errors-four-causes-1440x900.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-errors-four-causes-1440x900.png",
+      "query": "?state=error&reason=all",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=error&reason=all",
+      "viewport": "1440x900",
+      "captured": true,
+      "interactionResult": null
+    },
+    {
+      "fileName": "r2-focus-ring-390x844.png",
+      "relativePath": "docs/design/s1-a/screenshots/r2-focus-ring-390x844.png",
+      "query": "?state=home",
+      "urlPath": "/docs/design/s1-a/proof-static-not-the-product.html?state=home",
+      "viewport": "390x844",
+      "captured": true,
+      "interactionResult": true
+    }
+  ],
+  "manualVisualReview": true
+}

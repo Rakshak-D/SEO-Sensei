@@ -484,7 +484,7 @@ CHECK_POLICIES: dict[str, FindingPolicy] = {
             _action(
                 (_p("malformed_json_ld_count", "gt", 0), _FAIL),
                 "Fix malformed structured data",
-                "The fetched HTML contains {malformed_json_ld_summary}.",
+                "{malformed_json_ld_reason}",
                 Impact.MEDIUM,
                 Effort.MODERATE,
                 AnatomyPart.STRUCTURED_DATA,

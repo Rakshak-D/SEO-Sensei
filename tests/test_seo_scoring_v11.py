@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from backend.app.config import Settings
 from backend.app.seo.rules import CATEGORY_WEIGHTS, CHECK_POLICIES, Effort, Impact
 from backend.app.seo.engine import analyze_html
@@ -366,7 +368,99 @@ def test_observed_evidence_uses_readable_count_grammar() -> None:
     assert by_id["image_alt"].evidence.observed == (
         "Images with non-empty alt text: 1/1; empty alt attributes: 0; missing alt attributes: 0."
     )
-    assert by_id["json_ld"].finding_reason == "The fetched HTML contains 1 JSON-LD block could not be parsed."
+    assert by_id["json_ld"].finding_reason == "One JSON-LD block in the fetched HTML could not be parsed."
+
+
+@pytest.mark.parametrize(
+    ("json_ld_markup", "expected_score", "expected_status", "expected_reason", "expected_optional"),
+    [
+        (
+            '<script type="application/ld+json">{"@type":"WebPage"}</script>',
+            100,
+            CheckStatus.PASS,
+            None,
+            False,
+        ),
+        (
+            '<script type="application/ld+json">{broken}</script>',
+            95,
+            CheckStatus.FAIL,
+            "One JSON-LD block in the fetched HTML could not be parsed.",
+            False,
+        ),
+        (
+            '<script type="application/ld+json">{broken}</script><script type="application/ld+json">not json</script>',
+            95,
+            CheckStatus.FAIL,
+            "Two JSON-LD blocks in the fetched HTML could not be parsed.",
+            False,
+        ),
+        (
+            '<script type="application/ld+json">{broken}</script>'
+            '<script type="application/ld+json">not json</script>'
+            '<script type="application/ld+json">?</script>',
+            95,
+            CheckStatus.FAIL,
+            "3 JSON-LD blocks in the fetched HTML could not be parsed.",
+            False,
+        ),
+        (
+            '<script type="application/ld+json">{"@type":"WebPage"}</script>'
+            '<script type="application/ld+json">{"@type":"Article"}</script>',
+            100,
+            CheckStatus.PASS,
+            None,
+            False,
+        ),
+        (
+            '<script type="application/ld+json">{"@type":"WebPage"}</script>'
+            '<script type="application/ld+json">{broken}</script>',
+            95,
+            CheckStatus.FAIL,
+            "One JSON-LD block in the fetched HTML could not be parsed.",
+            False,
+        ),
+        ("", 98, CheckStatus.WARNING, None, True),
+    ],
+    ids=(
+        "zero-malformed",
+        "one-malformed",
+        "two-malformed",
+        "many-malformed",
+        "multiple-valid",
+        "mixed",
+        "optional-absent",
+    ),
+)
+def test_json_ld_finding_grammar_preserves_v11_analysis(
+    json_ld_markup: str,
+    expected_score: int,
+    expected_status: CheckStatus,
+    expected_reason: str | None,
+    expected_optional: bool,
+) -> None:
+    original_markup = '<script type="application/ld+json">{"@type":"WebPage"}</script>'
+    html = all_pass_html().replace(original_markup, json_ld_markup)
+    result = analyze(html)
+    json_ld = check(result, "json_ld")
+
+    assert result.deterministic_score.version == "1.1"
+    assert result.deterministic_score.overall_score == expected_score
+    assert tuple(item.id for item in result.checks) == tuple(item.id for item in analyze(all_pass_html()).checks)
+    assert json_ld.status == expected_status
+    assert json_ld.finding_reason == expected_reason
+    assert json_ld.impact == (Impact.MEDIUM if expected_reason else None)
+    assert json_ld.effort == (Effort.MODERATE if expected_reason else None)
+    assert json_ld.is_actionable is (expected_reason is not None)
+    assert (json_ld.optional_note is not None) is expected_optional
+    assert result.findings_summary.prioritized_check_ids == (["json_ld"] if expected_reason else [])
+    assert result.findings_summary.actionable_count == (1 if expected_reason else 0)
+    assert all(
+        (before.id, before.status, before.points, before.impact, before.effort, before.is_actionable)
+        == (after.id, after.status, after.points, after.impact, after.effort, after.is_actionable)
+        for before, after in zip(analyze(all_pass_html()).checks, result.checks, strict=True)
+        if before.id != "json_ld"
+    )
 
 
 def test_final_non_2xx_http_status_is_blocking_without_changing_score_status() -> None:

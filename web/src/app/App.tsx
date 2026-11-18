@@ -306,11 +306,19 @@ export function App() {
       const selectedPin = Array.from(document.querySelectorAll<HTMLElement>("[data-xray-check]"))
         .find((element) => element.dataset.xrayCheck === (focusFindingId.current || route.check));
       target = selectedPin ?? document.getElementById("guest-xray-title");
-      target?.scrollIntoView?.({ block: "center", inline: "nearest" });
+      const frame = window.requestAnimationFrame(() => {
+        target?.scrollIntoView?.({ block: "center", inline: "nearest" });
+        target?.focus({ preventScroll: true });
+        if (focusRequest.current === request) focusRequest.current = null;
+      });
+      return () => {
+        window.cancelAnimationFrame(frame);
+        if (focusRequest.current === request) focusRequest.current = null;
+      };
     }
     if (request === "search") target = document.getElementById("finding-search");
     if (request === "heading" || request === "error") target = document.querySelector("main h1[tabindex='-1']");
-    target?.focus({ preventScroll: request === "xray" });
+    target?.focus();
     focusRequest.current = null;
   }, [route, auth.status, demo, report]);
 

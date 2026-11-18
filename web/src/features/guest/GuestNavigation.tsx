@@ -102,7 +102,7 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
     <>
       <header className="guest-topbar">
         <a href="/?view=entry" className="guest-wordmark" onClick={(event) => { event.preventDefault(); onNewAudit(); }} aria-label="SEO Sensei, new audit">
-          <span>SEO</span><strong>Sensei</strong>
+          <span>SEO</span>{" "}<strong>Sensei</strong>
         </a>
         <div className="guest-top-actions">
           <button type="button" className="guest-secondary-button guest-new-audit" onClick={onNewAudit} aria-label="New audit">

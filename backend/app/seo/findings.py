@@ -22,6 +22,12 @@ _IMPACT_ORDER = {Impact.BLOCKING: 0, Impact.HIGH: 1, Impact.MEDIUM: 2, Impact.LO
 _EFFORT_ORDER = {Effort.QUICK: 0, Effort.MODERATE: 1, Effort.LARGER_JOB: 2}
 
 
+def _malformed_json_ld_reason(count: int) -> str:
+    quantity = {1: "One", 2: "Two"}.get(count, str(count))
+    block = "block" if count == 1 else "blocks"
+    return f"{quantity} JSON-LD {block} in the fetched HTML could not be parsed."
+
+
 def _facts(analysis: SEOAnalysis, check: SEOCheck) -> dict[str, Any]:
     social = analysis.social_metadata
     empty_alt_count = analysis.images.empty_alt
@@ -64,11 +70,7 @@ def _facts(analysis: SEOAnalysis, check: SEOCheck) -> dict[str, Any]:
             else f"{empty_alt_count} images have empty alt attributes; the HTML alone cannot show whether they are decorative."
         ),
         "malformed_json_ld_count": analysis.structured_data.malformed_blocks,
-        "malformed_json_ld_summary": (
-            "1 JSON-LD block could not be parsed"
-            if analysis.structured_data.malformed_blocks == 1
-            else f"{analysis.structured_data.malformed_blocks} JSON-LD blocks could not be parsed"
-        ),
+        "malformed_json_ld_reason": _malformed_json_ld_reason(analysis.structured_data.malformed_blocks),
         "json_ld_block_count": analysis.structured_data.block_count,
         "open_graph_count": sum(
             value is not None for value in (social.og_title, social.og_description, social.og_image, social.og_url)

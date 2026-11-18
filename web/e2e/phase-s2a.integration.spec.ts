@@ -44,7 +44,7 @@ function requestContract(request: Request, expectedUrl: string) {
   ).toBe(false);
   expect(request.postDataJSON()).toEqual({ url: expectedUrl });
 }
-test("renders the guest journey through the real same-origin HTTPS API and records the 12 review captures", async ({
+test("renders the guest journey and maps controlled HTTPS analyses through the Page X-ray", async ({
   page,
   context,
   baseURL,
@@ -187,6 +187,9 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
   ).toBe(0);
   await page.evaluate(() => window.scrollTo(0, 0));
   await capture(page, "summary-normal-desktop-1440x900.png");
+  const evidenceDirectory = resolve(process.cwd(), "review/s2-b1");
+  mkdirSync(evidenceDirectory, { recursive: true });
+  await captureTo(page, evidenceDirectory, "summary-with-preview-1440x900.png");
   const desktopBounds = await page.evaluate(() => {
     const rect = (selector: string) => {
       const element = document.querySelector(selector);
@@ -270,7 +273,20 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
       ),
   ).toBe(true);
   await capture(page, "summary-normal-mobile-390x844.png");
-  await page.getByRole("button", { name: "New audit" }).click();
+  await captureTo(page, evidenceDirectory, "summary-with-preview-390x844.png");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("link", { name: "Page X-ray" }).click();
+  await expect(page.getByRole("heading", { name: "Page X-ray" })).toBeVisible();
+  const warningRegionIds = await page.locator("[data-xray-region]").evaluateAll((regions) => regions.map((region) => region.getAttribute("data-xray-region")));
+  expect(warningRegionIds).toContain("primary-heading");
+  expect(warningRegionIds).toContain("images");
+  expect(warningRegionIds).toContain("links");
+  console.log("S2-B1 warning X-ray rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-xray-title", ".guest-xray-document", '[data-xray-region="primary-heading"]', ".guest-xray-details",
+  ])));
+  await captureTo(page, evidenceDirectory, "xray-weak-desktop-1440x900.png");
+  await page.getByRole("complementary", { name: "Report navigation" })
+    .getByRole("button", { name: "New audit" }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   const blocking = await submit(page, noindexUrl);
   requestContract(blocking.request, noindexUrl);
@@ -278,9 +294,11 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
     deterministic_score: {
       version: string;
     };
+    checks: Array<{ id: string; anatomy_part?: string | null; finding_title?: string | null }>;
     findings_summary: {
       actionable_count: number;
       verdict: string;
+      prioritized_check_ids: string[];
     };
   };
   expect(noindex.deterministic_score.version).toBe("1.1");
@@ -303,6 +321,153 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
     390,
   );
   await capture(page, "summary-blocking-mobile-390x844.png");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("link", { name: "Page X-ray" }).click();
+  await expect(page.getByRole("heading", { name: "Page X-ray" })).toBeVisible();
+  const robotsFinding = noindex.checks.find((check) => check.id === "robots_directives");
+  expect(robotsFinding?.anatomy_part).toBe("technical");
+  const robotsPriority = noindex.findings_summary.prioritized_check_ids.indexOf("robots_directives") + 1;
+  expect(robotsPriority).toBeGreaterThan(0);
+  await page.locator(".guest-xray-head > summary").click();
+  await expect(page.locator(".guest-xray-head")).toHaveAttribute("open", "");
+  const robotsPin = page.locator('[data-xray-check="robots_directives"]');
+  await expect(robotsPin).toHaveAttribute("aria-label", new RegExp(`^Priority ${robotsPriority}:`));
+  await expect(page.locator('[data-xray-region="head-robots"]')).toHaveAttribute("data-assessment", "blocking");
+  const sharedPins = await page.locator('[data-xray-region="head-sharing"] [data-xray-check]').evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom };
+  }));
+  expect(sharedPins.length).toBeGreaterThan(1);
+  expect(sharedPins.every((pin, index) => sharedPins.slice(index + 1).every((other) =>
+    pin.right <= other.x || other.right <= pin.x || pin.bottom <= other.y || other.bottom <= pin.y,
+  ))).toBe(true);
+  await robotsPin.scrollIntoViewIfNeeded();
+  console.log("S2-B1 noindex X-ray rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-xray-title", ".guest-xray-document", '[data-xray-region="head-robots"]', ".guest-xray-details", ".guest-xray-head",
+  ])));
+  await captureTo(page, evidenceDirectory, "xray-noindex-desktop-1440x900.png");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".guest-xray-head")).toHaveAttribute("open", "");
+  await robotsPin.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
+  await robotsPin.scrollIntoViewIfNeeded();
+  console.log("S2-B1 mobile X-ray rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-xray-title", ".guest-xray-document", '[data-xray-region="head-robots"]', ".guest-mobile-tabs",
+  ])));
+  await captureTo(page, evidenceDirectory, "xray-noindex-mobile-390x844.png");
+  await robotsPin.click();
+  await expect(page.getByRole("heading", { name: "Fix list" })).toBeVisible();
+  await expect(page).toHaveURL(/view=findings.*check=robots_directives/);
+  const expandedRobots = page.locator('[data-finding-id="robots_directives"]');
+  await expect(expandedRobots).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Show on X-ray" }).click();
+  await expect(page.getByRole("heading", { name: "Page X-ray" })).toBeVisible();
+  await expect(page).toHaveURL(/view=xray.*check=robots_directives/);
+  const selectedPin = page.locator('[data-xray-check="robots_directives"]');
+  await expect(selectedPin).toBeFocused();
+  const robotsRegion = page.locator('[data-xray-region="head-robots"]');
+  const sharingRegion = page.locator('[data-xray-region="head-sharing"]');
+  const openGraphPin = page.locator('[data-xray-check="open_graph"]');
+  const twitterPin = page.locator('[data-xray-check="twitter_metadata"]');
+  const findingDetails = page.locator(".guest-xray-finding");
+  const openGraphTitle = noindex.checks.find((check) => check.id === "open_graph")?.finding_title;
+  const twitterTitle = noindex.checks.find((check) => check.id === "twitter_metadata")?.finding_title;
+  expect(openGraphTitle).toBeTruthy();
+  expect(twitterTitle).toBeTruthy();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Tab");
+  await expect(openGraphPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(openGraphTitle!);
+  await expect(findingDetails.locator(".guest-xray-priority-label")).toHaveText(
+    `Priority ${noindex.findings_summary.prioritized_check_ids.indexOf("open_graph") + 1}`,
+  );
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Tab");
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await expect(findingDetails.locator(".guest-xray-priority-label")).toHaveText(
+    `Priority ${noindex.findings_summary.prioritized_check_ids.indexOf("twitter_metadata") + 1}`,
+  );
+  await selectedPin.hover();
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
+  await page.mouse.move(12, 12);
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+  await page.getByRole("link", { name: /^Summary/ }).first().focus();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
+  await expect.poll(async () => selectedPin.evaluate((element) => {
+    const pin = element.getBoundingClientRect();
+    const nav = document.querySelector(".guest-mobile-tabs")?.getBoundingClientRect();
+    return Boolean(nav && pin.top >= 0 && pin.bottom <= nav.top);
+  })).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  console.log("S2-B1 selected pin rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-xray-title", '[data-xray-region="head-robots"]', '[data-xray-check="robots_directives"]',
+  ])));
+  await captureTo(page, evidenceDirectory, "xray-selected-pin-1440x900.png");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  let keyboardReachedPin = false;
+  for (let index = 0; index < 60; index += 1) {
+    await page.keyboard.press("Tab");
+    keyboardReachedPin = await selectedPin.evaluate((element) => element === document.activeElement).catch(() => false);
+    if (keyboardReachedPin) break;
+  }
+  expect(keyboardReachedPin).toBe(true);
+  await expect(selectedPin).toHaveCSS("outline-style", "solid");
+  await expect(selectedPin).toHaveCSS("outline-width", "3px");
+  const focusRects = await measureRectangles(page, ['[data-xray-check="robots_directives"]', ".guest-mobile-tabs"]);
+  console.log("S2-B1 mobile focused pin rectangles:", JSON.stringify(focusRects));
+  const focusedPin = focusRects.elements['[data-xray-check="robots_directives"]'];
+  const fixedNavigation = focusRects.elements[".guest-mobile-tabs"];
+  expect(focusedPin && fixedNavigation && focusedPin.y >= 0 && focusedPin.bottom <= fixedNavigation.y).toBe(true);
+  await captureTo(page, evidenceDirectory, "xray-keyboard-focus-390x844.png");
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Fix list" })).toBeVisible();
+  await expect(page.locator('[data-finding-id="robots_directives"]')).toHaveAttribute("aria-expanded", "true");
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "Page X-ray" })).toBeVisible();
+  await expect(page).toHaveURL(/check=robots_directives/);
+  await expect(selectedPin).toBeFocused();
+  await twitterPin.click();
+  await expect(page).toHaveURL(/view=findings.*check=twitter_metadata/);
+  const expandedTwitter = page.locator('[data-finding-id="twitter_metadata"]');
+  await expect(expandedTwitter).toBeFocused();
+  await expect(expandedTwitter).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Show on X-ray" }).click();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await page.goBack();
+  await expect(page).toHaveURL(/view=findings.*check=twitter_metadata/);
+  await expect(expandedTwitter).toBeFocused();
+  await expect(expandedTwitter).toHaveAttribute("aria-expanded", "true");
+  await page.goForward();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
+  await page.getByRole("button", { name: "Back to Summary" }).click();
+  await expect(page.getByRole("heading", { name: "Summary" })).toBeVisible();
+
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "See all fixes" }).click();
   await expect(page.getByRole("heading", { name: "Fix list" })).toBeVisible();
@@ -323,7 +488,7 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
   );
   await capture(page, "fix-list-mobile-390x844.png");
   await page.locator(".guest-mobile-tabs a").first().click();
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Pages" })).toBeVisible();
   expect(await page.locator(".guest-more-sheet li").count()).toBe(10);
   expect(
@@ -331,7 +496,7 @@ test("renders the guest journey through the real same-origin HTTPS API and recor
   ).toBe(0);
   await capture(page, "mobile-more-390x844.png");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "More" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "More", exact: true })).toBeFocused();
   await page.getByRole("button", { name: "New audit" }).click();
   await page.route("**/api/guest/v1/analyse-url", async (route) => {
     await route.fulfill({
@@ -470,3 +635,29 @@ test("cancellation is explicit and a late response cannot replace the current pa
   ).toBeVisible();
   await page.unroute("**/api/guest/v1/analyse-url");
 });
+
+async function captureTo(page: Page, directory: string, filename: string) {
+  await page.evaluate(async () => { await document.fonts.ready; });
+  await page.screenshot({ path: resolve(directory, filename), animations: "disabled" });
+}
+
+async function measureRectangles(page: Page, selectors: string[]) {
+  return page.evaluate((items) => {
+    const round = (value: number) => Math.round(value * 100) / 100;
+    const elements: Record<string, { x: number; y: number; width: number; height: number; right: number; bottom: number } | null> = {};
+    for (const selector of items) {
+      const element = document.querySelector<HTMLElement>(selector);
+      const rect = element?.getBoundingClientRect();
+      elements[selector] = rect ? {
+        x: round(rect.x), y: round(rect.y), width: round(rect.width), height: round(rect.height),
+        right: round(rect.right), bottom: round(rect.bottom),
+      } : null;
+    }
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      scrollY: round(window.scrollY),
+      headMetadataOpen: document.querySelector<HTMLDetailsElement>(".guest-xray-head")?.open ?? null,
+      elements,
+    };
+  }, selectors);
+}

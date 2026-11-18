@@ -82,6 +82,84 @@ const scoreSchema = z.object({
   categories: z.array(scoreCategorySchema).max(8),
 });
 
+const metadataSchema = z.object({
+  title: z.string().max(500),
+  title_length: z.number().int().nonnegative().optional(),
+  title_count: z.number().int().nonnegative().optional(),
+  description: z.string().max(2_000).optional(),
+  description_length: z.number().int().nonnegative().optional(),
+  canonical: z.string().max(2_048).nullable().optional(),
+  canonical_resolved: z.string().max(2_048).nullable().optional(),
+  canonical_relationship: z.enum(["missing", "valid_same_host", "valid_other_host", "relative", "malformed"]).optional(),
+  robots_directives: z.array(z.string().max(64)).max(30).optional(),
+  language: z.string().max(32).nullable().optional(),
+  viewport: z.string().max(500).nullable().optional(),
+  charset: z.string().max(64).nullable().optional(),
+  mixed_content_reference_count: z.number().int().nonnegative().optional(),
+});
+
+const headingsSchema = z.object({
+  h1: z.array(z.string().max(500)).max(20),
+  h2: z.array(z.string().max(500)).max(50),
+  h3: z.array(z.string().max(500)).max(100),
+  empty_heading_count: z.number().int().nonnegative(),
+  hierarchy_jumps: z.array(z.string().max(500)).max(20),
+});
+
+const imagesSchema = z.object({
+  total: z.number().int().nonnegative(),
+  with_alt: z.number().int().nonnegative(),
+  missing_alt: z.number().int().nonnegative(),
+  empty_alt: z.number().int().nonnegative(),
+  alt_coverage_percent: z.number().min(0).max(100),
+  nonempty_alt: z.number().int().nonnegative().optional(),
+  empty_alt_intent_unknown: z.number().int().nonnegative().optional(),
+});
+
+const linksSchema = z.object({
+  total: z.number().int().nonnegative(),
+  internal: z.number().int().nonnegative(),
+  external: z.number().int().nonnegative(),
+  empty_anchors: z.number().int().nonnegative(),
+  nofollow: z.number().int().nonnegative(),
+  sponsored: z.number().int().nonnegative(),
+  ugc: z.number().int().nonnegative(),
+});
+
+const structuredDataSchema = z.object({
+  block_count: z.number().int().nonnegative(),
+  valid_blocks: z.number().int().nonnegative(),
+  malformed_blocks: z.number().int().nonnegative(),
+  types: z.array(z.string().max(100)).max(30),
+});
+
+const hreflangSchema = z.object({
+  links: z.array(z.object({
+    language_region: z.string().min(1).max(32),
+    href: z.string().min(1).max(2_048),
+  })).max(50),
+  malformed_count: z.number().int().nonnegative(),
+});
+
+const socialMetadataSchema = z.object({
+  og_title: z.string().max(500).nullable(),
+  og_description: z.string().max(2_000).nullable(),
+  og_image: z.string().max(2_048).nullable(),
+  og_url: z.string().max(2_048).nullable(),
+  twitter_card: z.string().max(100).nullable(),
+  twitter_title: z.string().max(500).nullable(),
+  twitter_description: z.string().max(2_000).nullable(),
+  twitter_image: z.string().max(2_048).nullable(),
+});
+
+const lexicalSignalsSchema = z.object({
+  visible_word_count: z.number().int().min(0).max(1_000_000),
+  frequent_terms: z.array(z.object({
+    term: z.string().min(1).max(80),
+    count: z.number().int().min(1).max(100_000),
+  })).max(10),
+});
+
 const findingsSummarySchema = z.object({
   total_checks: z.number().int().min(0).max(100),
   raw_passes: z.number().int().min(0).max(100),
@@ -116,7 +194,14 @@ export const seoAnalysisSchema = z.object({
   fetch: fetchSchema,
   deterministic_score: scoreSchema,
   checks: z.array(seoCheckSchema).max(100),
-  metadata: z.object({ title: z.string().max(500) }),
+  metadata: metadataSchema,
+  headings: headingsSchema.optional(),
+  images: imagesSchema.optional(),
+  links: linksSchema.optional(),
+  structured_data: structuredDataSchema.optional(),
+  hreflang: hreflangSchema.optional(),
+  social_metadata: socialMetadataSchema.optional(),
+  lexical_signals: lexicalSignalsSchema.optional(),
   findings_summary: findingsSummarySchema.optional(),
 });
 export type SeoAnalysis = z.infer<typeof seoAnalysisSchema>;
@@ -125,7 +210,7 @@ export type SeoAnalysis = z.infer<typeof seoAnalysisSchema>;
 // presentation prerequisite. Keep this parser independent of the fixture
 // wrapper and its Northstar-specific invariants.
 export const liveSeoAnalysisSchema = seoAnalysisSchema.extend({
-  metadata: z.object({ title: z.string().max(500).optional() }).optional(),
+  metadata: metadataSchema.partial().optional(),
 }).superRefine((analysis, context) => {
   const ids = new Set<string>();
   analysis.checks.forEach((check, index) => {

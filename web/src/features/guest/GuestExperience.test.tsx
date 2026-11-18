@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../../app/App";
 import auditFixture from "../../../public/fixtures/audit.json";
+import { routeFromSearch } from "../../app/route";
+import { fixtureSchema } from "../analysis/schema";
+import { GuestFixList } from "./GuestFixList";
+import { GuestPageXray } from "./GuestPageXray";
+import { GuestSummary } from "./GuestSummary";
 const guestSession = {
   csrf_token: "c".repeat(43),
   expires_in: 3600,
@@ -92,6 +97,7 @@ const guestAnalysis = {
       is_actionable: true,
       optional_note: null,
       exclusion_reason: null,
+      anatomy_part: "description",
     },
     {
       id: "retrieval_success",
@@ -161,7 +167,43 @@ const guestAnalysis = {
       exclusion_reason: null,
     },
   ],
-  metadata: { title: "A guide to home solar planning" },
+  metadata: {
+    title: "A guide to home solar planning",
+    title_length: 33,
+    title_count: 1,
+    description: "A practical guide to planning a home solar project.",
+    description_length: 52,
+    canonical: "https://northstar.example/guides/home-solar/",
+    canonical_resolved: "https://northstar.example/guides/home-solar/",
+    canonical_relationship: "valid_same_host",
+    robots_directives: [],
+    language: "en",
+    viewport: "width=device-width, initial-scale=1",
+    charset: "utf-8",
+    mixed_content_reference_count: 0,
+  },
+  headings: {
+    h1: ["Plan a home solar project"],
+    h2: ["Compare installation plans", "Prepare questions for an installer"],
+    h3: [],
+    empty_heading_count: 0,
+    hierarchy_jumps: [],
+  },
+  images: { total: 1, with_alt: 1, missing_alt: 0, empty_alt: 0, alt_coverage_percent: 100, nonempty_alt: 1, empty_alt_intent_unknown: 0 },
+  links: { total: 2, internal: 2, external: 0, empty_anchors: 0, nofollow: 0, sponsored: 0, ugc: 0 },
+  structured_data: { block_count: 0, valid_blocks: 0, malformed_blocks: 0, types: [] },
+  hreflang: { links: [], malformed_count: 0 },
+  social_metadata: {
+    og_title: null,
+    og_description: null,
+    og_image: null,
+    og_url: null,
+    twitter_card: null,
+    twitter_title: null,
+    twitter_description: null,
+    twitter_image: null,
+  },
+  lexical_signals: { visible_word_count: 241, frequent_terms: [{ term: "solar", count: 8 }] },
   findings_summary: {
     total_checks: 4,
     raw_passes: 1,
@@ -192,6 +234,27 @@ function response(
     status,
     headers: { "Content-Type": "application/json", ...headers },
   });
+}
+
+function demoReportWithHeadings(h1: string[] | undefined) {
+  const fixture = fixtureSchema.parse(structuredClone(auditFixture));
+  if (h1 === undefined) {
+    delete fixture.analysis.headings;
+  } else {
+    fixture.analysis.headings = { ...fixture.analysis.headings!, h1 };
+  }
+  return { source: "demo", analysis: fixture.analysis, fixture, html: "" } as const;
+}
+
+function renderSummary(report: ReturnType<typeof demoReportWithHeadings>) {
+  return render(
+    <GuestSummary
+      report={report}
+      onSeeFix={vi.fn()}
+      onReviewAll={vi.fn()}
+      onOpenXray={vi.fn()}
+    />,
+  );
 }
 function installGuestServices(
   options: {
@@ -310,6 +373,41 @@ describe("public guest audit journey", () => {
     expect(
       screen.getByText("Editable template, not your real copy."),
     ).toBeVisible();
+  });
+  it("opens observed X-ray regions and returns each numbered pin to its matching fix", async () => {
+    installGuestServices();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Check a web page for SEO problems." });
+    await user.type(screen.getByLabelText("Page address"), "https://northstar.example/guides/home-solar/");
+    await user.click(screen.getByRole("button", { name: "Check page" }));
+    await screen.findByRole("heading", { name: "Summary" });
+    expect(screen.getByRole("region", { name: "HTML X-ray" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Open Page X-ray" }));
+
+    expect(await screen.findByRole("heading", { name: "Page X-ray" })).toBeVisible();
+    expect(window.location.search).toContain("view=xray");
+    expect(window.location.search).toContain("source=guest");
+    expect(window.location.search).not.toContain("northstar.example");
+    await user.click(screen.getByText("HTML head metadata"));
+    expect(screen.getByText("A guide to home solar planning")).toBeVisible();
+    expect(screen.getByText("Plan a home solar project")).toBeVisible();
+    expect(screen.getByText("241 visible words found.")).toBeVisible();
+    expect(screen.getByText("Not assessed. No header or navigation content was returned.")).toBeVisible();
+    expect(screen.getByText("Not assessed. No footer content was returned.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Page X-ray" })).toHaveAttribute("aria-current", "page");
+
+    const pin = screen.getByRole("button", { name: "Priority 1: Add a page description.; open matching fix" });
+    await user.click(pin);
+    expect(await screen.findByRole("heading", { name: "Fix list" })).toBeVisible();
+    expect(window.location.search).toContain("view=findings");
+    expect(window.location.search).toContain("check=meta_description");
+    expect(screen.getByRole("button", { name: "Add a page description. High Quick" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Show on X-ray" }));
+    expect(await screen.findByRole("heading", { name: "Page X-ray" })).toBeVisible();
+    expect(window.location.search).toContain("check=meta_description");
+    expect(screen.getByRole("button", { name: "Priority 1: Add a page description.; open matching fix" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Add a page description." })).toBeVisible();
   });
   it("copies only the server-provided snippet and reports success only when clipboard write succeeds", async () => {
     installGuestServices();
@@ -523,5 +621,150 @@ describe("public guest audit journey", () => {
         ([input]) => String(input) === "/api/guest/v1/analyse-url",
       ),
     ).toHaveLength(1);
+  });
+
+  it("shows distinct assessed, unassessed, and observed H1 values in the rendered Summary preview", () => {
+    const missing = renderSummary(demoReportWithHeadings(undefined));
+    expect(within(screen.getByTestId("xray-preview")).getByText("H1 not assessed.")).toBeVisible();
+    missing.unmount();
+
+    const empty = renderSummary(demoReportWithHeadings([]));
+    const emptyPreview = screen.getByTestId("xray-preview");
+    expect(within(emptyPreview).getByText("No H1 found in the fetched HTML.")).toBeVisible();
+    expect(emptyPreview).not.toHaveTextContent(/\bClear\b/);
+    empty.unmount();
+
+    const emptyXray = render(
+      <GuestPageXray
+        report={demoReportWithHeadings([])}
+        route={routeFromSearch("?view=xray&source=demo&access=guest")}
+        onOpenFix={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const emptyH1Region = screen.getByRole("region", { name: "Primary heading (H1)" });
+    expect(emptyH1Region).toHaveAttribute("data-assessment", "not_found");
+    expect(within(emptyH1Region).getByText("Not found")).toBeVisible();
+    expect(emptyH1Region).not.toHaveTextContent(/\bClear\b/);
+    emptyXray.unmount();
+
+    renderSummary(demoReportWithHeadings(["Observed primary heading"]));
+    expect(within(screen.getByTestId("xray-preview")).getByText("Observed primary heading")).toBeVisible();
+  });
+
+  it("previews only the first returned H1 while the full X-ray retains every returned heading", () => {
+    const report = demoReportWithHeadings(["First observed H1", "Second observed H1"]);
+    const summary = renderSummary(report);
+    const preview = screen.getByTestId("xray-preview");
+    expect(within(preview).getByText("First observed H1")).toBeVisible();
+    expect(within(preview).queryByText("Second observed H1")).not.toBeInTheDocument();
+    summary.unmount();
+
+    render(
+      <GuestPageXray
+        report={report}
+        route={routeFromSearch("?view=xray&source=demo&access=guest")}
+        onOpenFix={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("First observed H1")).toBeVisible();
+    expect(screen.getByText("Second observed H1")).toBeVisible();
+  });
+
+  it("keeps the existing Summary and Fix-list actionable counts for the same report", () => {
+    const report = demoReportWithHeadings([]);
+    const summary = renderSummary(report);
+    expect(screen.getByTestId("summary-count-line")).toHaveTextContent("4 to fix");
+    summary.unmount();
+
+    render(
+      <GuestFixList
+        report={report}
+        route={routeFromSearch("?view=findings&source=demo&access=guest")}
+        onNavigate={vi.fn()}
+        onShowOnXray={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("findings-count-line")).toHaveTextContent("4 to fix");
+  });
+
+  it("resolves routed, keyboard-focused, and hovered findings without mixing details", async () => {
+    const user = userEvent.setup();
+    const report = demoReportWithHeadings(["Observed H1"]);
+    const route = routeFromSearch("?view=xray&source=demo&access=guest&check=robots_directives");
+    const onOpenFix = vi.fn();
+    const onNavigate = vi.fn();
+    const view = (nextRoute: ReturnType<typeof routeFromSearch>) => (
+      <>
+        <GuestPageXray report={report} route={nextRoute} onOpenFix={onOpenFix} onNavigate={onNavigate} />
+        <button type="button">Outside mapped regions</button>
+      </>
+    );
+    const { rerender } = render(view(route));
+    const robotsPin = screen.getByRole("button", { name: /Priority 1: Robots directives/ });
+    const openGraphPin = screen.getByRole("button", { name: /Open Graph metadata/ });
+    const twitterPin = screen.getByRole("button", { name: /Twitter metadata/ });
+    const details = document.querySelector<HTMLElement>(".guest-xray-finding")!;
+    const robotsRegion = document.querySelector<HTMLElement>('[data-xray-region="head-robots"]')!;
+    const sharingRegion = document.querySelector<HTMLElement>('[data-xray-region="head-sharing"]')!;
+
+    expect(within(details).getByText("Robots directives are reported")).toBeVisible();
+    expect(robotsRegion).toHaveClass("is-highlighted");
+
+    robotsPin.focus();
+    await user.tab();
+    expect(openGraphPin).toHaveFocus();
+    expect(within(details).getByText("Open Graph metadata is reported")).toBeVisible();
+    expect(within(details).getByText("Priority 3")).toBeVisible();
+    expect(sharingRegion).toHaveClass("is-highlighted");
+    expect(robotsRegion).not.toHaveClass("is-highlighted");
+
+    await user.tab();
+    expect(twitterPin).toHaveFocus();
+    expect(within(details).getByText("Twitter metadata is reported")).toBeVisible();
+    expect(within(details).getByText("Priority 4")).toBeVisible();
+
+    await user.hover(robotsPin);
+    expect(twitterPin).toHaveFocus();
+    expect(within(details).getByText("Robots directives are reported")).toBeVisible();
+    expect(robotsRegion).toHaveClass("is-highlighted");
+    expect(sharingRegion).not.toHaveClass("is-highlighted");
+
+    await user.unhover(robotsPin);
+    expect(twitterPin).toHaveFocus();
+    expect(within(details).getByText("Twitter metadata is reported")).toBeVisible();
+    expect(sharingRegion).toHaveClass("is-highlighted");
+    expect(robotsRegion).not.toHaveClass("is-highlighted");
+
+    await user.click(screen.getByRole("button", { name: "Outside mapped regions" }));
+    expect(within(details).getByText("Robots directives are reported")).toBeVisible();
+    expect(robotsRegion).toHaveClass("is-highlighted");
+    expect(sharingRegion).not.toHaveClass("is-highlighted");
+
+    twitterPin.focus();
+    rerender(view(routeFromSearch("?view=xray&source=demo&access=guest&check=open_graph")));
+    expect(within(details).getByText("Open Graph metadata is reported")).toBeVisible();
+    expect(within(details).getByText("Priority 3")).toBeVisible();
+    expect(sharingRegion).toHaveClass("is-highlighted");
+    expect(robotsRegion).not.toHaveClass("is-highlighted");
+  });
+
+  it("keeps an unknown routed check unavailable during pointer interaction", async () => {
+    const user = userEvent.setup();
+    const report = demoReportWithHeadings(["Observed H1"]);
+    const route = routeFromSearch("?view=xray&source=demo&access=guest&check=unknown_check");
+    const onNavigate = vi.fn();
+    render(
+      <GuestPageXray report={report} route={route} onOpenFix={vi.fn()} onNavigate={onNavigate} />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("This finding is not available in the current report.");
+    await user.hover(screen.getByRole("button", { name: /Priority 1: Robots directives/ }));
+    expect(screen.getByRole("status")).toHaveTextContent("This finding is not available in the current report.");
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(screen.queryByText("Robots directives are reported")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show all mapped findings" }));
+    expect(onNavigate).toHaveBeenCalledWith(expect.objectContaining({ check: "" }), { focus: "heading" });
   });
 });

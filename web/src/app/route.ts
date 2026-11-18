@@ -1,6 +1,6 @@
 import type { CheckStatus } from "../features/analysis/schema";
 
-export type ViewName = "entry" | "overview" | "findings" | "detail";
+export type ViewName = "entry" | "overview" | "findings" | "detail" | "xray";
 export type FindingsMode = "review" | "all";
 export type StatusFilter = "all" | CheckStatus;
 export type ReportSource = "demo" | "live" | "guest";
@@ -15,7 +15,7 @@ export type AppRoute = {
   operator: boolean;
 };
 
-const knownViews = new Set<ViewName>(["entry", "overview", "findings", "detail"]);
+const knownViews = new Set<ViewName>(["entry", "overview", "findings", "detail", "xray"]);
 const knownStatuses = new Set<StatusFilter>(["all", "fail", "warning", "pass", "not_applicable"]);
 
 export function routeFromSearch(search: string): AppRoute {
@@ -38,13 +38,15 @@ export function routeFromSearch(search: string): AppRoute {
 export function routeSearch(route: AppRoute): string {
   const params = new URLSearchParams();
   params.set("view", route.view);
-  if (route.view === "findings" || route.view === "detail") {
+  if (route.view === "findings" || route.view === "detail" || route.view === "xray") {
     params.set("source", route.source);
+  }
+  if (route.view === "findings" || route.view === "detail") {
     params.set("mode", route.mode);
     if (route.q) params.set("q", route.q);
     if (route.status !== "all") params.set("status", route.status);
   }
-  if (route.view === "findings" && route.check) params.set("check", route.check);
+  if ((route.view === "findings" || route.view === "xray") && route.check) params.set("check", route.check);
   if (route.view === "overview") params.set("source", route.source);
   if (route.view === "detail" && route.check) params.set("check", route.check);
   if (route.operator) params.set("access", "operator");

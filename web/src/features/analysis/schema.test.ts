@@ -109,12 +109,48 @@ describe("Northstar fixture contract", () => {
     live.final_url = live.requested_url;
     delete (live as Partial<typeof live>).metadata;
     live.checks = [live.checks[0]!];
-    expect(liveSeoAnalysisSchema.parse(live).checks).toHaveLength(1);
+    const parsed = liveSeoAnalysisSchema.parse(live);
+    expect(parsed.checks).toHaveLength(1);
+    expect(parsed.metadata).toBeUndefined();
 
     const empty = structuredClone(live);
     empty.checks = [];
     empty.deterministic_score.categories = [];
     expect(liveSeoAnalysisSchema.parse(empty).checks).toHaveLength(0);
+  });
+
+  it("retains the existing HTML observations needed by the page X-ray", () => {
+    const parsed = liveSeoAnalysisSchema.parse(fixtureData.analysis);
+
+    expect(parsed.metadata?.title).toBe(fixtureData.analysis.metadata.title);
+    expect(parsed.metadata?.description).toBe(fixtureData.analysis.metadata.description);
+    expect(parsed.metadata?.robots_directives).toEqual(["noindex", "follow"]);
+    expect(parsed.headings?.h1).toEqual(["Plan a home solar installation"]);
+    expect(parsed.headings?.h2).toHaveLength(2);
+    expect(parsed.images?.total).toBe(1);
+    expect(parsed.images?.missing_alt).toBe(0);
+    expect(parsed.links?.internal).toBe(2);
+    expect(parsed.lexical_signals?.visible_word_count).toBe(232);
+    expect(parsed.social_metadata?.og_title).toBe(fixtureData.analysis.social_metadata.og_title);
+    expect(parsed.structured_data?.block_count).toBe(1);
+    expect(parsed.hreflang?.links).toEqual([]);
+  });
+
+  it("keeps absent optional sections distinct from observed empty sections", () => {
+    const live = structuredClone(fixtureData.analysis);
+    delete (live as Partial<typeof live>).headings;
+    delete (live as Partial<typeof live>).images;
+    const parsed = liveSeoAnalysisSchema.parse(live);
+    expect(parsed.headings).toBeUndefined();
+    expect(parsed.images).toBeUndefined();
+
+    const withEmptyObservations = liveSeoAnalysisSchema.parse({
+      ...live,
+      headings: { h1: [], h2: [], h3: [], empty_heading_count: 0, hierarchy_jumps: [] },
+      images: { total: 0, with_alt: 0, missing_alt: 0, empty_alt: 0, alt_coverage_percent: 0 },
+    });
+    expect(withEmptyObservations.headings?.h1).toEqual([]);
+    expect(withEmptyObservations.images?.total).toBe(0);
   });
 
   it("rejects malformed live values and duplicate rule identifiers", () => {

@@ -65,8 +65,8 @@ export function GuestSummary({ report, onSeeFix, onReviewAll, onOpenXray }: Prop
 
         <p className="guest-report-counts" data-testid="summary-count-line">
           <strong>{model.openCount} to fix</strong><span aria-hidden="true"> · </span>{model.passedCount} passed<span aria-hidden="true"> · </span>{model.notApplicableCount} not applicable
+          {optionalCount > 0 && <><span aria-hidden="true"> · </span><span className="guest-optional-count">{optionalCount} optional {optionalCount === 1 ? "note" : "notes"}</span></>}
         </p>
-        {optionalCount > 0 && <p className="guest-optional-count">{optionalCount} optional {optionalCount === 1 ? "note" : "notes"}</p>}
 
         <div className="guest-priority-heading">
           <h2>Do these first</h2>

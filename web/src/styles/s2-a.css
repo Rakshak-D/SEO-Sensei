@@ -191,7 +191,7 @@
 .guest-score-popover li strong { font-size: 12px; }
 .guest-report-counts { margin: 9px 0 0; color: #36342f; font-size: 16px; }
 .guest-report-counts strong, .guest-fix-count strong { color: #14130f; font-weight: 750; }
-.guest-optional-count { margin: 2px 0 0; color: #5c5952; font-size: 13px; }
+.guest-optional-count { color: #5c5952; font-size: 13px; }
 .guest-priority-heading, .guest-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .guest-priority-heading { margin: 16px 0 8px; }
 .guest-priority-heading h2, .guest-section-heading h2 { margin: 0; color: #14130f; font-size: 21px; font-weight: 750; line-height: 1.2; }
@@ -396,20 +396,20 @@
   .guest-url-input { min-height: 56px; font-size: 13px !important; }
   .guest-entry-form > .guest-primary-button { min-height: 48px; }
   .guest-examples { margin-top: 28px; }
-  .guest-page-identity { margin-bottom: 10px; }
+  .guest-page-identity { margin-bottom: 6px; }
   .guest-page-identity .guest-summary-kicker { margin-top: 8px; }
   .guest-page-identity h1 { font-size: 24px; }
   .guest-verdict-heading { display: block; }
-  .guest-verdict { max-width: 24ch; font-size: 32px; }
-  .guest-score { width: fit-content; margin-top: 7px; padding: 0; border: 0; }
+  .guest-verdict { max-width: 24ch; margin-top: 2px; font-size: 32px; }
+  .guest-score { width: fit-content; margin-top: 4px; padding: 0; border: 0; }
   .guest-score strong { font-size: 21px; }
   .guest-score-help summary { width: 44px; height: 44px; }
-  .guest-report-counts { margin-top: 6px; font-size: 15px; }
-  .guest-priority-heading { margin: 8px 0 6px; }
+  .guest-report-counts { margin-top: 4px; font-size: 14px; }
+  .guest-priority-heading { margin: 4px 0; }
   .guest-priority-heading h2 { font-size: 19px; }
   .guest-priority-heading .guest-text-button { min-height: 44px; font-size: 14px; }
   .guest-priority-list { gap: 8px; }
-  .guest-priority-card { grid-template-columns: 22px minmax(0, 1fr); gap: 7px 9px; padding: 12px; }
+  .guest-priority-card { grid-template-columns: 22px minmax(0, 1fr); gap: 7px 9px; padding: 11px; }
   .guest-priority-number { grid-row: 1 / span 2; font-size: 16px; }
   .guest-priority-copy h3 { font-size: 17px; }
   .guest-priority-copy p { margin-top: 3px; font-size: 16px; line-height: 1.32; overflow-wrap: anywhere; }

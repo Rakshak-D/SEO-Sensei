@@ -4,8 +4,9 @@
 
 - Required `origin/main`: `f3a024b83653f738fd55124d3c012e94b1605b57`.
 - Feature branch: `fix/s2-c1-quality-accessibility`, created from that exact main commit.
-- Code and evidence commit: `5e9f16a1d79b84c9592f050b213612f002085548`.
-- The ledger is committed separately. The delivery report and PR checks identify the final branch tip and exact-head CI result.
+- Starting feature SHA for this final correction: `376c64155519ee6eed2a0a3f2588c713dce1aab5`.
+- Initial implementation/evidence commit: `5e9f16a1d79b84c9592f050b213612f002085548`.
+- The ledger and final corrections are committed separately. The delivery report and PR checks identify the final branch tip and exact-head CI result.
 - PR #10 is read-only and remains a separate unmerged design reference at `51a8134ce6a162730bfc8c97bc6c1d76a81d376e`.
 
 ## Confirmed defects and corrections
@@ -56,8 +57,8 @@ The production Chromium suite covered Home, Summary, Fix list, Page X-ray, On-pa
 
 - Widths 320, 390, 768, 1024 and 1440px: no horizontal overflow on measured implemented guest pages; minimum measured interactive target height is 44px.
 - Landscape 844×390: no horizontal overflow; minimum target remains 44px; the last report control clears the fixed navigation.
-- At 390×844 Summary: priority 1 is y=338.64–480.11px; priority 2 is y=488.11–608.47px; fixed navigation begins y=776px. The second card has 167.53px clearance.
-- At 320×844 Summary: first two cards end at y=506.34px and y=673.41px; navigation begins y=776px.
+- At 390×844 Summary using the longer six-finding warning report: priority 1 is x=16, y=389.17, 358×181.83px; priority 2 is x=16, y=579, 358×181.69px; fixed navigation begins y=776px. The second card has 15.31px clearance; its full reason and action remain visible at 16px body text.
+- At 320×844 Summary on the two-finding responsive report: the first two cards end at y=487.78px and y=654.84px; navigation begins y=776px.
 - A 1.5× computed-text-size stress at 390px reports no horizontal overflow or right-edge clipping across Summary, Fix list, X-ray, On-page, and Previews. This is not browser zoom evidence.
 - Actual browser 200% zoom and manual screen-reader testing were not performed and remain **UNVERIFIED**. Automated Axe results do not substitute for those checks.
 - The X-ray is the visually longest report screen on mobile. Its mapped evidence and selected details remain available; no blocking overlap was observed. Desktop detail panel remains visible while a selected region is scrolled into view.
@@ -77,9 +78,9 @@ Capture metadata and exact rectangles are in [`web/review/s2-c1/README.md`](../w
 | S2C1-7 SHOULD audit | PASS | This ledger; keyword/loading/long-copy and X-ray Playwright tests | Items 7–13 each have evidence, disposition, impact, and follow-up action. Mark-done is intentionally deferred. |
 | S2C1-8 keyboard/focus/dialog/form/announcement | PASS | `checks keyboard access, announcements, touch targets, and responsive reflow`; Axe and navigation E2E | Home/report screens and More checked; automated Axe only. Manual screen-reader use remains unverified. |
 | S2C1-9 responsive, text enlargement, reflow | PASS | Same responsive test | 320/390/768/1024/1440 and landscape 844×390; 1.5× text stress; no overflow/clipping. Real 200% browser zoom remains unverified. |
-| S2C1-10 mobile Summary cards | PASS | Responsive test and `summary-mobile-priority-clearance-390x844.png` | Second card bottom 608.47px; nav top 776px; 167.53px clearance at 390×844. |
+| S2C1-10 mobile Summary cards | PASS | `keeps two complete priority cards above mobile navigation with the controlled warnings report`; `web/review/s2-c1/summary-mobile-priority-clearance-390x844.png` | Six-finding warning report at 390×844: second card bottom 760.69px; nav top 776px; 15.31px clearance. Full reasons and actions fit; reason text remains 16px. |
 | S2C1-11 evidence/security invariants | PASS | JSON-LD tests, guest/security regression suite, E2E keyword and external-request checks, static scope review | No scoring/auth/security contract change, keyword not sent, no new outbound request or fabricated content. Live provider and deployment behavior are not claimed. |
-| S2C1-12 guest/auth/scoring/extension regression | UNVERIFIED pending exact-head integration CI | Full local pytest, web unit/E2E, focused HTTPS checks earlier in this task; final CI | Local checks passed. Exact final-head authenticated integration/container jobs are required because the complete local integration screenshot suite was not rerun; it writes into the separately reviewed S2-B2 evidence directory. |
+| S2C1-12 guest/auth/scoring/extension regression | PASS | `.\tests\integration\run_phase2d_local.ps1`; full Pytest and web regression suites | Isolated HTTPS/Caddy integration passed 6/6, including authenticated analysis, API-domain isolation, guest journey, controlled analysis-to-X-ray, specialist pages, reload recovery and cancellation. No production config changed. |
 | S2C1-13 final GitHub CI | UNVERIFIED pending final-head checks | PR check runs on final branch tip | Report exact run/head and all five job states in delivery; do not infer success from earlier CI. |
 | S2C1-14 protected state and artifacts | UNVERIFIED pending delivery recheck | Git SHA/PR metadata, diff inventory, artifact SHA256 | Main, PR #10, environment, and named untracked files must be rechecked after push. |
 
@@ -98,11 +99,12 @@ npm --prefix web run lint                                     passed
 npm --prefix web test                                         8 files, 90 tests passed
 npm --prefix web run build                                    passed; Vite transformed 141 modules
 npm --prefix web run test:e2e -- --workers=1 --grep-invert "captures demo and authentication browser review screenshots|renders v1.1 verdicts, shared counts, priority order, and severity colors in production reports|opens the fictional Northstar report X-ray and preserves its provenance|local example opens reload-safe On-page and Previews with usable mobile navigation"
-                                                               18 passed
+                                                               19 passed
+.\tests\integration\run_phase2d_local.ps1                   passed; isolated HTTPS integration 6/6
 git diff --check                                             passed
 ```
 
-Pytest skip: `tests/test_browser_auth.py:552`, POSIX account-file mode check not applicable on Windows. The local final Playwright invocation intentionally excluded four existing screenshot-capture tests to avoid overwriting previously approved S1-B/S2-A/S2-B evidence; the new C1 captures were generated by allowed tests. The controlled HTTPS integration harness had passed three focused checks earlier in this task sequence (Caddy routing/isolation, zero-fix result/reload recovery, and cancellation); it was not rerun after the CSS-only sticky-detail adjustment. The exact-head GitHub authenticated integration job remains the final regression evidence.
+Pytest skip: `tests/test_browser_auth.py:552`, POSIX account-file mode check not applicable on Windows. The final local Playwright invocation excluded four existing screenshot-capture tests to avoid overwriting approved milestone captures; all other 19 browser tests passed. The HTTPS harness passed all six integration tests, including the formerly failing two-card mobile Summary assertion. Its run refreshed screenshots in prior milestone folders; those tracked files were clean before the run and were restored to their pre-run revisions. The harness removed its own PID-scoped temporary directory. The three previously identified untracked artifacts remain untouched. Exact-head GitHub CI remains the final remote check.
 
 Fixture verification retained the existing SHA256 values:
 

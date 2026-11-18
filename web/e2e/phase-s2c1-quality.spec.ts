@@ -1,4 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 const appOrigin = "http://127.0.0.1:4173";
@@ -307,6 +309,105 @@ test("long priority reasons wrap and remain fully visible", async ({ page }) => 
     expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   }
+});
+
+test("keeps two complete priority cards above mobile navigation with the controlled warnings report", async ({ page }) => {
+  const api = await installApi(page);
+  const report = analysisFor("medium", true);
+  const first = report.checks.find((item) => item.id === "meta_description")!;
+  first.id = "visible_text";
+  first.category = "headings_content_structure";
+  first.anatomy_part = "content";
+  first.impact = "high";
+  first.finding_title = "Check whether this short page needs more context";
+  first.finding_reason = "A short page may be appropriate for its purpose. Check whether visitors get the context they need.";
+  const second = report.checks.find((item) => item.id === "heading_hierarchy")!;
+  second.id = "title";
+  second.category = "metadata";
+  second.anatomy_part = "title";
+  second.finding_title = "Make the page title more descriptive";
+  second.finding_reason = "The title has 11 characters. Check that it clearly identifies this page; this length check does not predict search presentation.";
+  const additionalFindings = [
+    { id: "canonical", title: "Canonical URL", finding_title: "Review the canonical URL", finding_reason: "The observed canonical relationship is missing. Confirm that the canonical URL identifies the page intended by the site owner.", impact: "medium", effort: "moderate", anatomy_part: "technical" },
+    { id: "internal_links", title: "Internal links", finding_title: "Add useful links to related pages", finding_reason: "No internal links were detected in the fetched HTML. Add links where they help visitors move between related pages.", impact: "medium", effort: "moderate", anatomy_part: "links" },
+    { id: "open_graph", title: "Open Graph metadata", finding_title: "Add useful social sharing details", finding_reason: "The fetched HTML contains 0 of four checked Open Graph fields.", impact: "low", effort: "quick", anatomy_part: "sharing" },
+    { id: "twitter_metadata", title: "X metadata", finding_title: "Add useful X sharing details", finding_reason: "The fetched HTML contains 0 of four checked X card fields.", impact: "low", effort: "quick", anatomy_part: "sharing" },
+  ];
+  report.checks.push(...additionalFindings.map((finding) => ({
+    ...first,
+    ...finding,
+  })));
+  const passingCheck = report.checks[0]!;
+  report.checks.push(...Array.from({ length: 13 }, (_, index) => ({
+    ...passingCheck,
+    id: `controlled_pass_${index + 1}`,
+    title: `Passing check ${index + 1}`,
+  })));
+  report.checks.push(...Array.from({ length: 2 }, (_, index) => ({
+    ...passingCheck,
+    id: `controlled_na_${index + 1}`,
+    title: `Not applicable check ${index + 1}`,
+    status: "not_applicable",
+  })));
+  report.checks.push({
+    ...passingCheck,
+    id: "json_ld",
+    title: "Structured data",
+    status: "warning",
+    impact: null,
+    effort: null,
+    is_actionable: false,
+    optional_note: "Optional structured data was not found.",
+    exclusion_reason: "Optional structured data is not required for every page.",
+  });
+  report.findings_summary.total_checks = 23;
+  report.findings_summary.raw_passes = 14;
+  report.findings_summary.raw_warnings = 7;
+  report.findings_summary.raw_failures = 0;
+  report.findings_summary.raw_not_applicable = 2;
+  report.findings_summary.actionable_count = 6;
+  report.findings_summary.optional_note_count = 1;
+  report.findings_summary.by_impact = { blocking: 0, high: 1, medium: 3, low: 2 };
+  report.findings_summary.by_effort = { quick: 3, moderate: 3, larger_job: 0 };
+  report.findings_summary.prioritized_check_ids = ["visible_text", "title", "canonical", "internal_links", "open_graph", "twitter_metadata"];
+  report.findings_summary.exclusions = [{
+    check_id: "json_ld",
+    status: "warning",
+    reason: "Optional structured data is not required for every page.",
+  }];
+  report.findings_summary.verdict = "6 fixes. The very short page content matters most.";
+  report.deterministic_score.overall_score = 84;
+  report.deterministic_score.points_earned = 84;
+  api.setCustomReport(report);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await submitAudit(page);
+  await expect(page.getByRole("heading", { name: "Summary" })).toBeVisible();
+  const measurement = await page.evaluate(() => {
+    const nav = document.querySelector<HTMLElement>(".guest-mobile-tabs")!.getBoundingClientRect();
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-priority-card]"))
+      .slice(0, 2)
+      .map((element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, top: box.top, width: box.width, height: box.height, right: box.right, bottom: box.bottom };
+      });
+    return { navTop: nav.top, cards, scrollWidth: document.documentElement.scrollWidth };
+  });
+  console.log("S2-C1 controlled warnings mobile priority bounds:", JSON.stringify(measurement));
+  expect(measurement.scrollWidth).toBe(390);
+  expect(measurement.cards).toHaveLength(2);
+  expect(measurement.cards.every((card) => card.top >= 0 && card.bottom <= measurement.navTop)).toBe(true);
+  await expect(page.getByTestId("summary-count-line")).toContainText("6 to fix");
+  await expect(page.getByTestId("summary-count-line")).toContainText("14 passed");
+  await expect(page.getByTestId("summary-count-line")).toContainText("2 not applicable");
+  await expect(page.getByTestId("summary-count-line")).toContainText("1 optional note");
+  await expect(page.locator("[data-priority-card] .guest-priority-copy p").first()).toHaveText(first.finding_reason!);
+  await expect(page.locator("[data-priority-card] .guest-priority-copy p").nth(1)).toHaveText(second.finding_reason!);
+  await expect(page.locator("[data-priority-card] .guest-priority-copy p").first()).toHaveCSS("font-size", "16px");
+  const evidenceDirectory = resolve(process.cwd(), "review/s2-c1");
+  mkdirSync(evidenceDirectory, { recursive: true });
+  await page.screenshot({ path: resolve(evidenceDirectory, "summary-mobile-priority-clearance-390x844.png") });
 });
 
 test("checks keyboard access, announcements, touch targets, and responsive reflow", async ({ page }) => {

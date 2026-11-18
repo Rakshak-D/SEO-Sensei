@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { expect, test, type Page, type Request } from "@playwright/test";
 const evidenceDirectory = resolve(process.cwd(), "review/s2-a");
 mkdirSync(evidenceDirectory, { recursive: true });
+const b2EvidenceDirectory = resolve(process.cwd(), "review/s2-b2");
+mkdirSync(b2EvidenceDirectory, { recursive: true });
 const warningUrl = "https://phase2d.test/pages/warnings";
 const noindexUrl = "https://phase2d.test/pages/noindex";
 const allPassUrl = "https://phase2d.test/pages/all-pass";
@@ -185,6 +187,7 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
       .locator(".guest-mobile-tabs .guest-mobile-xray .guest-nav-count")
       .count(),
   ).toBe(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await capture(page, "summary-normal-desktop-1440x900.png");
   const evidenceDirectory = resolve(process.cwd(), "review/s2-b1");
@@ -366,6 +369,9 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
   await expect(page).toHaveURL(/view=xray.*check=robots_directives/);
   const selectedPin = page.locator('[data-xray-check="robots_directives"]');
   await expect(selectedPin).toBeFocused();
+  // The pointer remains over the Fix-list action during navigation; clear
+  // that transient hover so this assertion isolates the routed selection.
+  await page.mouse.move(0, 0);
   const robotsRegion = page.locator('[data-xray-region="head-robots"]');
   const sharingRegion = page.locator('[data-xray-region="head-sharing"]');
   const openGraphPin = page.locator('[data-xray-check="open_graph"]');
@@ -435,6 +441,11 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
   expect(keyboardReachedPin).toBe(true);
   await expect(selectedPin).toHaveCSS("outline-style", "solid");
   await expect(selectedPin).toHaveCSS("outline-width", "3px");
+  await expect.poll(async () => selectedPin.evaluate((element) => {
+    const pin = element.getBoundingClientRect();
+    const nav = document.querySelector(".guest-mobile-tabs")?.getBoundingClientRect();
+    return Boolean(nav && pin.top >= 0 && pin.bottom <= nav.top);
+  })).toBe(true);
   const focusRects = await measureRectangles(page, ['[data-xray-check="robots_directives"]', ".guest-mobile-tabs"]);
   console.log("S2-B1 mobile focused pin rectangles:", JSON.stringify(focusRects));
   const focusedPin = focusRects.elements['[data-xray-check="robots_directives"]'];
@@ -568,6 +579,122 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
     }),
   );
 });
+test("renders On-page and Previews from two controlled HTTPS analyses", async ({
+  page,
+  baseURL,
+  browser,
+}) => {
+  console.log("S2-B2 controlled screenshot browser:", browser.version());
+  const appOrigin = new URL(baseURL!).origin;
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const origin = new URL(request.url()).origin;
+    if (origin !== appOrigin) externalRequests.push(origin);
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const warning = await submit(page, warningUrl);
+  requestContract(warning.request, warningUrl);
+  const warningAnalysis = warning.analysis as {
+    deterministic_score: { version: string };
+    checks: unknown[];
+    findings_summary: { actionable_count: number };
+  };
+  expect(warningAnalysis.deterministic_score.version).toBe("1.1");
+  expect(warningAnalysis.checks).toHaveLength(23);
+  expect(warningAnalysis.findings_summary.actionable_count).toBeGreaterThan(0);
+  await expect(page.getByRole("heading", { name: "Summary" })).toBeVisible();
+
+  await page.getByRole("link", { name: "On-page" }).click();
+  await expect(page.getByRole("heading", { name: "On-page content" })).toBeVisible();
+  await expect(page.getByText("Solar notes")).toBeVisible();
+  const onPageRelatedFix = page.locator(".guest-onpage .guest-specialist-related button", { hasText: "See the fix" }).first();
+  await expect(onPageRelatedFix).toBeVisible();
+  const onPageCheckId = await onPageRelatedFix.locator("xpath=ancestor::*[@data-related-check][1]").getAttribute("data-related-check");
+  expect(onPageCheckId).toBeTruthy();
+  await onPageRelatedFix.click();
+  await expect(page).toHaveURL(new RegExp("view=findings.*check=" + onPageCheckId));
+  const onPageSelectedRow = page.locator('[data-finding-id="' + onPageCheckId + '"]');
+  await expect(onPageSelectedRow).toHaveAttribute("aria-expanded", "true");
+  await expect(onPageSelectedRow).toBeFocused();
+  console.log("S2-B2 On-page selected fix route:", page.url());
+  const onPageExpandedRow = page.locator('[data-finding-id="' + onPageCheckId + '"]').locator("xpath=ancestor::li[contains(@class, 'guest-fix-row')]");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await onPageExpandedRow.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
+  await expect.poll(async () => onPageExpandedRow.evaluate((element) => {
+    const row = element.getBoundingClientRect();
+    const nav = document.querySelector(".guest-mobile-tabs")?.getBoundingClientRect();
+    return Boolean(nav && row.top >= 0 && row.bottom <= nav.top);
+  })).toBe(true);
+  console.log("S2-B2 on-page selected-fix mobile rectangles:", JSON.stringify(await measureRectangles(page, [
+    "[data-finding-id]", ".guest-fix-row:has([data-finding-id][aria-expanded='true'])", ".guest-mobile-tabs",
+  ])));
+  await captureTo(page, b2EvidenceDirectory, "on-page-selected-fix-390x844.png");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("link", { name: "Previews" }).click();
+  await expect(page.getByRole("heading", { name: "Search and social previews" })).toBeVisible();
+  await expect(page.getByText("No Open Graph title returned.")).toHaveCount(2);
+  await expect(page.getByText(/Illustration based on fetched metadata/)).toBeVisible();
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  const missingPreview = await measureRectangles(page, [
+    "#guest-previews-title", ".guest-search-preview", ".guest-og-preview", ".guest-x-preview", ".guest-linkedin-preview",
+  ]);
+  console.log("S2-B2 missing-metadata preview rectangles:", JSON.stringify(missingPreview));
+  await captureTo(page, b2EvidenceDirectory, "previews-missing-metadata-1440x900.png");
+  const previewRelatedFix = page.locator(".guest-previews-related button", { hasText: "See the fix" }).first();
+  await expect(previewRelatedFix).toBeVisible();
+  const previewCheckId = await previewRelatedFix.locator("xpath=ancestor::*[@data-related-check][1]").getAttribute("data-related-check");
+  expect(previewCheckId).toBeTruthy();
+  await previewRelatedFix.click();
+  await expect(page).toHaveURL(new RegExp("view=findings.*check=" + previewCheckId));
+  const previewSelectedRow = page.locator('[data-finding-id="' + previewCheckId + '"]');
+  await expect(previewSelectedRow).toHaveAttribute("aria-expanded", "true");
+  await expect(previewSelectedRow).toBeFocused();
+  console.log("S2-B2 Preview related fix route:", page.url());
+  const previewExpandedRow = page.locator('[data-finding-id="' + previewCheckId + '"]').locator("xpath=ancestor::li[contains(@class, 'guest-fix-row')]");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await previewExpandedRow.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
+  console.log("S2-B2 preview selected-fix mobile rectangles:", JSON.stringify(await measureRectangles(page, [
+    "[data-finding-id]", ".guest-fix-row:has([data-finding-id][aria-expanded='true'])", ".guest-mobile-tabs",
+  ])));
+  await captureTo(page, b2EvidenceDirectory, "previews-related-fix-390x844.png");
+
+  await page.getByRole("button", { name: "New audit" }).first().click();
+  await expect(page.getByRole("heading", { name: "Check a web page for SEO problems." })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const rich = await submit(page, allPassUrl);
+  requestContract(rich.request, allPassUrl);
+  const richAnalysis = rich.analysis as {
+    deterministic_score: { version: string };
+    checks: unknown[];
+    findings_summary: { actionable_count: number };
+    social_metadata: { og_title: string | null; twitter_title: string | null };
+  };
+  expect(richAnalysis.deterministic_score.version).toBe("1.1");
+  expect(richAnalysis.checks).toHaveLength(23);
+  expect(richAnalysis.findings_summary.actionable_count).toBe(0);
+  expect(richAnalysis.social_metadata.og_title).toBeTruthy();
+  expect(richAnalysis.social_metadata.twitter_title).toBeTruthy();
+  await page.getByRole("link", { name: "Previews" }).click();
+  await expect(page.getByRole("heading", { name: "Search and social previews" })).toBeVisible();
+  await expect(page.getByText(richAnalysis.social_metadata.og_title!, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(richAnalysis.social_metadata.twitter_title!, { exact: true }).first()).toBeVisible();
+  expect(await page.locator("img").count()).toBe(0);
+  console.log("S2-B2 rich preview desktop rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-previews-title", ".guest-search-preview", ".guest-og-preview", ".guest-x-preview", ".guest-linkedin-preview",
+  ])));
+  await captureTo(page, b2EvidenceDirectory, "previews-rich-desktop-1440x900.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  console.log("S2-B2 rich preview mobile rectangles:", JSON.stringify(await measureRectangles(page, [
+    "#guest-previews-title", ".guest-search-preview", ".guest-mobile-tabs",
+  ])));
+  await captureTo(page, b2EvidenceDirectory, "previews-rich-mobile-390x844.png");
+  expect(externalRequests).toEqual([]);
+});
+
 test("shows a zero-fix result and explicit in-memory recovery after reload", async ({
   page,
 }) => {

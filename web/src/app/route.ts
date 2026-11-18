@@ -1,6 +1,6 @@
 import type { CheckStatus } from "../features/analysis/schema";
 
-export type ViewName = "entry" | "overview" | "findings" | "detail" | "xray";
+export type ViewName = "entry" | "overview" | "findings" | "detail" | "xray" | "on-page" | "previews";
 export type FindingsMode = "review" | "all";
 export type StatusFilter = "all" | CheckStatus;
 export type ReportSource = "demo" | "live" | "guest";
@@ -15,7 +15,7 @@ export type AppRoute = {
   operator: boolean;
 };
 
-const knownViews = new Set<ViewName>(["entry", "overview", "findings", "detail", "xray"]);
+const knownViews = new Set<ViewName>(["entry", "overview", "findings", "detail", "xray", "on-page", "previews"]);
 const knownStatuses = new Set<StatusFilter>(["all", "fail", "warning", "pass", "not_applicable"]);
 
 export function routeFromSearch(search: string): AppRoute {
@@ -38,7 +38,7 @@ export function routeFromSearch(search: string): AppRoute {
 export function routeSearch(route: AppRoute): string {
   const params = new URLSearchParams();
   params.set("view", route.view);
-  if (route.view === "findings" || route.view === "detail" || route.view === "xray") {
+  if (route.view === "findings" || route.view === "detail" || route.view === "xray" || route.view === "on-page" || route.view === "previews") {
     params.set("source", route.source);
   }
   if (route.view === "findings" || route.view === "detail") {

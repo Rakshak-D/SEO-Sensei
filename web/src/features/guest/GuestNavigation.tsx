@@ -22,6 +22,8 @@ function routeFor(item: string, current: AppRoute): AppRoute | null {
   if (item === "Summary") return { ...current, view: "overview", check: "" };
   if (item === "Fix list") return { ...current, view: "findings", check: "" };
   if (item === "Page X-ray") return { ...current, view: "xray", check: "" };
+  if (item === "On-page") return { ...current, view: "on-page", check: "" };
+  if (item === "Previews") return { ...current, view: "previews", check: "" };
   return null;
 }
 
@@ -37,7 +39,9 @@ function PageLink({ item, route, openCount, onNavigate }: {
     ? route.view === "overview"
     : item === "Fix list"
       ? route.view === "findings" || route.view === "detail"
-      : item === "Page X-ray" && route.view === "xray";
+      : item === "Page X-ray" ? route.view === "xray"
+        : item === "On-page" ? route.view === "on-page"
+          : item === "Previews" && route.view === "previews";
   return (
     <a className="guest-nav-link" href={routeSearch(target)} aria-current={active ? "page" : undefined}
       onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: item === "Page X-ray" ? "xray" : "heading" }); }}>
@@ -155,7 +159,11 @@ export function GuestNavigation({ route, openCount, hasReport, children, onNavig
                 <ul>{section.items.map((item) => {
                   const target = routeFor(item, route);
                   if (!target) return <li key={item}><button type="button" className="guest-more-disabled" disabled aria-disabled="true">{item}<span>Coming later</span></button></li>;
-                  const active = item === "Summary" ? route.view === "overview" : item === "Fix list" ? route.view === "findings" || route.view === "detail" : route.view === "xray";
+                  const active = item === "Summary" ? route.view === "overview"
+                    : item === "Fix list" ? route.view === "findings" || route.view === "detail"
+                      : item === "Page X-ray" ? route.view === "xray"
+                        : item === "On-page" ? route.view === "on-page"
+                          : item === "Previews" && route.view === "previews";
                   return <li key={item}><a href={routeSearch(target)} aria-current={active ? "page" : undefined} onClick={(event) => { event.preventDefault(); onNavigate(target, { focus: item === "Page X-ray" ? "xray" : "heading" }); closeMore(false); }}>{item}</a></li>;
                 })}</ul>
               </section>

@@ -10,7 +10,9 @@ import { sampleUrl, type SeoCheck } from "../features/analysis/schema";
 import { GuestFixList } from "../features/guest/GuestFixList";
 import { GuestHome } from "../features/guest/GuestHome";
 import { GuestNavigation } from "../features/guest/GuestNavigation";
+import { GuestOnPage } from "../features/guest/GuestOnPage";
 import { GuestPageXray } from "../features/guest/GuestPageXray";
+import { GuestPreviews } from "../features/guest/GuestPreviews";
 import { GuestSummary } from "../features/guest/GuestSummary";
 import { useGuestFlow } from "../features/guest/useGuestFlow";
 import { SignIn } from "../features/auth/SignIn";
@@ -573,6 +575,10 @@ export function App() {
         onOpenFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })}
         onNavigate={navigate}
       />;
+    } else if (activeReport && route.view === "on-page") {
+      view = <GuestOnPage report={activeReport} onSeeFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })} />;
+    } else if (activeReport && route.view === "previews") {
+      view = <GuestPreviews report={activeReport} onSeeFix={(checkId) => navigate({ ...route, view: "findings", check: checkId, mode: "review", q: "", status: "all" }, { focus: "finding" })} />;
     } else if (activeReport) {
       view = <section className="guest-report-page guest-lost-report" aria-labelledby="guest-page-unavailable">
         <p className="guest-summary-kicker">Page unavailable</p>

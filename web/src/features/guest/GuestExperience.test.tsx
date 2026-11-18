@@ -4,9 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { App } from "../../app/App";
 import auditFixture from "../../../public/fixtures/audit.json";
 import { routeFromSearch } from "../../app/route";
-import { fixtureSchema } from "../analysis/schema";
+import { fixtureSchema, liveSeoAnalysisSchema } from "../analysis/schema";
+import { findingsViewModel } from "../analysis/findingsViewModel";
 import { GuestFixList } from "./GuestFixList";
+import { GuestOnPage } from "./GuestOnPage";
 import { GuestPageXray } from "./GuestPageXray";
+import { GuestPreviews } from "./GuestPreviews";
 import { GuestSummary } from "./GuestSummary";
 const guestSession = {
   csrf_token: "c".repeat(43),
@@ -244,6 +247,17 @@ function demoReportWithHeadings(h1: string[] | undefined) {
     fixture.analysis.headings = { ...fixture.analysis.headings!, h1 };
   }
   return { source: "demo", analysis: fixture.analysis, fixture, html: "" } as const;
+}
+
+function guestReport(overrides: Record<string, unknown> = {}) {
+  const fixture = fixtureSchema.parse(structuredClone(auditFixture));
+  const analysis = liveSeoAnalysisSchema.parse({ ...fixture.analysis, ...overrides });
+  return { source: "guest" as const, analysis };
+}
+
+function guestV11Report(overrides: Record<string, unknown> = {}) {
+  const analysis = liveSeoAnalysisSchema.parse({ ...structuredClone(guestAnalysis), ...overrides });
+  return { source: "guest" as const, analysis };
 }
 
 function renderSummary(report: ReturnType<typeof demoReportWithHeadings>) {
@@ -766,5 +780,123 @@ describe("public guest audit journey", () => {
     expect(screen.queryByText("Robots directives are reported")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show all mapped findings" }));
     expect(onNavigate).toHaveBeenCalledWith(expect.objectContaining({ check: "" }), { focus: "heading" });
+  });
+
+  it("renders observed On-page fields and opens the exact canonical fix", async () => {
+    const user = userEvent.setup();
+    const report = guestV11Report();
+    const onSeeFix = vi.fn();
+    render(<GuestOnPage report={report} onSeeFix={onSeeFix} />);
+
+    expect(screen.getByRole("heading", { name: "On-page content" })).toBeVisible();
+    expect(screen.getByText(report.analysis.metadata!.title!)).toBeVisible();
+    expect(screen.getByText(report.analysis.headings!.h1[0]!)).toBeVisible();
+    expect(screen.getByTestId("onpage-count-line")).toHaveTextContent(`${findingsViewModel(report).openCount} to fix`);
+    const descriptionFinding = report.analysis.checks.find((check) => check.id === "meta_description")!;
+    const descriptionRow = document.querySelector<HTMLElement>('[data-related-check="meta_description"]')!;
+    await user.click(within(descriptionRow).getByRole("button", { name: "See the fix" }));
+    expect(onSeeFix).toHaveBeenCalledWith(descriptionFinding.id);
+  });
+
+  it("renders unassessed and assessed-empty states in the actual On-page view", () => {
+    const unassessed = guestReport({ metadata: undefined, headings: undefined, lexical_signals: undefined });
+    const first = render(<GuestOnPage report={unassessed} onSeeFix={vi.fn()} />);
+    expect(screen.getAllByText("Page metadata not assessed in this report.")).toHaveLength(2);
+    expect(screen.getByText("Headings not assessed.")).toBeVisible();
+    expect(screen.getByText("Visible content not assessed in this report.")).toBeVisible();
+    first.unmount();
+
+    const empty = guestReport({
+      metadata: { title: "", description: "" },
+      headings: { h1: [], h2: [], h3: [], empty_heading_count: 0, hierarchy_jumps: [] },
+      lexical_signals: { visible_word_count: 0, frequent_terms: [] },
+    });
+    render(<GuestOnPage report={empty} onSeeFix={vi.fn()} />);
+    expect(screen.getByText("No page title found in the fetched HTML.")).toBeVisible();
+    expect(screen.getByText("No meta description found in the fetched HTML.")).toBeVisible();
+    expect(screen.getByText("No H1 found in the fetched HTML.")).toBeVisible();
+    expect(screen.getByText("No visible text was found in the fetched HTML.")).toBeVisible();
+  });
+
+  it("renders metadata-only Previews and routes related social fixes by check ID", async () => {
+    const user = userEvent.setup();
+    const report = guestV11Report({
+      metadata: { title: "Returned HTML title", description: "Returned HTML description" },
+      social_metadata: {
+        og_title: "Returned OG title", og_description: "Returned OG description", og_url: "https://northstar.example/share",
+        og_image: "https://northstar.example/remote-image.png", twitter_card: "summary", twitter_title: "Returned X title",
+        twitter_description: "Returned X description", twitter_image: null,
+      },
+    });
+    const onSeeFix = vi.fn();
+    render(<GuestPreviews report={report} onSeeFix={onSeeFix} />);
+
+    expect(screen.getByRole("heading", { name: "Search and social previews" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Returned HTML title" })).toBeVisible();
+    expect(screen.getByText("Returned HTML description")).toBeVisible();
+    expect(screen.getAllByText("Returned OG title")).toHaveLength(2);
+    expect(screen.getByText("Returned X title")).toBeVisible();
+    expect(screen.getByText("summary", { selector: ".guest-x-preview dd span" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "LinkedIn-style sharing illustration" })).toBeVisible();
+    expect(screen.getByText(/Search engines may display something different/)).toBeVisible();
+    expect(document.querySelector("img")).toBeNull();
+    const descriptionRow = document.querySelector<HTMLElement>('[data-related-check="meta_description"]')!;
+    await user.click(within(descriptionRow).getByRole("button", { name: "See the fix" }));
+    expect(onSeeFix).toHaveBeenCalledWith("meta_description");
+  });
+
+  it("does not substitute page text when social metadata was not assessed", () => {
+    const report = guestReport({
+      metadata: { title: "Do not use as social fallback", description: "Do not copy this into an OG field" },
+      social_metadata: undefined,
+    });
+    render(<GuestPreviews report={report} onSeeFix={vi.fn()} />);
+    expect(screen.getAllByText("Open Graph title not assessed in this report.")).toHaveLength(2);
+    expect(screen.queryByText("Do not use as social fallback", { selector: ".guest-og-preview *" })).not.toBeInTheDocument();
+    expect(screen.queryByText("No Open Graph title returned.")).not.toBeInTheDocument();
+  });
+
+  it("renders script-like metadata as text in previews", () => {
+    const payload = "<script>window.__seoSenseiInjected = true</script>";
+    const report = guestReport({
+      metadata: { title: payload, description: "Safe text" },
+      social_metadata: {
+        og_title: payload, og_description: "Safe text", og_url: "javascript:alert(1)", og_image: null,
+        twitter_card: "summary", twitter_title: payload, twitter_description: "Safe text", twitter_image: null,
+      },
+    });
+    const { container } = render(<GuestPreviews report={report} onSeeFix={vi.fn()} />);
+
+    expect(screen.getAllByText(payload)).toHaveLength(4);
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+    expect(window).not.toHaveProperty("__seoSenseiInjected");
+    expect(screen.getAllByText("javascript:alert(1)")).toHaveLength(2);
+  });
+
+  it("routes a guest report through both specialist pages and into the exact Fix-list row", async () => {
+    installGuestServices();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(await screen.findByLabelText("Page address"), "https://northstar.example/guides/home-solar/");
+    await user.click(screen.getByRole("button", { name: "Check page" }));
+    await screen.findByRole("heading", { name: "Summary" });
+
+    await user.click(screen.getByRole("link", { name: "On-page" }));
+    expect(await screen.findByRole("heading", { name: "On-page content" })).toHaveFocus();
+    expect(window.location.search).toBe("?view=on-page&source=guest");
+
+    await user.click(screen.getByRole("link", { name: "Previews" }));
+    expect(await screen.findByRole("heading", { name: "Search and social previews" })).toHaveFocus();
+    expect(window.location.search).toBe("?view=previews&source=guest");
+
+    const descriptionCheck = document.querySelector<HTMLElement>('[data-related-check="meta_description"]')!;
+    await user.click(within(descriptionCheck).getByRole("button", { name: "See the fix" }));
+    expect(await screen.findByRole("heading", { name: "Fix list" })).toBeVisible();
+    expect(window.location.search).toContain("view=findings");
+    expect(window.location.search).toContain("check=meta_description");
+    const descriptionFinding = document.querySelector<HTMLElement>('[data-finding-id="meta_description"]')!;
+    expect(descriptionFinding).toHaveAttribute("aria-expanded", "true");
+    expect(descriptionFinding).toHaveFocus();
   });
 });

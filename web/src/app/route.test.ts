@@ -51,4 +51,34 @@ describe("guest report routes", () => {
     });
     expect(routeFromSearch(search)).toMatchObject({ view: "xray", source: "demo", check: "robots_directives", operator: false });
   });
+
+  it.each(["on-page", "previews"] as const)("preserves the %s guest route across reload", (view) => {
+    const search = routeSearch({
+      view,
+      mode: "review",
+      q: "",
+      status: "all",
+      check: "",
+      source: "guest",
+      operator: false,
+    });
+
+    expect(search).toBe(`?view=${view}&source=guest`);
+    expect(routeFromSearch(search)).toMatchObject({ view, source: "guest", operator: false });
+  });
+
+  it.each(["on-page", "previews"] as const)("preserves fictional-example access on the %s route", (view) => {
+    const search = routeSearch({
+      view,
+      mode: "review",
+      q: "",
+      status: "all",
+      check: "",
+      source: "demo",
+      operator: false,
+    });
+
+    expect(search).toBe(`?view=${view}&source=demo&access=guest`);
+    expect(routeFromSearch(search)).toMatchObject({ view, source: "demo", operator: false });
+  });
 });

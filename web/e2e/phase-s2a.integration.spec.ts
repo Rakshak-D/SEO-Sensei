@@ -369,6 +369,9 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
   await expect(page).toHaveURL(/view=xray.*check=robots_directives/);
   const selectedPin = page.locator('[data-xray-check="robots_directives"]');
   await expect(selectedPin).toBeFocused();
+  // The pointer remains over the Fix-list action during navigation; clear
+  // that transient hover so this assertion isolates the routed selection.
+  await page.mouse.move(0, 0);
   const robotsRegion = page.locator('[data-xray-region="head-robots"]');
   const sharingRegion = page.locator('[data-xray-region="head-sharing"]');
   const openGraphPin = page.locator('[data-xray-check="open_graph"]');

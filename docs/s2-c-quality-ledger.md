@@ -6,6 +6,7 @@
 - Feature branch: `fix/s2-c1-quality-accessibility`, created from that exact main commit.
 - Starting feature SHA for this final correction: `376c64155519ee6eed2a0a3f2588c713dce1aab5`.
 - Initial implementation/evidence commit: `5e9f16a1d79b84c9592f050b213612f002085548`.
+- Mobile Summary correction commit: `1dadeefd8ad7189cf059f326315ec23f6edbd8eb`.
 - The ledger and final corrections are committed separately. The delivery report and PR checks identify the final branch tip and exact-head CI result.
 - PR #10 is read-only and remains a separate unmerged design reference at `51a8134ce6a162730bfc8c97bc6c1d76a81d376e`.
 
@@ -81,8 +82,8 @@ Capture metadata and exact rectangles are in [`web/review/s2-c1/README.md`](../w
 | S2C1-10 mobile Summary cards | PASS | `keeps two complete priority cards above mobile navigation with the controlled warnings report`; `web/review/s2-c1/summary-mobile-priority-clearance-390x844.png` | Six-finding warning report at 390×844: second card bottom 760.69px; nav top 776px; 15.31px clearance. Full reasons and actions fit; reason text remains 16px. |
 | S2C1-11 evidence/security invariants | PASS | JSON-LD tests, guest/security regression suite, E2E keyword and external-request checks, static scope review | No scoring/auth/security contract change, keyword not sent, no new outbound request or fabricated content. Live provider and deployment behavior are not claimed. |
 | S2C1-12 guest/auth/scoring/extension regression | PASS | `.\tests\integration\run_phase2d_local.ps1`; full Pytest and web regression suites | Isolated HTTPS/Caddy integration passed 6/6, including authenticated analysis, API-domain isolation, guest journey, controlled analysis-to-X-ray, specialist pages, reload recovery and cancellation. No production config changed. |
-| S2C1-13 final GitHub CI | UNVERIFIED pending final-head checks | PR check runs on final branch tip | Report exact run/head and all five job states in delivery; do not infer success from earlier CI. |
-| S2C1-14 protected state and artifacts | UNVERIFIED pending delivery recheck | Git SHA/PR metadata, diff inventory, artifact SHA256 | Main, PR #10, environment, and named untracked files must be rechecked after push. |
+| S2C1-13 final GitHub CI | PASS on correction commit; final ledger-only tip check reported at delivery | [GitHub run 44351529700](https://github.com/Rakshak-D/SEO-Sensei/actions/runs/44351529700), head `1dadeefd8ad7189cf059f326315ec23f6edbd8eb` | All five jobs passed: Python 3.11, Python 3.12, Frontend, Container validation, and Authenticated integration. The subsequent ledger-only commit is separately checked before delivery. |
+| S2C1-14 protected state and artifacts | PASS | `git rev-parse origin/main`, `gh pr view 10`, scoped `git status --short`, and SHA256 checks | Main remains `f3a024b83653f738fd55124d3c012e94b1605b57`; PR #10 is open/draft at `51a8134ce6a162730bfc8c97bc6c1d76a81d376e`; guest audits remain disabled. Both certificates and `web/review/s2-b2.zip` retain their pre-task hashes and are untracked/unstaged. |
 
 ## Local regression commands
 

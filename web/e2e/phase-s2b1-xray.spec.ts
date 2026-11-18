@@ -7,9 +7,27 @@ const evidenceDirectory = resolve(process.cwd(), "review/s2-b1");
 const appOrigin = "http://127.0.0.1:4173";
 mkdirSync(evidenceDirectory, { recursive: true });
 
-async function installLocalExample(page: Page) {
+function localFixtureWithImpactLabels() {
+  const fixture = structuredClone(auditFixture) as {
+    analysis: { checks: Array<Record<string, unknown> & { id: string }> };
+  };
+  const impactById: Record<string, string> = {
+    robots_directives: "blocking",
+    visible_text: "high",
+    open_graph: "medium",
+    twitter_metadata: "low",
+  };
+  fixture.analysis.checks = fixture.analysis.checks.map((check) => ({
+    ...check,
+    ...(impactById[check.id] ? { impact: impactById[check.id] } : {}),
+  }));
+  return fixture;
+}
+
+async function installLocalExample(page: Page, withImpactLabels = false) {
   await page.route("**/api/guest/v1/session", (route) => route.fulfill({ status: 404, body: "Guest audit disabled in local UI test." }));
-  await page.route("**/fixtures/audit.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(auditFixture) }));
+  const fixture = withImpactLabels ? localFixtureWithImpactLabels() : auditFixture;
+  await page.route("**/fixtures/audit.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fixture) }));
   await page.route("**/fixtures/northstar-solar.html", (route) => route.fulfill({
     status: 200,
     contentType: "text/html",
@@ -67,6 +85,86 @@ test("keeps report reload recovery honest and never substitutes local data for a
   await expect(page.getByRole("heading", { name: "Page X-ray" })).toHaveCount(0);
   await expect(page.locator(".guest-lost-report").getByRole("button", { name: "New audit" })).toBeVisible();
   await expect(page).not.toHaveURL(/northstar\.example/);
+});
+
+test("keeps routed, keyboard, pointer, and shared-region finding selection coherent", async ({ page }) => {
+  await installLocalExample(page, true);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Example: Northstar Solar" }).click();
+  await page.getByRole("button", { name: "See the fix" }).first().click();
+  await expect(page).toHaveURL(/view=findings.*check=robots_directives/);
+  await page.getByRole("button", { name: "Show on X-ray" }).click();
+
+  const robotsPin = page.locator('[data-xray-check="robots_directives"]');
+  const openGraphPin = page.locator('[data-xray-check="open_graph"]');
+  const twitterPin = page.locator('[data-xray-check="twitter_metadata"]');
+  const finding = page.locator(".guest-xray-finding");
+  const robotsRegion = page.locator('[data-xray-region="head-robots"]');
+  const sharingRegion = page.locator('[data-xray-region="head-sharing"]');
+
+  await expect(robotsPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Robots directives are reported");
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Tab");
+  await expect(openGraphPin).toBeFocused();
+  await expect(page).toHaveURL(/check=robots_directives/);
+  await expect(finding.locator("h3")).toHaveText("Open Graph metadata is reported");
+  await expect(finding.locator(".guest-xray-priority-label")).toHaveText("Priority 3");
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+
+  await page.keyboard.press("Tab");
+  await expect(twitterPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Twitter metadata is reported");
+  await expect(finding.locator(".guest-xray-priority-label")).toHaveText("Priority 4");
+
+  await robotsPin.hover();
+  await expect(twitterPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Robots directives are reported");
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
+
+  await page.mouse.move(12, 12);
+  await expect(twitterPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Twitter metadata is reported");
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+
+  await page.getByRole("link", { name: /^Summary/ }).first().focus();
+  await expect(finding.locator("h3")).toHaveText("Robots directives are reported");
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/view=findings.*check=robots_directives/);
+  await expect(page.locator('[data-finding-id="robots_directives"]')).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/view=xray.*check=robots_directives/);
+  await expect(robotsPin).toBeFocused();
+
+  await twitterPin.click();
+  await expect(page).toHaveURL(/view=findings.*check=twitter_metadata/);
+  const twitterRow = page.locator('[data-finding-id="twitter_metadata"]');
+  await expect(twitterRow).toBeFocused();
+  await expect(twitterRow).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Show on X-ray" }).click();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Twitter metadata is reported");
+
+  await page.evaluate(() => {
+    window.history.pushState({}, "", "?view=xray&source=demo&access=guest&check=unknown_check");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.locator(".guest-xray-selection-error")).toContainText("This finding is not available in the current report.");
+  await robotsPin.hover();
+  await expect(page.locator(".guest-xray-selection-error")).toBeVisible();
+  await expect(finding).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
+  await expect(finding.locator("h3")).toHaveText("Twitter metadata is reported");
 });
 
 test("measures X-ray overflow, touch targets, mobile nav clearance, and reduced motion at every supported width", async ({ page }) => {

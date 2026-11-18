@@ -26,6 +26,7 @@ export type XrayRegion = {
   id: XrayRegionId;
   label: string;
   value: string;
+  summaryPreview?: string;
   items: string[];
   itemLabels: string[];
   assessment: XrayAssessment;
@@ -57,6 +58,7 @@ export type XrayModel = {
 
 type Observation = {
   value: string;
+  summaryPreview?: string;
   items?: string[];
   itemLabels?: string[];
   assessment: XrayAssessment;
@@ -158,6 +160,7 @@ function baseRegion(id: XrayRegionId, label: string, observation: Observation): 
     id,
     label,
     value: observation.value,
+    summaryPreview: observation.summaryPreview,
     items: observation.items ?? [],
     itemLabels: observation.itemLabels ?? [],
     assessment: observation.assessment,
@@ -169,7 +172,12 @@ function baseRegion(id: XrayRegionId, label: string, observation: Observation): 
 
 function headingsObservation(analysis: LiveSeoAnalysis, key: "h1" | "subheadings"): Observation {
   const headings = analysis.headings;
-  if (!headings) return { value: "Headings not assessed in this report.", assessment: "not_assessed", items: [] };
+  if (!headings) return {
+    value: "Headings not assessed in this report.",
+    summaryPreview: key === "h1" ? "H1 not assessed." : undefined,
+    assessment: "not_assessed",
+    items: [],
+  };
   const items = key === "h1" ? headings.h1 : [...headings.h2, ...headings.h3];
   const itemLabels = key === "h1"
     ? headings.h1.map(() => "H1")
@@ -177,6 +185,7 @@ function headingsObservation(analysis: LiveSeoAnalysis, key: "h1" | "subheadings
   if (items.length === 0) {
     return {
       value: key === "h1" ? "No H1 heading was found in the fetched HTML." : "No H2 or H3 subheadings were found in the fetched HTML.",
+      summaryPreview: key === "h1" ? "No H1 found in the fetched HTML." : undefined,
       assessment: "not_found",
       items,
       itemLabels,
@@ -184,6 +193,7 @@ function headingsObservation(analysis: LiveSeoAnalysis, key: "h1" | "subheadings
   }
   return {
     value: key === "h1" ? countLabel(items.length, "H1 heading") : `${countLabel(headings.h2.length, "H2 heading")} and ${countLabel(headings.h3.length, "H3 heading")} found.`,
+    summaryPreview: key === "h1" ? items[0] : undefined,
     assessment: "observed",
     items,
     itemLabels,

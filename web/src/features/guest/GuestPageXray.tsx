@@ -40,10 +40,11 @@ const assessmentLabels = {
   blocking: "Blocking",
 } as const;
 
-function PinList({ region, onOpenFix, onSelect }: {
+function PinList({ region, onOpenFix, onSelect, onHover }: {
   region: XrayRegion;
   onOpenFix: (checkId: string) => void;
   onSelect: (checkId: string) => void;
+  onHover: (checkId: string) => void;
 }) {
   if (!region.pins.length) return null;
   return (
@@ -57,6 +58,8 @@ function PinList({ region, onOpenFix, onSelect }: {
             aria-label={`Priority ${pin.number}: ${pin.title}; open matching fix`}
             title={`Priority ${pin.number}: ${pin.title}`}
             onFocus={() => onSelect(pin.checkId)}
+            onMouseEnter={() => onHover(pin.checkId)}
+            onMouseLeave={() => onHover("")}
             onClick={() => onOpenFix(pin.checkId)}
           >{pin.number}</button>
         </li>
@@ -114,7 +117,7 @@ function Region({ region, limit = 3, activeCheckId, onOpenFix, onSelect, onHover
           {showAll ? "Show fewer returned headings" : `Show all ${region.items.length} returned headings`}
         </button>
       )}
-      <PinList region={region} onOpenFix={onOpenFix} onSelect={onSelect} />
+      <PinList region={region} onOpenFix={onOpenFix} onSelect={onSelect} onHover={onHover} />
     </section>
   );
 }
@@ -122,19 +125,35 @@ function Region({ region, limit = 3, activeCheckId, onOpenFix, onSelect, onHover
 export function GuestPageXray({ report, route, onOpenFix, onNavigate }: Props) {
   const findings = findingsViewModel(report);
   const model = useMemo(() => buildXrayModel(report.analysis, findings.prioritized, route.check), [report.analysis, findings.prioritized, route.check]);
-  const [focusedCheckId, setFocusedCheckId] = useState(route.check);
-  const [hoveredCheckId, setHoveredCheckId] = useState("");
+  const [interaction, setInteraction] = useState(() => ({
+    routeCheck: route.check,
+    focusedCheckId: "",
+    hoveredCheckId: "",
+  }));
   const [headMetadataOpen, setHeadMetadataOpen] = useState(false);
-  const activeCheckId = model.selection.status === "selected" ? model.selection.checkId : hoveredCheckId || focusedCheckId;
+  const interactionMatchesRoute = interaction.routeCheck === route.check;
+  const activeCheckId = model.selection.status === "unavailable"
+    ? ""
+    : (interactionMatchesRoute ? interaction.hoveredCheckId : "")
+      || (interactionMatchesRoute ? interaction.focusedCheckId : "")
+      || (model.selection.status === "selected" ? model.selection.checkId : "");
   const selectedPriority = model.priorities.find((item) => item.check.id === activeCheckId);
   const activeFinding = selectedPriority?.check ?? null;
   const clearSelection = () => {
-    setFocusedCheckId("");
-    setHoveredCheckId("");
+    setInteraction({ routeCheck: route.check, focusedCheckId: "", hoveredCheckId: "" });
     onNavigate({ ...route, check: "" }, { focus: "heading" });
   };
   const openAllFixes = () => onNavigate({ ...route, view: "findings", check: "", mode: "review", q: "", status: "all" }, { focus: "heading" });
-  const selectFinding = (checkId: string) => setFocusedCheckId(checkId);
+  const selectFinding = (checkId: string) => setInteraction((current) => ({
+    routeCheck: route.check,
+    focusedCheckId: checkId,
+    hoveredCheckId: current.routeCheck === route.check ? current.hoveredCheckId : "",
+  }));
+  const hoverFinding = (checkId: string) => setInteraction((current) => ({
+    routeCheck: route.check,
+    focusedCheckId: current.routeCheck === route.check ? current.focusedCheckId : "",
+    hoveredCheckId: checkId,
+  }));
 
   return (
     <section className="guest-report-page guest-page-xray" aria-labelledby="guest-xray-title">
@@ -161,13 +180,13 @@ export function GuestPageXray({ report, route, onOpenFix, onNavigate }: Props) {
       <div className="guest-xray-layout">
         <div className="guest-xray-specimen" role="group" aria-label="Schematic of returned page structure">
           <div className="guest-xray-document" role="group" aria-label="Schematic page body">
-            <Region region={model.regions[0]!} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={setHoveredCheckId} />
+            <Region region={model.regions[0]!} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={hoverFinding} />
             <div className="guest-xray-body">
               {model.regions.slice(1, -1).map((region) => (
-                <Region key={region.id} region={region} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={setHoveredCheckId} />
+                <Region key={region.id} region={region} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={hoverFinding} />
               ))}
             </div>
-            <Region region={model.regions[model.regions.length - 1]!} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={setHoveredCheckId} />
+            <Region region={model.regions[model.regions.length - 1]!} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={hoverFinding} />
           </div>
 
           <details
@@ -183,7 +202,7 @@ export function GuestPageXray({ report, route, onOpenFix, onNavigate }: Props) {
             </summary>
             <div className="guest-xray-head-items">
               {model.headMetadata.map((region) => (
-                <Region key={region.id} region={region} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={setHoveredCheckId} />
+                <Region key={region.id} region={region} activeCheckId={activeCheckId} onOpenFix={onOpenFix} onSelect={selectFinding} onHover={hoverFinding} />
               ))}
             </div>
           </details>

@@ -52,14 +52,20 @@ describe("buildXrayModel", () => {
     delete missing.headings;
     delete missing.images;
     const missingModel = buildXrayModel(missing, []);
-    expect(missingModel.regions.find((region) => region.id === "primary-heading")?.assessment).toBe("not_assessed");
+    expect(missingModel.regions.find((region) => region.id === "primary-heading")).toMatchObject({
+      assessment: "not_assessed",
+      summaryPreview: "H1 not assessed.",
+    });
     expect(missingModel.regions.find((region) => region.id === "images")?.value).toBe("Images not assessed in this report.");
 
     const observedEmpty = sourceAnalysis();
     observedEmpty.headings = { h1: [], h2: [], h3: [], empty_heading_count: 0, hierarchy_jumps: [] };
     observedEmpty.images = { total: 0, with_alt: 0, missing_alt: 0, empty_alt: 0, alt_coverage_percent: 0 };
     const emptyModel = buildXrayModel(observedEmpty, []);
-    expect(emptyModel.regions.find((region) => region.id === "primary-heading")?.assessment).toBe("not_found");
+    expect(emptyModel.regions.find((region) => region.id === "primary-heading")).toMatchObject({
+      assessment: "not_found",
+      summaryPreview: "No H1 found in the fetched HTML.",
+    });
     expect(emptyModel.regions.find((region) => region.id === "images")?.value).toBe("No image elements found in the fetched HTML.");
 
     const clearAnalysis = sourceAnalysis();
@@ -127,6 +133,7 @@ describe("buildXrayModel", () => {
     const h1 = headingsModel.regions.find((region) => region.id === "primary-heading");
     const subheadings = headingsModel.regions.find((region) => region.id === "subheadings");
     expect(h1?.items).toEqual(["Primary title observed", "Second H1 observed"]);
+    expect(h1?.summaryPreview).toBe("Primary title observed");
     expect(subheadings?.items).toEqual(["First H2", "Nested H3"]);
     expect(subheadings?.itemLabels).toEqual(["H2", "H3"]);
     expect(subheadings?.findingIds).toEqual(["heading_hierarchy"]);

@@ -366,6 +366,51 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
   await expect(page).toHaveURL(/view=xray.*check=robots_directives/);
   const selectedPin = page.locator('[data-xray-check="robots_directives"]');
   await expect(selectedPin).toBeFocused();
+  const robotsRegion = page.locator('[data-xray-region="head-robots"]');
+  const sharingRegion = page.locator('[data-xray-region="head-sharing"]');
+  const openGraphPin = page.locator('[data-xray-check="open_graph"]');
+  const twitterPin = page.locator('[data-xray-check="twitter_metadata"]');
+  const findingDetails = page.locator(".guest-xray-finding");
+  const openGraphTitle = noindex.checks.find((check) => check.id === "open_graph")?.finding_title;
+  const twitterTitle = noindex.checks.find((check) => check.id === "twitter_metadata")?.finding_title;
+  expect(openGraphTitle).toBeTruthy();
+  expect(twitterTitle).toBeTruthy();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Tab");
+  await expect(openGraphPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(openGraphTitle!);
+  await expect(findingDetails.locator(".guest-xray-priority-label")).toHaveText(
+    `Priority ${noindex.findings_summary.prioritized_check_ids.indexOf("open_graph") + 1}`,
+  );
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Tab");
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await expect(findingDetails.locator(".guest-xray-priority-label")).toHaveText(
+    `Priority ${noindex.findings_summary.prioritized_check_ids.indexOf("twitter_metadata") + 1}`,
+  );
+  await selectedPin.hover();
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
+  await page.mouse.move(12, 12);
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await expect(sharingRegion).toHaveClass(/is-highlighted/);
+  await expect(robotsRegion).not.toHaveClass(/is-highlighted/);
+  await page.getByRole("link", { name: /^Summary/ }).first().focus();
+  await expect(findingDetails.locator("h3")).toHaveText(
+    noindex.checks.find((check) => check.id === "robots_directives")?.finding_title ?? "",
+  );
+  await expect(robotsRegion).toHaveClass(/is-highlighted/);
+  await expect(sharingRegion).not.toHaveClass(/is-highlighted/);
   await expect.poll(async () => selectedPin.evaluate((element) => {
     const pin = element.getBoundingClientRect();
     const nav = document.querySelector(".guest-mobile-tabs")?.getBoundingClientRect();
@@ -403,6 +448,23 @@ test("renders the guest journey and maps controlled HTTPS analyses through the P
   await page.goForward();
   await expect(page.getByRole("heading", { name: "Page X-ray" })).toBeVisible();
   await expect(page).toHaveURL(/check=robots_directives/);
+  await expect(selectedPin).toBeFocused();
+  await twitterPin.click();
+  await expect(page).toHaveURL(/view=findings.*check=twitter_metadata/);
+  const expandedTwitter = page.locator('[data-finding-id="twitter_metadata"]');
+  await expect(expandedTwitter).toBeFocused();
+  await expect(expandedTwitter).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Show on X-ray" }).click();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
+  await expect(findingDetails.locator("h3")).toHaveText(twitterTitle!);
+  await page.goBack();
+  await expect(page).toHaveURL(/view=findings.*check=twitter_metadata/);
+  await expect(expandedTwitter).toBeFocused();
+  await expect(expandedTwitter).toHaveAttribute("aria-expanded", "true");
+  await page.goForward();
+  await expect(page).toHaveURL(/view=xray.*check=twitter_metadata/);
+  await expect(twitterPin).toBeFocused();
   await page.getByRole("button", { name: "Back to Summary" }).click();
   await expect(page.getByRole("heading", { name: "Summary" })).toBeVisible();
 

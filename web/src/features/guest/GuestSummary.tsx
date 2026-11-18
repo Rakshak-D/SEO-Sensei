@@ -107,7 +107,7 @@ export function GuestSummary({ report, onSeeFix, onReviewAll, onOpenXray }: Prop
             </div>
             <div className="guest-xray-preview-body">
               <span className="guest-xray-preview-unassessed">Header not assessed</span>
-              <strong>{xray.regions.find((region) => region.id === "primary-heading")?.items[0] ?? "H1 not assessed"}</strong>
+              <strong>{xray.regions.find((region) => region.id === "primary-heading")?.summaryPreview}</strong>
               <span>{xray.regions.find((region) => region.id === "visible-content")?.value}</span>
               <div className="guest-xray-preview-facts">
                 <span>{xray.regions.find((region) => region.id === "images")?.value}</span>
